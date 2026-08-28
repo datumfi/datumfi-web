@@ -61,10 +61,15 @@
    * ⚠️ MEASURED, ENTERED Studio, 1440x900: the key's own centre goes (9,18,33) -> (24,51,57),
    *    d=(15,33,24), against a predicted 24.1/51.1/56.8 — agreement to the unit, cross-checked
    *    independently by reading the token's resolved value out of the CSSOM.
-   * ⛔ THAT NUMBER IS ONLY TRUE WITH THE LANDING OVERLAY DISMISSED. Cold, `.so-overlay-wrap`
-   *    (:18836) scrims the viewport at rgba(3,8,18,.36->.72) UNDER a backdrop-filter: blur(9px),
-   *    and the same measurement reads d=(0,1,0). A MEASUREMENT TAKEN THROUGH AN UNDECLARED LAYER IS
-   *    NOT A WEAK MEASUREMENT — IT IS A MEASUREMENT OF THE LAYER.
+   * ⛔ THAT NUMBER IS ONLY TRUE WITH THE LANDING OVERLAY DISMISSED. Cold, `#studioOverlayWrap`
+   *    scrims the viewport at rgba(2,7,13,.70) UNDER a backdrop-filter: blur(5px), and the same
+   *    measurement reads d=(0,1,0). A MEASUREMENT TAKEN THROUGH AN UNDECLARED LAYER IS NOT A WEAK
+   *    MEASUREMENT — IT IS A MEASUREMENT OF THE LAYER.
+   *    ⚠️ SELECTOR AND SCRIM BOTH UPDATED 2026-08-28 by the overlay port: the old `.so-overlay-wrap`
+   *    (two radial gradients + a linear, rgba(3,8,18,.36->.72), blur(9px)) NO LONGER EXISTS. The
+   *    d=(0,1,0) reading was NOT re-measured through the new scrim — it is retained as the shape of
+   *    the hazard, not as a current figure. A COMMENT THAT KEEPS A DEAD SELECTOR'S NAME SENDS THE
+   *    NEXT READER LOOKING FOR A RULE THAT ISN'T THERE.
    *
    * ⛔ `background-image`, NEVER THE `background` SHORTHAND, AND THAT IS MECHANICAL NOT STYLISTIC.
    *    styles/typography.css:5/:8 set html/body `background-color: var(--bg-navy) !important`. The
@@ -16800,114 +16805,337 @@
   <script src="/feedback.js"></script>
 
   <style>
-  /* ── R3.6 STUDIO OVERLAY ─────────────────────────────────── */
-  .so-overlay-wrap{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;padding:84px 24px 40px;background:radial-gradient(circle at 50% 42%,rgba(201,168,76,.085),transparent 38%),radial-gradient(circle at 45% 58%,rgba(93,202,165,.052),transparent 42%),linear-gradient(180deg,rgba(3,8,18,.36),rgba(3,8,18,.72));backdrop-filter:blur(9px)}
-  .so-overlay{width:min(1080px,calc(100vw - 42px));position:relative;border-radius:36px;border:1px solid rgba(255,255,255,.138);background:radial-gradient(circle at 17% 0%,rgba(201,168,76,.170),transparent 30%),radial-gradient(circle at 88% 13%,rgba(93,202,165,.135),transparent 35%),radial-gradient(circle at 54% 110%,rgba(77,168,218,.064),transparent 42%),linear-gradient(115deg,rgba(255,255,255,.040),transparent 18%,transparent 78%,rgba(255,255,255,.026)),repeating-linear-gradient(31deg,rgba(255,255,255,.014) 0 1px,transparent 1px 9px),linear-gradient(180deg,rgba(14,27,48,.94),rgba(5,11,20,.91));box-shadow:0 66px 166px rgba(0,0,0,.74),0 0 78px rgba(201,168,76,.055),inset 0 1px rgba(255,255,255,.135),inset 0 0 0 1px rgba(255,255,255,.050),inset 0 -1px rgba(0,0,0,.34);overflow:hidden}
-  .so-overlay:before{content:"";position:absolute;inset:-46% -20% auto -20%;height:330px;background:linear-gradient(112deg,transparent,rgba(255,255,255,.135),transparent);transform:translateX(-38%);opacity:.88;filter:blur(.15px)}
-  .so-overlay:after{content:"DF";position:absolute;right:30px;top:28px;width:102px;height:102px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(201,168,76,.30);color:rgba(201,168,76,.49);font-family:'Fraunces',Georgia,serif;font-size:32px;font-style:italic;letter-spacing:-.065em;background:radial-gradient(circle at 50% 50%,transparent 0 32px,rgba(201,168,76,.120) 33px 34px,transparent 35px),radial-gradient(circle at 50% 50%,transparent 0 44px,rgba(201,168,76,.190) 45px 46px,transparent 47px),radial-gradient(circle at 50% 50%,rgba(255,255,255,.030),transparent 62%);transform:rotate(7deg);pointer-events:none;filter:drop-shadow(0 14px 28px rgba(0,0,0,.18))}
-  .so-rim{position:absolute;inset:14px;border-radius:27px;border:1px solid rgba(255,255,255,.055);pointer-events:none;z-index:1;box-shadow:inset 0 1px rgba(255,255,255,.035),inset 0 0 0 1px rgba(0,0,0,.18)}
-  .so-close{position:absolute;top:22px;right:22px;z-index:5;width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:radial-gradient(circle at 30% 10%,rgba(255,255,255,.16),transparent 40%),rgba(255,255,255,.044);color:rgba(255,255,255,.68);font-size:24px;line-height:1;display:grid;place-items:center;cursor:pointer;box-shadow:inset 0 1px rgba(255,255,255,.085),0 14px 30px rgba(0,0,0,.24);transition:transform .18s ease,border-color .18s ease,color .18s ease}
-  .so-close:hover{transform:translateY(-1px) scale(1.025);color:rgba(255,255,255,.92);border-color:rgba(201,168,76,.34)}
-  .so-inner{position:relative;z-index:2;padding:38px 38px 36px}
-  .so-head{display:grid;grid-template-columns:1fr 240px;gap:30px;align-items:start;margin-bottom:24px}
-  .so-eyebrow{margin:0 0 12px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(201,168,76,.84)}
-  .so-overlay h1{max-width:750px;margin:0;font-family:'Fraunces',Georgia,serif;font-size:clamp(42px,5.8vw,70px);font-style:italic;font-weight:300;line-height:.92;letter-spacing:-.035em;text-shadow:0 0 38px rgba(201,168,76,.070),0 18px 38px rgba(0,0,0,.24)}
-  .so-copy{max-width:730px;margin:16px 0 0;color:rgba(255,255,255,.64);font-size:15.5px;line-height:1.72}
-  .so-copy strong{color:rgba(201,168,76,.93);font-weight:400;text-shadow:0 0 18px rgba(201,168,76,.08)}
-  .so-status{border-radius:24px;border:1px solid rgba(255,255,255,.118);background:radial-gradient(circle at 22% 0%,rgba(255,255,255,.135),transparent 36%),radial-gradient(circle at 88% 94%,rgba(201,168,76,.092),transparent 40%),linear-gradient(180deg,rgba(255,255,255,.062),rgba(255,255,255,.024));padding:18px;box-shadow:inset 0 1px rgba(255,255,255,.095),0 23px 52px rgba(0,0,0,.29)}
-  .so-status-title{font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(201,168,76,.78)}
-  .so-status-value{margin-top:10px;font-family:'Fraunces',Georgia,serif;font-size:28px;font-style:italic;text-shadow:0 0 18px rgba(201,168,76,.055)}
-  .so-status-note{margin-top:8px;color:rgba(255,255,255,.48);font-size:12.5px;line-height:1.5}
-  .so-roadmap{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0 18px}
-  .so-step{position:relative;min-height:208px;border-radius:24px;overflow:hidden;padding:20px;border:1px solid rgba(93,202,165,.28);background:radial-gradient(circle at 18% 8%,rgba(93,202,165,.20),transparent 36%),radial-gradient(circle at 92% 94%,rgba(93,202,165,.24),transparent 38%),linear-gradient(180deg,rgba(255,255,255,.068),rgba(255,255,255,.025));box-shadow:inset 0 1px rgba(255,255,255,.130),0 31px 66px rgba(0,0,0,.36)}
-  .so-step:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,rgba(93,202,165,.96),rgba(93,202,165,.42) 58%,rgba(201,168,76,.58));box-shadow:0 0 28px rgba(93,202,165,.31)}
-  .so-step.so-gold{border-color:rgba(201,168,76,.28)}.so-step.so-gold:before{background:linear-gradient(180deg,rgba(201,168,76,.96),rgba(201,168,76,.42) 58%,rgba(93,202,165,.58));box-shadow:0 0 28px rgba(201,168,76,.31)}
-  .so-step.so-orange{border-color:rgba(229,142,38,.28)}.so-step.so-orange:before{background:linear-gradient(180deg,rgba(229,142,38,.96),rgba(229,142,38,.42) 58%,rgba(201,168,76,.58));box-shadow:0 0 28px rgba(229,142,38,.31)}
-  .so-step-num{font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:12px}
-  .so-step h2{margin:0 0 8px;font-family:'Fraunces',Georgia,serif;font-size:29px;font-style:italic;font-weight:300;line-height:1.02}
-  .so-step p{margin:0;color:rgba(255,255,255,.60);font-size:13px;line-height:1.58}
-  .so-cta-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:20px}
-  .so-choice{position:relative;overflow:hidden;text-align:left;min-height:142px;border-radius:25px;padding:20px;border:1px solid rgba(255,255,255,.124);background:radial-gradient(circle at 18% 0%,rgba(255,255,255,.118),transparent 36%),radial-gradient(circle at 88% 92%,rgba(201,168,76,.080),transparent 40%),linear-gradient(180deg,rgba(255,255,255,.058),rgba(255,255,255,.022));color:#fff;box-shadow:inset 0 1px rgba(255,255,255,.106),0 28px 62px rgba(0,0,0,.34);transition:.20s ease;cursor:pointer}
-  .so-choice:hover{transform:translateY(-4px);border-color:rgba(201,168,76,.42);box-shadow:inset 0 1px rgba(255,255,255,.130),0 38px 78px rgba(0,0,0,.42),0 0 40px rgba(201,168,76,.082)}
-  .so-choice:before{content:"";position:absolute;inset:0;background:linear-gradient(112deg,transparent 0%,rgba(255,255,255,.20) 44%,transparent 58%);transform:translateX(-120%);transition:transform .70s ease}
-  .so-choice:hover:before{transform:translateX(120%)}
-  .so-choice.so-primary{border-color:rgba(201,168,76,.36);background:radial-gradient(circle at 18% 0%,rgba(201,168,76,.175),transparent 36%),radial-gradient(circle at 88% 92%,rgba(93,202,165,.086),transparent 40%),linear-gradient(180deg,rgba(255,255,255,.072),rgba(255,255,255,.026));box-shadow:inset 0 1px rgba(255,255,255,.122),0 30px 66px rgba(0,0,0,.36),0 0 32px rgba(201,168,76,.060)}
-  .so-choice.so-primary:hover{border-color:rgba(201,168,76,.52);box-shadow:inset 0 1px rgba(255,255,255,.140),0 38px 78px rgba(0,0,0,.42),0 0 40px rgba(201,168,76,.090)}
-  .so-choice.so-blue{border-color:rgba(77,168,218,.25);background:radial-gradient(circle at 18% 0%,rgba(77,168,218,.135),transparent 36%),linear-gradient(180deg,rgba(255,255,255,.060),rgba(255,255,255,.022))}
-  .so-choice.so-teal{border-color:rgba(93,202,165,.25);background:radial-gradient(circle at 18% 0%,rgba(93,202,165,.135),transparent 36%),linear-gradient(180deg,rgba(255,255,255,.060),rgba(255,255,255,.022))}
-  .so-choice-kicker{position:relative;z-index:2;margin-bottom:8px;font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(201,168,76,.84)}
-  .so-choice.so-blue .so-choice-kicker{color:rgba(77,168,218,.82)}
-  .so-choice.so-teal .so-choice-kicker{color:rgba(93,202,165,.82)}
-  .so-choice-title{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:'Fraunces',Georgia,serif;font-size:28px;font-style:italic;line-height:1;text-shadow:0 0 22px rgba(255,255,255,.040)}
-  .so-choice-sub{position:relative;z-index:2;margin-top:10px;color:rgba(255,255,255,.56);font-size:13px;line-height:1.55}
-  .so-choice-arrow{flex:0 0 auto;width:35px;height:35px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.045);font-family:'DM Mono',monospace;font-size:15px;box-shadow:inset 0 1px rgba(255,255,255,.08),0 8px 18px rgba(0,0,0,.18)}
-  .so-choice.so-primary .so-choice-arrow{border-color:rgba(201,168,76,.26);background:rgba(201,168,76,.075)}
-  .so-choice.disabled-cta{opacity:.45;cursor:not-allowed;pointer-events:none}
-  .so-overlay-wrap.dismissed{opacity:0;pointer-events:none;transition:opacity .28s ease}
-  /* P8.1 Q2 — toast anchored TOP-center (below the 56px topbar), not bottom, so validation
-     feedback is never hidden behind the bottom-anchored privacy/cookie banner. z-index raised
-     above it too (belt + suspenders). The hiding was a position overlap, not z-index. */
-  .so-toast{position:fixed;left:50%;top:76px;transform:translate(-50%,-20px);opacity:0;pointer-events:none;z-index:10001;border:1px solid rgba(201,168,76,.36);border-radius:999px;padding:12px 16px;background:radial-gradient(circle at 18% 0%,rgba(201,168,76,.110),transparent 42%),rgba(5,11,20,.94);color:rgba(255,255,255,.80);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;box-shadow:0 26px 66px rgba(0,0,0,.46);transition:.22s ease}
-  .so-toast.show{opacity:1;transform:translate(-50%,0)}
-  @media(max-width:1080px){.so-head{grid-template-columns:1fr}.so-roadmap{grid-template-columns:1fr}.so-cta-grid{grid-template-columns:1fr}}
-  @media(max-width:640px){.so-overlay-wrap{padding:74px 16px 26px;align-items:start;overflow:auto}.so-overlay{width:100%;border-radius:28px}.so-inner{padding:58px 20px 22px}.so-overlay:after{width:78px;height:78px;font-size:25px;right:18px;top:18px;opacity:.54}}
-  .so-overlay{transform:scale(.85);transform-origin:top center}
+  /* ── STUDIO ENTRY OVERLAY ─ ported from "Studio Mock" (Captain-authored) 2026-08-28 ──
+     Replaces the retired .so-* overlay. Markup ids are UNCHANGED, so the handler block below
+     is BYTE-IDENTICAL to what it was — that is the proof the three buttons and the X still do
+     what they did, not a claim about them.
+
+     ⛔ SCOPED UNDER #studioOverlayWrap, AND THE SCOPING IS LOAD-BEARING.
+     The mock is a standalone file, so its overlay classes are bare generic names — .close
+     .toast .phase .choice .primary .shape .test .live .help .signed. MEASURED 2026-08-28:
+     0 of 37 collide with studio.html today. THAT IS A FACT ABOUT TODAY, NOT A PROPERTY OF THE
+     NAMES. An unscoped .close{position:absolute} in a 1.4MB page that keeps growing is a
+     silent landmine — the day someone adds class="close" it moves and nothing throws. The
+     retired so-* block earned its prefix exactly this way. Scoping adds (1,0,0) to every rule
+     UNIFORMLY, so relative cascade is unchanged.
+
+     ⛔⛔ THE SCOPED PALETTE BELOW IS NOT DECORATION — WITHOUT IT THE PILLAR SPINE RENDERS WRONG
+     AND NOTHING THROWS. Measured: of the 9 custom properties this block reads, SIX are ABSENT
+     from studio.html (--mono --serif --sans --blue --purple --accent) and THREE exist under the
+     SAME NAME WITH A DIFFERENT VALUE (--teal live #1D9E75 vs mock #79dec7, --gold live #C9A84C
+     vs mock #d5ad63, --white live #fff vs mock #f2f5f2). Inherited from studio.html the
+     traveler's teal->purple->blue->gold walk would come out as two wrong shades and two
+     missing colours, and every font would fall back to a browser default. A CSS RULE THAT DOES
+     NOT APPLY LOOKS IDENTICAL TO ONE NEVER WRITTEN. Declaring them ON the wrap keeps the mock's
+     palette inside the overlay and leaves the rest of the Studio's palette untouched.
+
+     FIVE TRANSLATIONS FROM THE MOCK. NONE IS A DESIGN CHANGE; ALL FIVE ARE MEASURED:
+       1. wrap z-index 50 -> 9000, toast z-index 90 -> 10001. Live studio has 12 stacking
+          contexts above 50; the mock had none. Verbatim, the overlay renders BEHIND the chrome.
+       2. .hidden -> .dismissed. The live brain writes .dismissed. Renaming the CSS is what lets
+          the handlers stay byte-identical.
+       3. the scoped palette (above).
+       4. scoping under #studioOverlayWrap (above).
+       5. NOTHING ELSE. Padding stays the mock's 22px (the old wrap used 84px) and .brief keeps
+          the mock's min(1240px,100vw-44px) / min(820px,100vh-44px) box. THAT IS THE SIZE WIN.
+
+     ⛔ THE RETIRED .so-overlay{transform:scale(.85);transform-origin:top center} IS NOT PORTED.
+        It was a late patch on the OLD shell (studio.html:16854) that shrank it to ~918px
+        effective. A fixpoint keyed on the NEW selectors would never have seen it, because it
+        names the OLD one — it is deleted with the block it patched. */
+  #studioOverlayWrap,#studioOverlayToast{
+    --teal:#79dec7;--teal2:#5dcaa5;--gold:#d5ad63;--purple:#8178d7;--blue:#7ac0ff;
+    --red:#e27d61;--white:#f2f5f2;--accent:var(--teal);
+    --serif:"Fraunces",Georgia,serif;--mono:"DM Mono","Courier New",monospace;
+    --sans:"DM Sans",Arial,sans-serif;
+  }
+  #studioOverlayWrap .phase-title{margin:0; max-width:360px; font:300 italic 36px/1.05 var(--serif); letter-spacing:-.018em; color:#dfb65f; text-shadow:0 10px 28px rgba(0,0,0,.16);}
+  @media(max-width:1060px){
+    #studioOverlayWrap .phase-title{font-size:31px}
+  }
+  @media(max-width:720px){
+    #studioOverlayWrap .phase-title{font-size:32px}
+  }
+  #studioOverlayWrap{position:fixed;inset:0;z-index:9000; display:grid;place-items:center; padding:22px; background:rgba(2,7,13,.70); backdrop-filter:blur(5px); transition:opacity .26s ease,visibility .26s ease;}
+  #studioOverlayWrap.dismissed{opacity:0;visibility:hidden;pointer-events:none}
+  #studioOverlayWrap .brief{position:relative; width:min(1240px,calc(100vw - 44px)); height:min(820px,calc(100vh - 44px)); min-height:680px; border:1px solid rgba(121,222,199,.48); background: linear-gradient(rgba(42,78,104,.12) 1px,transparent 1px), linear-gradient(90deg,rgba(42,78,104,.12) 1px,transparent 1px), radial-gradient(circle at 82% 10%,rgba(121,222,199,.085),transparent 25%), radial-gradient(circle at 11% 73%,rgba(129,120,215,.045),transparent 25%), radial-gradient(circle at 50% -8%,rgba(255,255,255,.018),transparent 30%), linear-gradient(180deg,#06101b,#07111d 58%,#050c16); background-size:76px 76px,76px 76px,auto,auto,auto,auto; box-shadow: 0 48px 118px rgba(0,0,0,.60), 0 0 0 1px rgba(121,222,199,.045), 0 0 42px rgba(121,222,199,.055), inset 0 1px 0 rgba(255,255,255,.025); overflow:hidden; display:grid; grid-template-rows:48px 1fr auto;}
+  #studioOverlayWrap .brief:before{content:"";position:absolute;inset:14px;pointer-events:none; border:1px solid rgba(121,222,199,.075); box-shadow:inset 0 0 34px rgba(121,222,199,.012);}
+  #studioOverlayWrap .brief-header{position:relative;z-index:2; display:flex;align-items:center; padding:0 22px; border-bottom:1px solid rgba(121,222,199,.15); background: linear-gradient(90deg,rgba(121,222,199,.025),transparent 32%,rgba(213,173,99,.018)), rgba(4,10,18,.76); box-shadow:inset 0 -1px 0 rgba(255,255,255,.012);}
+  #studioOverlayWrap .brief-header-left,#studioOverlayWrap .brief-header-right{font:500 8.5px var(--mono);letter-spacing:.15em;text-transform:uppercase;color:#81909a;}
+  #studioOverlayWrap .brief-header-right{margin-left:auto;color:rgba(213,173,99,.68)}
+  #studioOverlayWrap .close{width:30px;height:30px;margin-left:20px; border:1px solid rgba(142,160,168,.25); background:transparent;color:#aeb7bd; font:400 18px/1 var(--sans);}
+  #studioOverlayWrap .close:hover{border-color:rgba(213,173,99,.50);color:var(--white)}
+  #studioOverlayWrap .brief-body{position:relative;z-index:2; min-height:0; display:grid; grid-template-columns:1.04fr .96fr;}
+  #studioOverlayWrap .brief-intro{padding:42px 48px 28px 52px; border-right:1px solid rgba(121,222,199,.11); background: radial-gradient(circle at 18% 12%,rgba(255,255,255,.012),transparent 26%), linear-gradient(90deg,rgba(121,222,199,.008),transparent 42%);}
+  #studioOverlayWrap .eyebrow{margin:0 0 18px; font:500 9px var(--mono);letter-spacing:.19em;text-transform:uppercase;color:var(--teal);}
+  #studioOverlayWrap .brief h1{max-width:650px;margin:0; font:300 clamp(46px,5vw,68px)/.98 var(--serif); letter-spacing:-.028em; color:var(--white); text-shadow:0 10px 34px rgba(0,0,0,.16);}
+  #studioOverlayWrap .brief h1 em{font-style:italic;font-weight:300}
+  #studioOverlayWrap .brief-copy{max-width:650px; margin:24px 0 0; color:#9ba7ae; font:300 15px/1.72 var(--sans);}
+  #studioOverlayWrap .brief-copy strong{color:#d7ddda;font-weight:400}
+  #studioOverlayWrap .brief-formula{display:inline-block; margin-top:30px;padding-top:16px; border-top:1px solid rgba(213,173,99,.25); font:400 11px var(--mono); letter-spacing:.12em;color:rgba(213,173,99,.82);}
+  #studioOverlayWrap .phases{min-height:0; padding:26px 36px 20px; display:grid; grid-template-rows:auto minmax(0,1fr); align-content:stretch; background: radial-gradient(circle at 68% 8%,rgba(121,222,199,.032),transparent 38%), linear-gradient(180deg,rgba(255,255,255,.005),transparent 44%);}
+  #studioOverlayWrap .phase-title{margin:0 0 8px; font:500 9px var(--mono); letter-spacing:.18em; text-transform:uppercase; color:#788994;}
+  #studioOverlayWrap .phase-list{position:relative; min-height:0; height:100%; display:grid; grid-template-rows:repeat(4,minmax(0,1fr)); gap:0;}
+  #studioOverlayWrap .phase-list:before{content:"";position:absolute;left:19px;top:36px;bottom:36px;width:1px; background:linear-gradient( to bottom, var(--teal) 0%,var(--teal) 22%, color-mix(in srgb,var(--teal) 58%,var(--purple) 42%) 30%, var(--purple) 40%,var(--purple) 46%, color-mix(in srgb,var(--purple) 55%,var(--blue) 45%) 56%, var(--blue) 62%,var(--blue) 69%, color-mix(in srgb,var(--blue) 40%,var(--gold) 60%) 78%, var(--gold) 86%,var(--gold) 100% );}
+  #studioOverlayWrap .phase{--accent:var(--teal); position:relative; display:grid; grid-template-columns:38px 62px 1fr; gap:16px; align-items:center; min-height:0; padding:8px 0; border-top:1px solid rgba(121,222,199,.075);}
+  #studioOverlayWrap .phase:first-child{border-top:0}
+  #studioOverlayWrap .phase.shape{--accent:var(--purple)}
+  #studioOverlayWrap .phase.test{--accent:var(--blue)}
+  #studioOverlayWrap .phase.live{--accent:var(--gold)}
+  #studioOverlayWrap .phase-dot{width:12px;height:12px;border-radius:50%; justify-self:center; background:#06101b; border:1.5px solid var(--accent); box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 8%,transparent); z-index:2;}
+  #studioOverlayWrap .phase-num{font:400 23px var(--mono); color:var(--accent); letter-spacing:.04em;}
+  #studioOverlayWrap .phase-copy strong{display:block; font:600 12.5px var(--mono); letter-spacing:.11em; text-transform:uppercase; color:var(--accent);}
+  #studioOverlayWrap .phase-copy span{display:block; margin-top:5px; font:400 10.5px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:#a8b4b9;}
+  #studioOverlayWrap .phase-copy p{margin:8px 0 0; max-width:420px; font:300 13px/1.48 var(--sans); color:#7f919a;}
+  #studioOverlayWrap .action-dock{position:relative;z-index:2; border-top:1px solid rgba(121,222,199,.17); background: linear-gradient(180deg,rgba(121,222,199,.012),transparent 24%), rgba(4,10,18,.84); box-shadow:0 -18px 38px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.012); padding:16px 20px 18px;}
+  #studioOverlayWrap .action-meta{display:flex;align-items:center;gap:12px; margin:0 2px 12px; font:500 8px var(--mono);letter-spacing:.13em;text-transform:uppercase;color:#71808a;}
+  #studioOverlayWrap .status-light{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 9px rgba(213,173,99,.25)}
+  #studioOverlayWrap .action-meta .signed{color:#a9966b}
+  #studioOverlayWrap .action-meta .help{margin-left:auto;color:#62737d}
+  #studioOverlayWrap .choices{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  #studioOverlayWrap .choice{position:relative; min-height:108px; padding:16px 17px; text-align:left;color:var(--white); border:1px solid rgba(121,222,199,.105); background: linear-gradient(180deg,rgba(255,255,255,.008),transparent 20%), linear-gradient(180deg,rgba(9,20,32,.90),rgba(6,14,24,.92)); box-shadow:inset 0 1px 0 rgba(255,255,255,.022),0 10px 24px rgba(0,0,0,.08); transition:.2s ease;}
+  #studioOverlayWrap .choice:hover{transform:translateY(-2px); border-color:rgba(121,222,199,.24); background: linear-gradient(180deg,rgba(255,255,255,.014),transparent 22%), linear-gradient(180deg,rgba(12,27,40,.96),rgba(7,17,28,.94)); box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 16px 32px rgba(0,0,0,.14);}
+  #studioOverlayWrap .choice.primary{border-color:rgba(121,222,199,.28)}
+  #studioOverlayWrap .choice.sketch{border-color:rgba(122,192,255,.19)}
+  #studioOverlayWrap .choice.blueprint{border-color:rgba(213,173,99,.22)}
+  #studioOverlayWrap .choice-kicker{display:block;margin-bottom:7px; font:500 8px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#71828c;}
+  #studioOverlayWrap .choice.primary .choice-kicker{color:var(--teal)}
+  #studioOverlayWrap .choice.sketch .choice-kicker{color:var(--blue)}
+  #studioOverlayWrap .choice.blueprint .choice-kicker{color:var(--gold)}
+  #studioOverlayWrap .choice-title{display:flex;justify-content:space-between;align-items:center;gap:12px; font:400 21px var(--serif);line-height:1.05;}
+  #studioOverlayWrap .choice-arrow{font:300 22px var(--serif);color:#a9b4b9}
+  #studioOverlayWrap .choice-sub{display:block;margin-top:7px; font:300 11.5px/1.45 var(--sans);color:#778993;}
+  #studioOverlayToast{position:fixed;left:50%;bottom:24px;z-index:10001; transform:translate(-50%,12px); opacity:0;pointer-events:none; border:1px solid rgba(121,222,199,.24); background:#081521; padding:10px 14px;color:#dbe2df; font:500 8.5px var(--mono);letter-spacing:.11em;text-transform:uppercase; transition:.2s ease;}
+  #studioOverlayToast.show{opacity:1;transform:translate(-50%,0)}
+  @media(max-width:1060px){
+    #studioOverlayWrap .brief{height:auto;min-height:calc(100vh - 28px)}
+    #studioOverlayWrap .brief-body{grid-template-columns:1fr}
+    #studioOverlayWrap .brief-intro{border-right:0;border-bottom:1px solid rgba(121,222,199,.10);padding:36px}
+    #studioOverlayWrap .phases{padding:22px 36px 16px;min-height:440px}
+    #studioOverlayWrap .choices{grid-template-columns:1fr}
+  }
+  @media(max-width:720px){
+    #studioOverlayWrap{padding:8px;align-items:start;overflow:auto}
+    #studioOverlayWrap .brief{width:100%;min-height:0;margin:0;border-left:0;border-right:0}
+    #studioOverlayWrap .brief-intro,#studioOverlayWrap .phases{padding:28px 22px}
+    #studioOverlayWrap .brief h1{font-size:42px}
+    #studioOverlayWrap .phase{grid-template-columns:30px 44px 1fr}
+    #studioOverlayWrap .action-dock{padding:14px}
+  }
+  #studioOverlayWrap .phase-traveler{--traveler-color:var(--teal); position:absolute; left:19px; top:12.5%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%) scale(1); background:var(--traveler-color); border:1px solid rgba(255,255,255,.72); box-shadow: 0 0 0 4px color-mix(in srgb,var(--traveler-color) 12%,transparent), 0 0 14px color-mix(in srgb,var(--traveler-color) 36%,transparent); z-index:5; opacity:0; pointer-events:none;}
+  #studioOverlayWrap:not(.dismissed) .phase-traveler{opacity:1; animation:studioSequenceTraveler 12s linear infinite;}
+  @media (prefers-reduced-motion:reduce){
+    #studioOverlayWrap:not(.dismissed) .phase-traveler{animation:none; opacity:0;}
+  }
+  #studioOverlayWrap .phase-copy strong{margin-top:12px;}
+  /* the traveler. Its colour walk IS the pillar spine (teal 01 -> purple 02 -> blue 03
+     -> gold 04) and must not be re-coloured. Name checked against the 21 @keyframes
+     already in studio.html on 2026-08-28: no collision. */
+  @keyframes studioSequenceTraveler{
+    0%{
+      top:12.5%;
+      --traveler-color:var(--teal);
+      transform:translate(-50%,-50%) scale(1);
+      box-shadow:0 0 0 4px rgba(121,222,199,.12),0 0 14px rgba(121,222,199,.34);
+    }
+    4%{
+      top:12.5%;
+      --traveler-color:var(--teal);
+      transform:translate(-50%,-50%) scale(1.28);
+      box-shadow:0 0 0 8px rgba(121,222,199,.10),0 0 20px rgba(121,222,199,.46);
+    }
+    8%{
+      top:12.5%;
+      --traveler-color:var(--teal);
+      transform:translate(-50%,-50%) scale(1);
+    }
+  
+    25%{
+      top:37.5%;
+      --traveler-color:var(--purple);
+      transform:translate(-50%,-50%) scale(1);
+      box-shadow:0 0 0 4px rgba(129,120,215,.12),0 0 14px rgba(129,120,215,.34);
+    }
+    29%{
+      top:37.5%;
+      --traveler-color:var(--purple);
+      transform:translate(-50%,-50%) scale(1.28);
+      box-shadow:0 0 0 8px rgba(129,120,215,.10),0 0 20px rgba(129,120,215,.46);
+    }
+    33%{
+      top:37.5%;
+      --traveler-color:var(--purple);
+      transform:translate(-50%,-50%) scale(1);
+    }
+  
+    50%{
+      top:62.5%;
+      --traveler-color:var(--blue);
+      transform:translate(-50%,-50%) scale(1);
+      box-shadow:0 0 0 4px rgba(122,192,255,.12),0 0 14px rgba(122,192,255,.34);
+    }
+    54%{
+      top:62.5%;
+      --traveler-color:var(--blue);
+      transform:translate(-50%,-50%) scale(1.28);
+      box-shadow:0 0 0 8px rgba(122,192,255,.10),0 0 20px rgba(122,192,255,.46);
+    }
+    58%{
+      top:62.5%;
+      --traveler-color:var(--blue);
+      transform:translate(-50%,-50%) scale(1);
+    }
+  
+    75%{
+      top:87.5%;
+      --traveler-color:var(--gold);
+      transform:translate(-50%,-50%) scale(1);
+      box-shadow:0 0 0 4px rgba(213,173,99,.12),0 0 14px rgba(213,173,99,.34);
+    }
+    79%{
+      top:87.5%;
+      --traveler-color:var(--gold);
+      transform:translate(-50%,-50%) scale(1.28);
+      box-shadow:0 0 0 8px rgba(213,173,99,.10),0 0 20px rgba(213,173,99,.46);
+    }
+    84%{
+      top:87.5%;
+      --traveler-color:var(--gold);
+      transform:translate(-50%,-50%) scale(1);
+    }
+    100%{
+      top:87.5%;
+      --traveler-color:var(--gold);
+      transform:translate(-50%,-50%) scale(1);
+    }
+  }
+  /* ── AUTH STATE ─ Captain-ruled 2026-08-28. The mock never had a signed-in state to style
+     (it hard-codes isSignedIn=false at row 5766), so these two states are a ruling, not a
+     transcription. Gold in, RED out — and the dot follows the word. --red is the mock's own
+     #e27d61; no new colour is introduced. */
+  #studioOverlayWrap .action-meta .signed.is-in{color:var(--gold)}
+  #studioOverlayWrap .action-meta .signed.is-out{color:var(--red)}
+  #studioOverlayWrap .status-light.is-in{background:var(--gold);box-shadow:0 0 9px rgba(213,173,99,.25)}
+  #studioOverlayWrap .status-light.is-out{background:var(--red);box-shadow:0 0 9px rgba(226,125,97,.30)}
+  /* the inline sign-in affordance. ⛔ AN AFFORDANCE PROVEN ONLY BY BEING HIT: it must read as
+     clickable without becoming a button. Inherits the dock's own colour, carries a quiet rule
+     underneath, and resolves to the accent on hover — no new colour, no rectangle. */
+  #studioOverlayWrap .dock-signin{color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;text-decoration-color:rgba(121,222,199,.40);cursor:pointer;transition:color .18s ease,text-decoration-color .18s ease}
+  #studioOverlayWrap .dock-signin:hover,#studioOverlayWrap .dock-signin:focus-visible{color:var(--teal);text-decoration-color:var(--teal)}
+  /* ── DRAFT-RESTORE DIALOG BUTTONS ─────────────────────────────────────────────────
+     ⛔ THESE SIX RULES ARE NOT LEFTOVERS. DO NOT DELETE THEM WITH THE NEXT OVERLAY REWRITE.
+     The unsaved-draft recovery dialog (#draft-restore-overlay, built in JS ~line 17770) BORROWED
+     .so-choice / .so-primary from the old entry overlay. It is a SEPARATE SURFACE on a separate
+     code path, appended to <body> at z-index 10020 — it was never inside the overlay.
+     ⛔⛔ THE 2026-08-28 OVERLAY PORT DELETED THE .so-* BLOCK AND SILENTLY UNSTYLED THIS DIALOG.
+     Nothing threw. The port’s collision census asked "do the NEW classes collide?" and was clean
+     at 0/37 — IT NEVER ASKED WHO ELSE CONSUMED THE OLD ONES. 🔑 A RENAME IS SAFE ONLY WHEN YOU HAVE
+     ENUMERATED THE CONSUMERS, NOT WHEN THE NEW NAME IS FREE.
+     They are now SCOPED to the dialog, so the coupling is explicit rather than inherited: this
+     block can only ever style the draft-restore buttons, and the entry overlay cannot reach it. */
+  #draft-restore-overlay .so-choice{position:relative;overflow:hidden;text-align:left;min-height:142px;border-radius:25px;padding:20px;border:1px solid rgba(255,255,255,.124);background:radial-gradient(circle at 18% 0%,rgba(255,255,255,.118),transparent 36%),radial-gradient(circle at 88% 92%,rgba(201,168,76,.080),transparent 40%),linear-gradient(180deg,rgba(255,255,255,.058),rgba(255,255,255,.022));color:#fff;box-shadow:inset 0 1px rgba(255,255,255,.106),0 28px 62px rgba(0,0,0,.34);transition:.20s ease;cursor:pointer}
+  #draft-restore-overlay .so-choice:hover{transform:translateY(-4px);border-color:rgba(201,168,76,.42);box-shadow:inset 0 1px rgba(255,255,255,.130),0 38px 78px rgba(0,0,0,.42),0 0 40px rgba(201,168,76,.082)}
+  #draft-restore-overlay .so-choice:before{content:"";position:absolute;inset:0;background:linear-gradient(112deg,transparent 0%,rgba(255,255,255,.20) 44%,transparent 58%);transform:translateX(-120%);transition:transform .70s ease}
+  #draft-restore-overlay .so-choice:hover:before{transform:translateX(120%)}
+  #draft-restore-overlay .so-choice.so-primary{border-color:rgba(201,168,76,.36);background:radial-gradient(circle at 18% 0%,rgba(201,168,76,.175),transparent 36%),radial-gradient(circle at 88% 92%,rgba(93,202,165,.086),transparent 40%),linear-gradient(180deg,rgba(255,255,255,.072),rgba(255,255,255,.026));box-shadow:inset 0 1px rgba(255,255,255,.122),0 30px 66px rgba(0,0,0,.36),0 0 32px rgba(201,168,76,.060)}
+  #draft-restore-overlay .so-choice.so-primary:hover{border-color:rgba(201,168,76,.52);box-shadow:inset 0 1px rgba(255,255,255,.140),0 38px 78px rgba(0,0,0,.42),0 0 40px rgba(201,168,76,.090)}
   </style>
-  <section class="so-overlay-wrap" id="studioOverlayWrap" aria-labelledby="studioOverlayTitle">
-    <div class="so-overlay" role="dialog" aria-modal="true" aria-describedby="studioOverlayDesc">
-      <div class="so-rim" aria-hidden="true"></div>
-      <button class="so-close" id="studioCloseIntro" type="button" aria-label="Close intro and start a new Blueprint">&times;</button>
-      <div class="so-inner">
-        <div class="so-head">
-          <div>
-            <p class="so-eyebrow">Before you enter the Studio</p>
-            <h1 id="studioOverlayTitle">You are about to draft the Blueprint that carries your retirement.</h1>
-            <p class="so-copy" id="studioOverlayDesc">The Studio is where the outline becomes architecture. You will add the account rooms, define the Datum, then test the tension between the life you want and the estate that has to carry it.</p>
+  <section class="overview" id="studioOverlayWrap" aria-labelledby="studioOverlayTitle">
+    <article class="brief" role="dialog" aria-modal="true" aria-describedby="studioOverlayDesc">
+      <header class="brief-header">
+        <div class="brief-header-left">DATUMAE / STUDIO / OVERVIEW</div>
+        <div class="brief-header-right">Blueprint Brief · 00</div>
+        <button class="close" id="studioCloseIntro" type="button" aria-label="Close overview">×</button>
+      </header>
+
+      <div class="brief-body">
+        <section class="brief-intro">
+          <p class="eyebrow">Before you enter the Studio</p>
+          <h1 id="studioOverlayTitle">Your retirement is<br>not a number. It’s a<br><em>structure.</em></h1>
+
+          <p class="brief-copy" id="studioOverlayDesc">
+            The Studio is where your retirement moves from outline to architecture. Build the financial estate,
+            test the forces and decisions that act upon it, see the shape it can support, then align
+            the structure for the life it has to carry.
+          </p>
+
+          <div class="brief-formula">( D + A ) × ( T + U ) = M → ( A + E )</div>
+        </section>
+
+        <aside class="phases" aria-label="Studio journey">
+          <p class="phase-title">The Studio sequence</p>
+          <div class="phase-list">
+            <div class="phase-traveler" aria-hidden="true"></div>
+            <div class="phase">
+              <div class="phase-dot"></div>
+              <div class="phase-num">01</div>
+              <div class="phase-copy">
+                <strong>Build it.</strong>
+                <p>Establish the baseline, accounts and assets that make up the estate.</p>
+              </div>
+            </div>
+
+            <div class="phase shape">
+              <div class="phase-dot"></div>
+              <div class="phase-num">02</div>
+              <div class="phase-copy">
+                <strong>Test it.</strong>
+                <p>Apply spending, obligations, Social Security and pension timing.</p>
+              </div>
+            </div>
+
+            <div class="phase test">
+              <div class="phase-dot"></div>
+              <div class="phase-num">03</div>
+              <div class="phase-copy">
+                <strong>Shape it.</strong>
+                <p>Measure the structure across thousands of possible futures.</p>
+              </div>
+            </div>
+
+            <div class="phase live">
+              <div class="phase-dot"></div>
+              <div class="phase-num">04</div>
+              <div class="phase-copy">
+                <strong>Live it.</strong>
+                <p>Align withdrawal strategy and sustainable retirement spending.</p>
+              </div>
+            </div>
           </div>
-          <aside class="so-status" aria-label="Auth status">
-            <div class="so-status-title">Current status</div>
-            <div class="so-status-value" id="studioStatusValue">Signed out</div>
-            <div class="so-status-note" id="studioStatusNote">You can start a new Blueprint now. Saved Sketches and filed Blueprints require sign in so they can open from the right archive.</div>
-          </aside>
-        </div>
-        <div class="so-roadmap" aria-label="Studio roadmap">
-          <article class="so-step so-gold">
-            <div class="so-step-num">01 / Account rooms</div>
-            <h2>Build the estate.</h2>
-            <p>Add household details, tax base, accounts, assets, expenses, Social Security, pensions, and the capital that will carry retirement.</p>
-          </article>
-          <article class="so-step">
-            <div class="so-step-num">02 / Datum</div>
-            <h2>Derive the target.</h2>
-            <p>Define the annual spend the plan must support. Studio turns that target into a line the estate has to clear, not just a number on a form.</p>
-          </article>
-          <article class="so-step so-orange">
-            <div class="so-step-num">03 / Tension</div>
-            <h2>Resolve the pressure.</h2>
-            <p>Run the plan against market climate, tax drag, withdrawal order, income timing, and shocks. Then see what holds, what stretches, and what needs redesign.</p>
-          </article>
-        </div>
-        <div class="so-cta-grid">
-          <button class="so-choice so-primary" id="studioStartScratch" type="button">
-            <div class="so-choice-kicker">Begin new</div>
-            <div class="so-choice-title">Start from Scratch <span class="so-choice-arrow">&rarr;</span></div>
-            <div class="so-choice-sub">Start a new Blueprint with clean Studio inputs.</div>
-          </button>
-          <button class="so-choice so-blue" id="studioStartSketch" type="button">
-            <div class="so-choice-kicker">Import outline</div>
-            <div class="so-choice-title">Start from Sketch <span class="so-choice-arrow">&rarr;</span></div>
-            <div class="so-choice-sub" id="studioSketchSub">Sign in, open your Sketchbook, choose a saved Sketch, and prefill your Blueprint defaults.</div>
-          </button>
-          <button class="so-choice so-teal" id="studioStartBlueprint" type="button">
-            <div class="so-choice-kicker">Continue filed work</div>
-            <div class="so-choice-title">Start from Blueprint <span class="so-choice-arrow">&rarr;</span></div>
-            <div class="so-choice-sub" id="studioBlueprintSub">Continue from saved Blueprint.</div>
-          </button>
-        </div>
+        </aside>
       </div>
-    </div>
+
+      <footer class="action-dock">
+        <div class="action-meta">
+          <span class="status-light is-out" id="studioStatusLight"></span>
+          <span class="signed is-out" id="studioStatusValue">Signed out</span>
+          <span id="studioStatusNote">Saved Blueprints require <a href="/vault.html?returnTo=%2Fstudio.html" class="dock-signin">sign in</a>.</span>
+          <span class="help">Choose how to enter the Studio.</span>
+        </div>
+
+        <div class="choices">
+          <button class="choice primary" id="studioStartScratch" type="button">
+            <span class="choice-kicker">Begin new</span>
+            <span class="choice-title">Start from Scratch <span class="choice-arrow">→</span></span>
+            <span class="choice-sub">Start a new Blueprint with clean Studio inputs.</span>
+          </button>
+
+          <button class="choice sketch" id="studioStartSketch" type="button">
+            <span class="choice-kicker">Import outline</span>
+            <span class="choice-title">Start from Sketch <span class="choice-arrow">→</span></span>
+            <span class="choice-sub" id="studioSketchSub">Sign in, choose a saved Sketch, and use it to prefill a new Studio run.</span>
+          </button>
+
+          <button class="choice blueprint" id="studioStartBlueprint" type="button">
+            <span class="choice-kicker">Continue filed work</span>
+            <span class="choice-title">Start from Blueprint <span class="choice-arrow">→</span></span>
+            <span class="choice-sub" id="studioBlueprintSub">Sign in, open your Archive, and continue a filed Blueprint.</span>
+          </button>
+        </div>
+      </footer>
+    </article>
   </section>
-  <div class="so-toast" id="studioOverlayToast" role="status" aria-live="polite"></div>
+  <div class="toast" id="studioOverlayToast" role="status" aria-live="polite"></div>
   <script>
   (function() {
     'use strict';
@@ -16934,6 +17162,7 @@
 
     var _toast           = document.getElementById('studioOverlayToast');
     var _statusValue     = document.getElementById('studioStatusValue');
+    var _statusLight     = document.getElementById('studioStatusLight');
     var _statusNote      = document.getElementById('studioStatusNote');
     var _startSketch     = document.getElementById('studioStartSketch');
     var _startBlueprint  = document.getElementById('studioStartBlueprint');
@@ -16953,17 +17182,27 @@
       _signedIn = !!signedIn;
       if (_startSketch)    _startSketch.classList.remove('disabled-cta');
       if (_startBlueprint) _startBlueprint.classList.remove('disabled-cta');
+      // ⛔ CAPTAIN-RULED 2026-08-28, AND THE COLOUR IS PART OF THE RULING: gold IN, red OUT,
+      // and the status dot follows the word. THE SIGN-IN AFFORDANCE MOVED: it used to be a
+      // rectangular .nav-login-btn sitting in the status value; it is now the words 'sign in'
+      // inside the note sentence. A DOCK IS NOT A PLACE FOR A BUTTON-SHAPED OBJECT.
+      // ⚠️ THIS FUNCTION IS THE ONLY PART OF THE OVERLAY SCRIPT THE PORT TOUCHED. The consent
+      // and routing brain below (_scratchReset / _clearCarriedDesign / _startScratchFlow /
+      // dismissOverlay / the X handler / _navDrain) is BYTE-IDENTICAL, deliberately.
       if (_signedIn) {
-        if (_statusValue) _statusValue.textContent = 'Signed in';
-        if (_statusNote)  _statusNote.textContent  = 'Your Sketchbook and Archive are available.';
-        if (_sketchSub)    _sketchSub.textContent    = 'Open your Sketchbook and choose a saved Sketch to prefill your Blueprint defaults.';
-        if (_blueprintSub) _blueprintSub.textContent = 'Open your Archive and continue a filed Blueprint.';
+        if (_statusValue) { _statusValue.textContent = 'SIGNED IN'; _statusValue.className = 'signed is-in'; }
+        // ⛔ THE NOTE IS DROPPED ENTIRELY WHEN SIGNED IN — ruled, not omitted. There is nothing
+        // to say once the archives are reachable, and a replacement sentence would be filler.
+        if (_statusNote)  _statusNote.textContent  = '';
+        if (_sketchSub)    _sketchSub.textContent    = 'Choose a saved Sketch, and use it to prefill a new Studio run.';
+        if (_blueprintSub) _blueprintSub.textContent = 'Open your Archive, and continue a filed Blueprint.';
       } else {
-        if (_statusValue) _statusValue.innerHTML = '<a href="/vault.html?returnTo=%2Fstudio.html" class="nav-login-btn" style="margin-left:0">Sign In</a>';
-        if (_statusNote)  _statusNote.textContent  = 'You can start a new Blueprint now. Saved Sketches and filed Blueprints require sign in so they can open from the right archive.';
-        if (_sketchSub)    _sketchSub.textContent    = 'Sign in, open your Sketchbook, and choose a saved Sketch to prefill your Blueprint defaults.';
+        if (_statusValue) { _statusValue.textContent = 'Signed out'; _statusValue.className = 'signed is-out'; }
+        if (_statusNote)  _statusNote.innerHTML = 'Saved Blueprints require <a href="/vault.html?returnTo=%2Fstudio.html" class="dock-signin">sign in</a>.';
+        if (_sketchSub)    _sketchSub.textContent    = 'Sign in, choose a saved Sketch, and use it to prefill a new Studio run.';
         if (_blueprintSub) _blueprintSub.textContent = 'Sign in, open your Archive, and continue a filed Blueprint.';
       }
+      if (_statusLight) _statusLight.className = 'status-light ' + (_signedIn ? 'is-in' : 'is-out');
     }
     window._studioOverlayApplyAuth = applyAuthState;
 

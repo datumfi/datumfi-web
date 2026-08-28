@@ -35,9 +35,24 @@ const ROOT = path.resolve(__dirname, '..');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
 
 const LYING = process.argv.includes('--lyingtoast');
+
+/* ── THE CARVE-OUT'S OWN GUARD (Captain-required, 2026-08-28) ────────────────────────────────
+ * The observer below SKIPS anything inside #studioOverlayWrap, because the overlay port put a
+ * static briefing sentence there that begins with the word "Saved" and it was being recorded as
+ * a toast. That exclusion is SAFE ONLY BECAUSE OF A FACT ABOUT TODAY'S DOM: every real toast is
+ * created OUTSIDE that subtree — studio.html's toast() fallback does document.body.appendChild,
+ * and #studioOverlayToast is a SIBLING of the wrap, not a child.
+ * ⛔ MOVE THE TOAST INSIDE THE WRAP TOMORROW AND THIS GATE GOES BLIND RATHER THAN RED, AND
+ * NOTHING ANNOUNCES IT. A GUARD DERIVED FROM A MEASUREMENT INHERITS THAT MEASUREMENT'S BLIND
+ * SPOT. So TOAST 0 asserts the STRUCTURE THE EXCLUSION DEPENDS ON, not the current arrangement:
+ * it converts a silent blinding into a loud red. --toastinside is its red-first proof. */
+const TOASTINSIDE = process.argv.includes('--toastinside');
+const A_TOPO = '  </section>\n  <div class="toast" id="studioOverlayToast" role="status" aria-live="polite"></div>';
+const M_TOPO = '  <div class="toast" id="studioOverlayToast" role="status" aria-live="polite"></div>\n  </section>';
 const A_QS = "        DatumBlueprint.save(bp, { blueprint_id: meta.id, onResult: saveOutcomeToast(meta.name ? 'Saved to ' + meta.name : 'Saved.') });";
 const M_QS = "        DatumBlueprint.save(bp, { blueprint_id: meta.id });\n        toast(meta.name ? 'Saved to ' + meta.name : 'Saved.');";
 let htmlDiffers = false;
+let topoPoisoned = false;
 
 let pass = 0, fail = 0; const lines = [];
 const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL ') + m); };
@@ -55,6 +70,13 @@ const server = http.createServer((req, res) => {
     const out = orig.replace(A_QS, M_QS);
     htmlDiffers = (out !== orig);
     body = Buffer.from(out, 'utf8');
+  }
+  if (p === '/studio.html' && TOASTINSIDE) {
+    const orig = body.toString('utf8');
+    const n = orig.split(A_TOPO).length - 1;
+    if (n !== 1) throw new Error(`anchor toast-topology: expected exactly 1 occurrence, found ${n}`);
+    body = Buffer.from(orig.replace(A_TOPO, M_TOPO), 'utf8');
+    topoPoisoned = true;
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
   res.end(body);
@@ -127,6 +149,21 @@ const bpFix = () => ({
         recs.forEach(function (r) {
           Array.prototype.forEach.call(r.addedNodes, function (n) {
             if (!n || n.nodeType !== 1 || n.id === 'datum-save-pill') return;
+            /* ⛔ THE ENTRY OVERLAY IS NOT A TOAST SURFACE, AND UNTIL 2026-08-28 NOTHING SAID SO.
+               This observer is installed by addInitScript, so it fires for PARSER-INSERTED nodes as
+               well as scripted ones. The overlay port gave the dock the Captain-authored sentence
+               "Saved Blueprints require sign in." — a STATIC briefing line that starts with the word
+               Saved — and it was recorded as a toast at parse time, reddening TOAST 2/3/4 on a run
+               where the product behaved perfectly. THE COPY IS NOT THE DEFECT: this file's own header
+               says it asserts "only what the USER SEES: the toast text", and a briefing sentence is
+               not toast text. The population was over-broad and a new string exposed it.
+               ⚠️ THIS EXCLUSION CANNOT BLIND THE INSTRUMENT, AND THAT IS STRUCTURAL, NOT LUCKY: every
+               real toast is created OUTSIDE this subtree — the fallback in studio.html's toast() does
+               document.body.appendChild(), and the overlay's own #studioOverlayToast is a SIBLING of
+               #studioOverlayWrap, not a child. TOAST 1 (the live-save control) is what proves it: if
+               this narrowing ever hid a real toast, the control reds and every green below it is
+               declared meaningless by design. */
+            if (n.closest && n.closest('#studioOverlayWrap')) return;
             var t = (n.textContent || '').trim();
             if (/^Saved|^Not saved|^Still trying|^Save failed|^Overwrote/.test(t) && window.__toasts.indexOf(t) < 0) window.__toasts.push(t);
           });
@@ -152,12 +189,35 @@ const bpFix = () => ({
 
     const toasts = await page.evaluate(() => window.__toasts.slice());
     const stored = d1.rows['blueprint/' + BP_ID].payload.portfolio_total;
+    /* TOAST 0's measurement, taken on the SAME page the toasts were recorded on and BEFORE the
+       context is closed — the first version of this read sat after ctx.close() and crashed the
+       gate outright. A crash is not a red. */
+    const topo = await page.evaluate(() => {
+      const wrap = document.getElementById('studioOverlayWrap');
+      const t = document.getElementById('studioOverlayToast');
+      return {
+        wrapPresent: !!wrap,
+        toastPresent: !!t,
+        toastInsideWrap: !!(wrap && t && wrap.contains(t))
+      };
+    });
     await ctx.close();
-    return { toasts: toasts, stored: stored, rowPresent: row };
+    return { toasts: toasts, stored: stored, rowPresent: row, topo: topo };
   }
 
   const live = await run('live');
   lines.push(`      [LIVE]   toasts=${JSON.stringify(live.toasts)}  server=${live.stored}`);
+  /* ── TOAST 0 · THE CARVE-OUT'S PRECONDITION ────────────────────────────────────────────────
+     The observer skips #studioOverlayWrap. That is only safe while no real toast lives inside
+     it. THIS LEG ASSERTS THE REQUIREMENT, NOT THE ARRANGEMENT: move #studioOverlayToast into
+     the wrap and this reds LOUDLY, instead of the gate quietly going blind to every toast.
+     Both halves are asserted — the elements must EXIST (an absent wrap would make "not a
+     descendant" vacuously true, which is the empty-set green this estate keeps meeting). */
+  ok(live.topo.wrapPresent && live.topo.toastPresent,
+    `TOAST 0a: the overlay wrap and the toast element BOTH exist (wrap=${live.topo.wrapPresent} toast=${live.topo.toastPresent}) — without both, 0b is vacuous`);
+  ok(live.topo.wrapPresent && live.topo.toastPresent && live.topo.toastInsideWrap === false,
+    `TOAST 0b: #studioOverlayToast is NOT inside #studioOverlayWrap — the exclusion below cannot hide a real toast (inside=${live.topo.toastInsideWrap})`);
+
   ok(live.toasts.some((t) => t.indexOf('Saved to The Harbour Plan') === 0) && live.stored === 777000,
     `TOAST 1 CONTROL: a LIVE save still shows the success toast and the write lands (server=${live.stored}) — if this reds, every green below is meaningless`);
 
@@ -194,9 +254,14 @@ const bpFix = () => ({
     if (!htmlDiffers) { console.log('MUTATION DID NOT APPLY — this run proves nothing. Fix the anchor.'); process.exit(2); }
   }
   console.log('\n' + lines.join('\n'));
-  console.log(`\n${LYING ? 'MUTATED[lyingtoast]' : 'CLEAN'}  GREEN ${pass} / RED ${fail}`);
-  if (LYING) {
-    console.log(fail > 0 ? 'RED-FIRST OK — the mutation BIT.' : 'RED-FIRST FAILED — the lying toast was restored and everything still passed.');
+  /* ⛔ THE LABEL MUST NAME THE MUTATION THAT ACTUALLY RAN. Until 2026-08-28 this line read the
+     LYING flag alone, so a --toastinside run printed "CLEAN" while a leg was red — a mislabelled
+     verdict in the one file whose entire subject is refusing to say a comforting thing that is
+     not true. A VERDICT LINE IS A SENTENCE THE GATE SAYS ABOUT ITSELF. */
+  const MUT = [LYING && 'lyingtoast', TOASTINSIDE && 'toastinside'].filter(Boolean);
+  console.log(`\n${MUT.length ? 'MUTATED[' + MUT.join('+') + ']' : 'CLEAN'}  GREEN ${pass} / RED ${fail}`);
+  if (MUT.length) {
+    console.log(fail > 0 ? 'RED-FIRST OK — the mutation BIT.' : 'RED-FIRST FAILED — the mutation was applied and everything still passed.');
     process.exit(fail > 0 ? 0 : 1);
   }
   process.exit(fail === 0 ? 0 : 1);

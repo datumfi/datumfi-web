@@ -126,13 +126,33 @@ async function clickAndGetUrl(page, btnId) {
       visible: !!(w && w.style.display !== 'none' && !w.classList.contains('dismissed')),
       sketchDisabled: !!(sk && sk.classList.contains('disabled-cta')),
       bpDisabled: !!(bp && bp.classList.contains('disabled-cta')),
-      signInLink: !!(sv && /Sign In/i.test(sv.textContent || ''))
+      statusReadsOut: !!(sv && /Signed out/i.test(sv.textContent || '')),
+      statusIsRed: !!(sv && sv.classList.contains('is-out')),
+      // ⛔ THE SIGN-IN AFFORDANCE MOVED (Captain-ruled 2026-08-28) and this leg moved WITH it.
+      // It used to be a rectangular .nav-login-btn inside the status value; it is now the words
+      // 'sign in' inside the note sentence. 🔑 THE LEG WAS RE-POINTED, NOT DELETED — deleting it
+      // would have left a GREEN OVER AN ABSENT AFFORDANCE, which is the exact defect it exists
+      // to catch. It is also STRICTER than the leg it replaces: the old one accepted any text
+      // matching /Sign In/, this one requires a real anchor AND the right destination.
+      signInAffordance: (function(){
+        var n = document.getElementById('studioStatusNote');
+        var a = n && n.querySelector('a');
+        return { present: !!a,
+                 text: a ? (a.textContent||'').trim() : null,
+                 href: a ? (a.getAttribute('href')||'') : null };
+      })()
     };
   });
   check('(a) signed-out: overlay visible', outState.visible);
   check('(a) signed-out: Sketch option actionable (not disabled)', !outState.sketchDisabled);
   check('(a) signed-out: Blueprint option actionable (not disabled)', !outState.bpDisabled);
-  check('(a) signed-out: status shows Sign In link', outState.signInLink);
+  check('(a) signed-out: status value reads "Signed out"', outState.statusReadsOut);
+  check('(a) signed-out: status value carries the red state class', outState.statusIsRed);
+  check('(a) signed-out: the note carries a real sign-in ANCHOR (not just the words)',
+        outState.signInAffordance.present, outState.signInAffordance.text);
+  check('(a) signed-out: that anchor routes to the vault and comes BACK to the Studio',
+        outState.signInAffordance.href === '/vault.html?returnTo=%2Fstudio.html',
+        outState.signInAffordance.href);
 
   // Correct signed-out behavior = goes through sign-in (vault.html, which then
   // redirects to the Clerk hosted /sign-in) targeting the right archive — NOT a

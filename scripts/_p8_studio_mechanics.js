@@ -271,7 +271,14 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   check('Item5: overlay auto-hides on signed-in+seen load', !(await visible(page, 'studioOverlayWrap')));
   await page.click('.return-home'); await page.waitForTimeout(400);
   check('Item5: reopen works even when auto-hidden', await visible(page, 'studioOverlayWrap'));
-  check('Item5: reopen shows live Signed in', /Signed in/.test(await page.evaluate(() => (document.getElementById('studioStatusValue') || {}).textContent || '')));
+  /* ⚠️ CASE-INSENSITIVE SINCE 2026-08-28, AND THE CASE WAS NEVER THE CLAIM. The overlay port made the
+     signed-in status read 'SIGNED IN' (Captain-ruled: gold in, red out), and this leg was the ONLY one
+     in the suite still matching it case-SENSITIVELY — _p7_studio_overlay_parity:171 has asserted the
+     same fact with /Signed in/i all along, and stayed green through the same change.
+     🔑 TWO GATES ASSERTING ONE FACT TO DIFFERENT PRECISIONS IS A COIN FLIP ON WHICH ONE YOU READ.
+     Discriminating power is unchanged: /Signed in/i still fails on 'Signed out', which is the state
+     this leg exists to rule out. */
+  check('Item5: reopen shows live Signed in', /Signed in/i.test(await page.evaluate(() => (document.getElementById('studioStatusValue') || {}).textContent || '')));
   await ctx.close();
 
   // ── Item 4 — MM/YYYY age inputs ──
