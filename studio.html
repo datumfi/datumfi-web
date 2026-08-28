@@ -13625,7 +13625,7 @@
             let apiResult = null, timedOut = false;
             try {
               apiResult = await Promise.race([
-                fetch('https://api.datumfi.com/api/calculate', {
+                fetch('/api/calculate', {
                   method: 'POST', headers: {'Content-Type': 'application/json'},
                   body: JSON.stringify(req)
                 }).then(function(r) {
@@ -13691,7 +13691,7 @@
           if (!req) { resetOverlayState(); return; } // STU-022: custom_weights validation failed
           let apiResult = null, timedOut = false, apiSettled = false;
 
-          fetch('https://api.datumfi.com/api/calculate', {
+          fetch('/api/calculate', {
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(req)
           }).then(function(r) {
@@ -15713,7 +15713,7 @@
   (function() {
     'use strict';
 
-    var API_BASE    = 'https://api.datumfi.com';
+    var API_BASE    = '';   // SAME-ORIGIN: the SS-matrix calls go via the Pages proxy that holds the engine token
     var MAX_POLLS   = 60;
     var _currentJobId = null;
 

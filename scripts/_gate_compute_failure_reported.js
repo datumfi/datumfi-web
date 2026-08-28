@@ -72,7 +72,14 @@ const check = (id, label, pass, detail) => { results.push({ id, label, pass, det
         `earliest=${Math.min(...callIdx)} def=${defIdx}`);
 
   /* ── L3 REGRESSION ─────────────────────────────────────────────────────────── */
-  const calcBlocks = s.split("fetch('https://api.datumfi.com/api/calculate'").slice(1)
+  /* ⚠️ ANCHOR MOVED 2026-08-27 — the call sites are SAME-ORIGIN now. The browser no longer
+     names api.datumfi.com: the engine is reached through the Pages Function at
+     functions/api/calculate.js, which is the sole holder of the engine token. THE OLD ANCHOR
+     WOULD NOT HAVE FAILED LOUDLY — split() on an absent literal yields ZERO blocks, so L3b
+     ("no call site still uses the bare r.ok swallow") would have gone GREEN OVER AN EMPTY SET
+     while L3a caught the count. A green whose population is empty is this suite's oldest trap;
+     L3a is the leg that keeps L3b honest, which is exactly why it asserts the count first. */
+  const calcBlocks = s.split("fetch('/api/calculate'").slice(1)
     .map(b => b.slice(0, 700));
   const bare = calcBlocks.filter(b => /r\.ok \? r\.json\(\) : null/.test(b)).length;
   check('L3a', 'two /api/calculate call sites found', calcBlocks.length === 2, `sites=${calcBlocks.length}`);

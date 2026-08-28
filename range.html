@@ -827,7 +827,7 @@
       if (reqRaw) {
         try {
           var req = JSON.parse(reqRaw);
-          fetch('https://api.datumfi.com/api/calculate', {
+          fetch('/api/calculate', {
             method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(req)
           }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
             .then(function(data) {
@@ -957,7 +957,7 @@
 
     // ─── callAPI (ported from index.html) ─────────────────────────────────────
     function callAPI(req) {
-        return fetch('https://api.datumfi.com/api/calculate', {
+        return fetch('/api/calculate', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(req)
@@ -1351,7 +1351,7 @@
         try {
           var req = JSON.parse(reqRaw);
           req.market_outlook = outlook;
-          fetch('https://api.datumfi.com/api/calculate', {
+          fetch('/api/calculate', {
             method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(req)
           }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
             .then(function(data) {
