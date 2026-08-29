@@ -27,6 +27,12 @@
   --paint-verdigris-light: #8EDAC0;
   --paint-brass:          #C9A84C;
   --paint-brass-deep:     #B8952F;
+  /* ⭐ ADDED 2026-08-28 (Captain-ruled). The Studio's design source carries a BRIGHTER gold than
+     brass and the Captain chose it on LEGIBILITY grounds, not taste. It is a -light sibling rather
+     than a new material because brass already had a -deep and verdigris already had both — REUSING
+     THE MODIFIER CONVENTION INSTEAD OF COINING A COLOUR-WORD KEEPS THE PAINT TIER MATERIAL-NAMED,
+     which is the whole reason a recolour cannot make a paint name into a lie. */
+  --paint-brass-light:    #D5AD63;
   --paint-chalk:          #ffffff;                    /* what a draughtsman marks with on a dark ground */
   --paint-red-lead:       #e24b4a;
   /* ⛔⛔ OPAQUE SINCE 2026-08-19, AND THE LAW IT NOW OBEYS WAS ALREADY WRITTEN THREE LINES BELOW.
@@ -40,6 +46,8 @@
    * 🔑 THE ALPHA DID NOT VANISH, IT MOVED TO WHERE IT ALWAYS BELONGED: --grid-line derives its own
    *    5% below, so the ONE consumer that wanted a 5% blue still gets exactly that. */
   --paint-cyanotype:      #64B4FF;                    /* blueprint blue — the ruling of the paper */
+  /* ⭐ ADDED 2026-08-28 (Captain-ruled), same reason and same convention as --paint-brass-light. */
+  --paint-cyanotype-light: #7AC0FF;
   /* proto's drafting-grid major with THE ALPHA STRIPPED OUT. 🔑 A PAINT IS A PIGMENT; TRANSPARENCY
    * IS HOW A SURFACE *USES* IT. Storing rgba(42,78,104,.16) here would have made every future
    * opacity tweak a recolour. (MASTER SPEC §76.1) */
@@ -212,15 +220,23 @@
    * formula's grouping. ⛔ THE TONE BELONGS TO THE POSITION, NOT TO THE LABEL — which is why the
    * Captain's 02/03 label swap left these untouched. The markup carries `data-tone` and the CSS
    * reads it; a colour inlined beside a label would have travelled with it.
-   * ⚠️ 03 AND 04 REUSE PAINTS WE ALREADY OWN RATHER THAN IMPORTING THE DESIGN FILE'S NEAR-DUPLICATES
-   *    (its blue #7ac0ff vs our cyanotype #64B4FF; its gold #d5ad63 vs our brass #C9A84C). Same
-   *    hues, and importing both would have left the palette with two blues and two golds for no
-   *    design reason. ⛔ STATED SO IT IS A CHOICE, NOT A DRIFT: if the exact screenshot values are
-   *    wanted, that is two more paints and one ruling — it is not a thing to discover later. */
+   * ⚠️ ~~03 AND 04 REUSE PAINTS WE ALREADY OWN RATHER THAN IMPORTING THE DESIGN FILE'S
+   *    NEAR-DUPLICATES... if the exact screenshot values are wanted, that is two more paints and one
+   *    ruling — it is not a thing to discover later.~~ STRUCK 2026-08-28, NOT DELETED: THE EXACT
+   *    SCREENSHOT VALUES WERE WANTED. The Captain ruled for the brighter blue and gold on LEGIBILITY
+   *    grounds, so 03 and 04 now point at --paint-cyanotype-light and --paint-brass-light.
+   *    ⭐⭐ THE PRIOR NOTE IS WHY THIS WAS ONE RULING INSTEAD OF AN ARCHAEOLOGY EXPEDITION: it priced
+   *    the decision ("two more paints and one ruling") months before anyone asked, and it was right
+   *    to the paint. A DOCUMENTED NON-DECISION IS AN ASSET; AN UNDOCUMENTED ONE IS A DRIFT NOBODY
+   *    CAN DATE.
+   *    ⛔ AND IT CLOSED A FORK THAT HAD ALREADY OPENED. The entry overlay shipped 2026-08-27 with its
+   *    own scoped hex, so BUILD/TEST matched the movement column while SHAPE/LIVE did not — two
+   *    colours for one pillar on one page. Repointing here is what makes the two surfaces agree,
+   *    which is the POINT of the change, not a side effect of it. */
   --movement-1:  var(--paint-seafoam);
   --movement-2:  var(--paint-amethyst);
-  --movement-3:  var(--paint-cyanotype);
-  --movement-4:  var(--paint-brass);
+  --movement-3:  var(--paint-cyanotype-light);
+  --movement-4:  var(--paint-brass-light);
 
   /* ⛔ --grid-line IS DELIBERATELY *NOT* REPOINTED AT SEAFOAM, AND THIS IS A RULING COLLISION I AM
    * RESOLVING IN THE OPEN RATHER THAN SILENTLY. proto2's minor grid is teal at 4.5%; ours is

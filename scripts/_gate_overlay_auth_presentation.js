@@ -129,9 +129,29 @@ function ok(id, msg, cond, observed) {
   else      { fail++; console.log(`FAIL ${id} · ${msg}   [observed: ${observed}]`); }
 }
 
-/* The ruled colours, read from the mock's palette and pinned here as RGB because that is what
- * getComputedStyle returns. --red #e27d61 / --gold #d5ad63. */
-const RED  = 'rgb(226, 125, 97)';
+/* The ruled colours, pinned here as RGB because that is what getComputedStyle returns.
+ *
+ * ⚠️ RED CHANGED 2026-08-28 FROM rgb(226,125,97) (#e27d61) TO rgb(226,75,74) (#e24b4a), AND THE
+ * EARLIER RULING IS SUPERSEDED, NOT FORGOTTEN. The Captain first ruled #e27d61 — the design
+ * source's own red — when the question was simply "which red does the dock use". The TIER question
+ * had not been asked yet. It was asked the next day, and the answer changed the value:
+ *   ⭐ --red IS A ROLE, NOT A PAINT, AND THE DONOR PROVES IT — the design source redefines it per
+ *     theme (#e27d61 dark, #b65340 / #a84f3d / #b85c46 light). A PAINT HOLDS ONE VALUE; A THING
+ *     THAT CHANGES WITH THE THEME IS A ROLE BY DEFINITION. The role is "the negative state".
+ *   ⭐ AND THE DONOR AND THIS ESTATE ALREADY AGREE ON THAT MEANING. In the mock --red has exactly
+ *     ONE consumer (Studio Mock:457, `.field strong.red`, a negative money value) — the same job as
+ *     our --debt. They disagreed only on the SHADE.
+ *   ⛔ THE SHADE WAS NOT WORTH A SECOND ROLE. Honouring #e27d61 meant either repointing --debt —
+ *     486 reads across 31 files, to match one status dot — or minting a new role whose only job is
+ *     to sit beside an existing one that means the same thing. TWO ROLES FOR ONE MEANING IS THE
+ *     FORK L48 EXISTS TO PREVENT, and one we chose deliberately would be worse than one inherited.
+ * 🔑 THE DOCK FOLLOWS THE ESTATE'S NEGATIVE ROLE BY RULING, NOT BY ACCIDENT. A constant that
+ * changed without a reason beside it reads as a drift to the next person; this one has a reason.
+ * ⛔ THIS GATE CAUGHT THE CHANGE THAT PRODUCED THIS NOTE. It was written to pin a Captain's ruling
+ * against a future restyle, and the first thing it stopped was the palette work one session later.
+ * DO NOT "FIX" A RED HERE BY EDITING THE CONSTANT TO MATCH WHAT THE PAGE HAPPENS TO RENDER — that
+ * is making the instrument agree with the change, which is the one thing it exists not to do. */
+const RED  = 'rgb(226, 75, 74)';
 const GOLD = 'rgb(213, 173, 99)';
 
 /* ⛔ THE REAL CLERK SDK MUST BE BLOCKED OR THE FIXTURE IS NOT THE FIXTURE. Measured on this

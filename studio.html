@@ -16886,9 +16886,25 @@
         It was a late patch on the OLD shell (studio.html:16854) that shrank it to ~918px
         effective. A fixpoint keyed on the NEW selectors would never have seen it, because it
         names the OLD one — it is deleted with the block it patched. */
+  /* ⛔ EVERY VALUE BELOW IS NOW A READ, NOT A LITERAL. This block shipped on 2026-08-27 holding SEVEN
+     RAW HEX DECLARATIONS, and they were a real fork rather than a tidiness complaint: BUILD and TEST
+     happened to match the movement column while SHAPE and LIVE did not, so one pillar wore two
+     colours on one page. MEASURED, then closed by ruling.
+     ⭐ FIVE MAP TO PAINTS THE ESTATE ALREADY OWNED — three at the IDENTICAL hex (seafoam #79DEC7,
+     amethyst #8178D7, verdigris #5DCAA5) and two to paints added for this ruling.
+     ⭐ TWO ARE ROLES, NOT PAINTS, AND THE DONOR ITSELF PROVES IT: both --white and --red are
+     REDEFINED PER THEME in the design source. A PAINT HOLDS ONE VALUE; A THING THAT CHANGES WITH THE
+     THEME IS A ROLE BY DEFINITION. --white is "primary text" and --red is "the negative state".
+     ⚠️ --red READS THE EXISTING NEGATIVE ROLE (#e24b4a) RATHER THAN THE DONOR'S #e27d61, AND THAT IS
+     A DELIBERATE, MEASURED TRADE: var(--danger-red) is read 486 times across 31 files, so honouring
+     the donor's softer red would have recoloured every debt figure and error state in the estate to
+     match one dock. The overlay's signed-out status reads very slightly more scarlet as a result.
+     ⛔ THE LOCAL NAMES STAY. Renaming them to --paint-* inside this block would put theme-variable
+     values in the one tier that must never move, and would break 39 reads for zero gain. */
   #studioOverlayWrap,#studioOverlayToast{
-    --teal:#79dec7;--teal2:#5dcaa5;--gold:#d5ad63;--purple:#8178d7;--blue:#7ac0ff;
-    --red:#e27d61;--white:#f2f5f2;--accent:var(--teal);
+    --teal:var(--paint-seafoam);--teal2:var(--paint-verdigris);--gold:var(--paint-brass-light);
+    --purple:var(--paint-amethyst);--blue:var(--paint-cyanotype-light);
+    --red:var(--danger-red);--white:var(--text);--accent:var(--teal);
     --serif:"Fraunces",Georgia,serif;--mono:"DM Mono","Courier New",monospace;
     --sans:"DM Sans",Arial,sans-serif;
   }
@@ -17054,8 +17070,10 @@
   }
   /* ── AUTH STATE ─ Captain-ruled 2026-08-28. The mock never had a signed-in state to style
      (it hard-codes isSignedIn=false at row 5766), so these two states are a ruling, not a
-     transcription. Gold in, RED out — and the dot follows the word. --red is the mock's own
-     #e27d61; no new colour is introduced. */
+     transcription. Gold in, RED out — and the dot follows the word.
+     ⚠️ AMENDED 2026-08-28: --red no longer holds the donor's #e27d61. It reads the estate's negative
+     role (var(--danger-red), #e24b4a) — see the palette note above for the 486-read reason. The
+     RULING is unchanged (gold in, red out, the dot follows); only the red's SOURCE moved. */
   #studioOverlayWrap .action-meta .signed.is-in{color:var(--gold)}
   #studioOverlayWrap .action-meta .signed.is-out{color:var(--red)}
   #studioOverlayWrap .status-light.is-in{background:var(--gold);box-shadow:0 0 9px rgba(213,173,99,.25)}
