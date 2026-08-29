@@ -1142,10 +1142,33 @@
   }
   .journey-cue span { color: #a7b3b8; }
   .journey-cue i { font-style: normal; color: rgba(213,173,99,.58); }
+  /* ⛔ THE NARROW END. MEASURED 2026-08-28, CAPTAIN-REPRODUCED FIRST: with the donor's flat
+     `gap:18px` and `font-size:10.2px`, the four labels are 244.4px and the row's INTRINSIC MINIMUM
+     is 302.4px (244.4 + 3x18 + 4px padding). The panel's content box is its width minus 80px of
+     --panel-pad-x, so the row stops fitting below a 380px panel and the resizer allows 340
+     (studio-panel-resize.js:50). At 340 the last label overran the content edge by 40.5px and sat
+     on the divider.
+     ⚠️ IT DOES NOT WRAP, AND THAT IS WHY IT WAS EASY TO MISS: white-space is nowrap, so a row that
+     cannot shrink OVERFLOWS instead. The first probe here checked `wraps === false`, saw false, and
+     reported a graceful degradation. 🔑 ABSENCE OF WRAP IS NOT EVIDENCE OF FITTING — an instrument
+     that can only detect the failure mode that cannot happen reports silence as success.
+     ⭐ BOTH VALUES SCALE WITH THE PANEL, KEYED ON --studio-panel-w, WHICH THE RESIZER ALREADY WRITES
+     TO documentElement IN px (studio-panel-resize.js:122). No resize handler exists and none is
+     needed — the same reason the re-spacing itself needs none.
+     ⚠️ TWO PROPERTIES, NOT ONE, AND THE ARITHMETIC FORCED IT: at 9.2px the labels are 220.5px, so
+     with the gap still at 18 the row needs 278.5px in a 260px box and STILL overflows. Holding the
+     gap at 18 would have required an 8.4px font. Font and gap move together or neither works.
+     ⛔ THE AUTHORED LETTER-SPACING (.105em) IS UNTOUCHED — it is the character of this mono row, and
+     the alternative fix (cutting it to .03em, a 71% reduction) rewrites the look to save a size step.
+     ⭐ ABOVE A 420px PANEL NOTHING CHANGES: both clamps sit at their donor values, so the wide view
+     is byte-for-byte the ported design and only the broken end moves. */
   .journey-cue {
     width: 100%; display: flex; align-items: center; justify-content: space-between;
-    gap: 18px; margin: 31px 0 20px; padding: 0 2px;
-    font: 600 10.2px/1 var(--font-mono); letter-spacing: .105em; text-transform: uppercase;
+    gap: clamp(12px, calc(12px + (var(--studio-panel-w, 480px) - 340px) * 0.075), 18px);
+    margin: 31px 0 20px; padding: 0 2px;
+    font-family: var(--font-mono); font-weight: 600; line-height: 1;
+    font-size: clamp(9.2px, calc(9.2px + (var(--studio-panel-w, 480px) - 340px) * 0.0125), 10.2px);
+    letter-spacing: .105em; text-transform: uppercase;
     color: rgba(247,249,248,.94); white-space: nowrap;
   }
   .journey-cue span { color: rgba(247,249,248,.94); }
