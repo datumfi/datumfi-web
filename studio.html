@@ -17100,7 +17100,14 @@
   #studioOverlayWrap .action-meta .signed.is-in{color:var(--gold)}
   #studioOverlayWrap .action-meta .signed.is-out{color:var(--red)}
   #studioOverlayWrap .status-light.is-in{background:var(--gold);box-shadow:0 0 9px rgba(213,173,99,.25)}
-  #studioOverlayWrap .status-light.is-out{background:var(--red);box-shadow:0 0 9px rgba(226,125,97,.30)}
+  /* ⛔ THE GLOW FOLLOWS THE FILL. The 2026-08-28 amendment above moved --red off the donor's
+     #e27d61 and onto the estate's negative role — but only the `background` was updated; this
+     `box-shadow` kept the superseded shade, so the dot and its halo were two different reds on the
+     live site. A ruling written at the TOKEN layer cannot reach a LITERAL sitting beside it, which
+     is the whole argument for routing paint through roles. Same alpha, same geometry — only the
+     hue is corrected, to the red the fill has been rendering since that amendment.
+     Guarded by scripts/_gate_status_light_glow.js. */
+  #studioOverlayWrap .status-light.is-out{background:var(--red);box-shadow:0 0 9px rgba(226,75,74,.30)}
   /* the inline sign-in affordance. ⛔ AN AFFORDANCE PROVEN ONLY BY BEING HIT: it must read as
      clickable without becoming a button. Inherits the dock's own colour, carries a quiet rule
      underneath, and resolves to the accent on hover — no new colour, no rectangle. */
