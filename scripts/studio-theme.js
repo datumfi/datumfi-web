@@ -86,6 +86,12 @@
 
   function setSiteTheme(theme, persist) {
     var light = theme === 'light';
+    /* ⛔ BOTH ELEMENTS, AND THE <html> ONE IS NOT DECORATION. The PAINT tokens are declared at
+       :root; a custom property is substituted where it is DECLARED, so a paint set on <body> is
+       already too late and the roles keep :root's dark values. Measured 2026-08-29 — setting the
+       paint on body.light-mode moved NOTHING on screen. The donor's `body.light-mode` selectors
+       need the body class; the paint tier needs the html one. Drop either and the theme half-lands. */
+    document.documentElement.classList.toggle('light-mode', light);
     document.body.classList.toggle('light-mode', light);
 
     var meta = document.querySelector('meta[name="theme-color"]');

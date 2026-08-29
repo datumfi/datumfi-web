@@ -25,6 +25,7 @@
  *   --strip-css      the donor's first toggle rule is removed    -> REDS L1b ONLY
  *   --restore-quirk  the donor's paper re-default is restored    -> REDS L6  ONLY
  *   --icon-quirk     the retired V30 moon rule is restored       -> REDS L7  ONLY
+ *   --nolight        the light-mode CSS block is disarmed        -> REDS L8  ONLY
  *   --oneway-quirk   the donor's one-way coupling is restored    -> REDS L3e + L3g
  * SIX controls; FOUR red sets are SINGLETONS and all six are DISTINCT. Stated
  * rather than claimed: L3 and L5 share a control because persistence cannot be observed without
@@ -46,6 +47,7 @@ const STRIP_CSS     = process.argv.includes('--strip-css');
 const RESTORE_QUIRK = process.argv.includes('--restore-quirk');
 const ICON_QUIRK    = process.argv.includes('--icon-quirk');
 const ONEWAY_QUIRK  = process.argv.includes('--oneway-quirk');
+const NOLIGHT       = process.argv.includes('--nolight');
 
 /* The Captain's own storage keys, verbatim from the design donor. NOT ours to rename. */
 const KEY_SITE  = 'datumae-studio-site-theme-v31';
@@ -57,6 +59,7 @@ const A_HANDLER = "t.closest('[data-theme-toggle]')";
 const A_BOOT    = "  if (p === 'light') document.body.classList.add('canvas-light');";
 const A_MOBCSS  = '  .theme-toggle-mobile { display: flex;';
 const A_REVERT  = '} else if (!light && paperLight && paperWasAuto()) {';
+const A_LIGHTCSS = '  background-color:#f3f1ed !important;';
 
 let pass = 0, fail = 0; const lines = [];
 const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL ') + m); };
@@ -85,6 +88,14 @@ const server = http.createServer((req, res) => {
   if (ICON_QUIRK && /studio\.html$/.test(p)) {
     body = Buffer.from(mutate(body.toString('utf8'), A_MOBCSS,
       '  body.canvas-light .moon-icon { display:block; }' + String.fromCharCode(10) + A_MOBCSS, 'A_MOBCSS'), 'utf8');
+  }
+  /* ⛔ SURGICAL, AND THE FIRST VERSION WAS NOT. It commented out the whole light block, which left an
+     unbalanced comment, ate the rules after it and broke the diagnostics modal's display:none — the
+     gate then timed out clicking through an invisible overlay. A CONTROL THAT BREAKS MORE THAN ITS
+     TARGET PROVES NOTHING ABOUT ITS TARGET. This swaps ONE value back to the dark field and leaves
+     the stylesheet valid. */
+  if (NOLIGHT && /studio\.html$/.test(p)) {
+    body = Buffer.from(mutate(body.toString('utf8'), A_LIGHTCSS, '  background-color:#091221 !important;', 'A_LIGHTCSS'), 'utf8');
   }
   if (ONEWAY_QUIRK && /studio-theme\.js$/.test(p)) {
     body = Buffer.from(mutate(body.toString('utf8'), A_REVERT,
@@ -277,6 +288,45 @@ const server = http.createServer((req, res) => {
   ok(ic.paper === true && ic.light === false && ic.sun !== 'none' && ic.moon === 'none',
     'L7 · ICON INDEPENDENCE: a light CANVAS leaves the nav icon reporting the SITE [observed: site '
     + ic.light + ', paper ' + ic.paper + ', sun ' + ic.sun + ', moon ' + ic.moon + ']');
+
+  /* ── L8 · THE THEME ACTUALLY MOVES THE PAGE ──────────────────────────────────────────────────
+     ⛔ WITHOUT THIS LEG THE WHOLE GATE IS AN EMPTY GREEN FOR THIS COMMIT: every other leg proves the
+     CONTROL works, and a control that works over a page that never changes colour is exactly the
+     product the last commit shipped ON PURPOSE. This one asserts the claim this commit actually makes.
+     ⭐ ASSERTED AS A RELATIONSHIP, NOT A CONSTANT: light must be LIGHTER than dark on the same
+     surfaces. Pinning #efede8 would have to be edited every time the Captain retunes a value, and an
+     instrument you must edit to keep green is one that will be edited to agree with a defect. */
+  const lum = (c) => { const m = String(c).match(/[0-9.]+/g); return m && m.length >= 3
+    ? (0.2126 * +m[0] + 0.7152 * +m[1] + 0.0722 * +m[2]) : null; };
+  const surfaces = () => page.evaluate(() => {
+    const g = (sel, prop) => { const e = document.querySelector(sel); return e ? getComputedStyle(e)[prop] : null; };
+    /* ⚠️ backgroundColor IS THE WRONG PROPERTY FOR THE NAV AND THE CARDS and the first version of
+       this leg used it: both paint with a GRADIENT, so backgroundColor is transparent in BOTH
+       themes and the comparison read 0 -> 0. The luminance test is right for body (a flat colour)
+       and meaningless for a gradient — so those two are asserted as "the painted surface CHANGED",
+       which is the strongest sentence this measurement supports. */
+    return { body: g('body', 'backgroundColor'), text: g('body', 'color'),
+             navImg: g('#app-nav', 'backgroundImage') + '|' + g('#app-nav', 'backgroundColor'),
+             cardImg: g('.sl-phase', 'backgroundImage') + '|' + g('.sl-phase', 'backgroundColor'),
+             htmlClass: document.documentElement.className };
+  });
+  await page.evaluate((k) => { localStorage.setItem(k[0], 'dark'); localStorage.setItem(k[1], 'dark'); }, [KEY_SITE, KEY_PAPER]);
+  await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(900);
+  const dk = await surfaces();
+  await page.evaluate((k) => { localStorage.setItem(k[0], 'light'); }, [KEY_SITE, KEY_PAPER]);
+  await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(900);
+  const lt = await surfaces();
+  ok(lum(lt.body) > lum(dk.body) + 80,
+    'L8a · THE FIELD MOVES: body goes markedly lighter [observed luminance '
+    + Math.round(lum(dk.body)) + ' -> ' + Math.round(lum(lt.body)) + ', want +80 or more]');
+  ok(lt.navImg !== dk.navImg && lt.cardImg !== dk.cardImg,
+    'L8d · THE CHROME MOVES WITH IT: the nav and the phase cards paint differently in each theme '
+    + '[observed nav changed ' + (lt.navImg !== dk.navImg) + ', card changed ' + (lt.cardImg !== dk.cardImg) + ']');
+  ok(lum(lt.text) < lum(dk.text) - 80,
+    'L8b · AND THE INK INVERTS WITH THEM [observed text ' + Math.round(lum(dk.text)) + ' -> ' + Math.round(lum(lt.text)) + ']');
+  ok(/light-mode/.test(lt.htmlClass) && !/light-mode/.test(dk.htmlClass),
+    'L8c · THE CLASS REACHES <html>, WHERE THE PAINTS ARE DECLARED [observed dark "' + dk.htmlClass
+    + '", light "' + lt.htmlClass + '"] — on <body> alone the paint tier does not move');
 
   for (const l of lines) console.log(l);
   console.log('SCORE ' + pass + '/' + (pass + fail) + (fail ? ' RED' : ' GREEN'));

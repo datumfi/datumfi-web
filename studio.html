@@ -5,7 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <style id="datum-critical-colors">
   :root{--bg-navy:#091221;--teal:#1D9E75;--teal-mid:#5DCAA5;--gold:#C9A84C;--gold-dark:#B8952F;--white:#fff;--muted:rgba(255,255,255,0.55);--danger-red:#e24b4a}
-  html,body{background-color:#091221!important}
+  /* ⛔ THE VALUE IS DECIDED HERE, THE DECLARATION IS NOT FOUGHT. This !important is an anti-FOUC
+     guarantee that was CORRECT with one theme and becomes a WRONG-THEME guarantee with two.
+     Out-specifying it would start an !important arms race in every light rule downstream; giving
+     it a variable lets it keep exactly the authority it has and simply say the right thing.
+     ⚠️ --critical-bg is defined IN THIS BLOCK, so it resolves at parse with no second request to
+     wait for — it cannot repeat the transparent-nav failure. */
+  html.light-mode{--critical-bg:#efede8;--bg-navy:#efede8}
+  html,body{background-color:var(--critical-bg,#091221)!important}
 </style>
 <meta name="theme-color" content="#091221">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com https://static.cloudflareinsights.com https://clerk.datumfi.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://rentcast-avm.dmerced1.workers.dev; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com https://clerk.datumfi.com https://rentcast-avm.dmerced1.workers.dev https://o4511758659223552.ingest.us.sentry.io; worker-src 'self' blob: https://clerk.datumfi.com;">
@@ -1316,14 +1323,30 @@
                  stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
   .sl-phase:hover .sl-icon svg { stroke: rgba(255,255,255,0.72); }
   .sl-copy { display: block; min-width: 0; }
-  .sl-name { display: block; font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.13em;
-             color: var(--label); }
+  /* ⭐ 600/15px MATCHES THE DESIGN DONOR, AND IT CHANGES BOTH THEMES BY CAPTAIN'S RULING 2026-08-29.
+     Measured: the gold is byte-identical on both sides (#a67828) — what differed was WEIGHT and SIZE,
+     ours 400/13px against the donor's 600/15px. It read "lighter" because it was thinner, not paler.
+     🔑 THE DIVERGENCE WAS ALWAYS THERE AND ONLY BECAME VISIBLE ON A LIGHT GROUND: thin gold on navy
+     carries, thin gold on cream does not. A defect can sit in plain sight for months and surface the
+     day you change something unrelated to it. Captain looked at the dark mock and took it there too. */
+  .sl-name { display: block; font-family: var(--font-mono); font-size: 15px; font-weight: 600;
+             letter-spacing: 0.08em; color: var(--label); }
   /* THE DROP-CAP. The phase's initial is the brand's own shorthand — D, A, T, U, M, A, E — so it is
      set larger rather than merely coloured. */
   .sl-initial { font-size: 16px; }
+  /* ⭐ THE EMPHASIS ORDER IS THE DONOR'S, AND IT WAS INVERTED HERE — CAPTAIN-CAUGHT 2026-08-29.
+     MEASURED, both sides, same viewport: the donor sets the italic line to weight 300 and the plain
+     third line to 500. Ours had BOTH at 400, so the larger 14px italic won by default and the
+     plain-speak line receded — the opposite of the intent. The Captain's words: he wants the third
+     line to be "the clear, plain speak version of what's going on" and the poetic second line to be
+     "more subtle". That is what the donor already encodes; we simply had not carried it.
+     ⚠️ BOTH THEMES, like the title weight — this is typography, not palette, and it was never
+     light-specific. It only became legible as a problem on a light ground. */
   .sl-desc { display: block; font-family: var(--font-serif); font-style: italic; font-size: 14px;
+             font-weight: 300;
              color: rgba(255,255,255,0.66); margin-top: 3px; line-height: 1.35; }
   .sl-plain { display: block; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.11em;
+              font-weight: 500;
               color: var(--muted); margin-top: 6px; }
   .sl-chev { font-size: 17px; color: rgba(255,255,255,0.34); text-align: right; }
   .sl-phase:hover .sl-chev { color: rgba(255,255,255,0.6); }
@@ -1779,13 +1802,14 @@
    *    whose preceding comment merely mentions "paper-toggle button". Comments are stripped BEFORE
    *    parsing now, and the resulting count (43) agrees with an independent line-grep of the donor.
    *
-   * ⚠️⚠️ TWO DONOR QUIRKS ARE REPRODUCED DELIBERATELY AND BOTH AWAIT A RULING:
-   *   1. `body.canvas-light .sun-icon/.moon-icon` survive from V30, when ONE toggle drove the canvas.
-   *      Under V31's two INDEPENDENT controls they mean the NAV button shows a moon when only the
-   *      PAPER is light — a state indicator reporting the state of the other switch.
-   *   2. Light-site + dark-paper does not survive a reload (see scripts/studio-theme.js).
-   * 🔑 BOTH ARE THE CAPTAIN'S DESIGN AND NOT MINE TO REPAIR. The acceptance test is "no difference
-   *    from the mock", so a silent fix here would FAIL that test while looking like an improvement. */
+   * ⭐ TWO DONOR QUIRKS WERE FOUND BY PORTING AND ARE NOW FIXED ON THE CAPTAIN'S RULING
+   *    (2026-08-29): the nav sun/moon no longer follows the PAPER switch, and a saved paper
+   *    choice survives a reload. Both were reproduced faithfully FIRST and repaired only when
+   *    he ruled — the acceptance test is "no difference from the mock", so a silent fix would
+   *    have FAILED that test while looking like an improvement. See _gate_theme_toggles L6/L7.
+   *    ⚠️ THIS PARAGRAPH USED TO SAY THEY WERE 'REPRODUCED DELIBERATELY AND AWAIT A RULING'.
+   *    It outlived the code by one commit. A COMMENT THAT DESCRIBES BEHAVIOUR THE CODE NO
+   *    LONGER HAS IS WORSE THAN NO COMMENT — it is a confident wrong answer. */
   body.light-mode {
     /* The only two donor tokens these 43 rules dereference. The full 12-token light vocabulary
        lands with the value-level colour port; defining more here would be that commit, early. */
@@ -2031,6 +2055,168 @@
      data-theme-toggle hook, same delegated handler, no second code path. */
   .theme-toggle-mobile { display: flex; align-items: center; gap: 10px; }
   .theme-toggle-mobile .theme-icon { width: 15px; height: 15px; flex: 0 0 15px; }
+  /* ══ LIGHT MODE — THE VALUE-LEVEL PORT ════════════════════════════════════════════════════
+   * The Captain's authored values, carried from `Studio Mock.html` as VALUES, never as var()
+   * names. 🔑 A TOKEN NAME IS NOT A VALUE: the donor's --teal is #79dec7 and ours is #1D9E75, so
+   * copying a name copies the NAME and silently re-resolves it here. Measured 2026-08-29.
+   *
+   * ⭐ MOST OF THIS IS FIVE PAINTS, NOT A SELECTOR SWEEP. --paint-inkwell / -chalk / -verdigris /
+   * -brass / -red-lead carry his five measured values, and the role tier does the rest. The
+   * cookie banner, the Capacity Mode button and the shape overlay all moved on ONE paint because
+   * 34feae4 made them read --veil-*; before that commit they were raw rgba(9,18,33,0.9x) and
+   * nothing could have reached them. THAT COMMIT MOVED NO PIXELS AND THIS IS WHERE IT PAYS.
+   *
+   * ⛔ THE EXPLICIT RULES BELOW ARE NOT A STYLE CHOICE — each one names a surface or a line that
+   * spells its colour as a LITERAL and therefore cannot be reached by any paint.
+   * ⚠️ AND THE INK IS PER-LINE, NOT ONE INK AT DIFFERENT ALPHAS. Deriving every line from one
+   * colour at descending opacity LOOKS like a palette and is not one: the donor's third card
+   * line is #0f1c24 (near black) where an alpha ramp made it the faintest thing on the card.
+   * Captain-caught by eye, 2026-08-29. */
+/* ⛔⛔ THE PAINTS MUST MOVE ON <html>, NOT ON <body>, AND THIS IS THE FINDING OF THE TRANCHE.
+   The ROLES are declared at :root. A custom property is substituted where it is DECLARED, not
+   where it is used - so `body.light-mode{--paint-chalk:...}` is TOO LATE: :root's --text-muted has
+   already resolved --paint-chalk against :root's own white. Setting the paint on body changed
+   NOTHING and the text stayed white, which is exactly what the screenshot showed.
+   ⇒ the theme class has to be mirrored onto documentElement. `body.light-mode` selectors ported
+   from the donor keep working; the PAINT tier needs the class one level up. */
+html.light-mode {
+  /* THE CAPTAIN'S OWN FIVE MEASURED VALUES, APPLIED AT THE PAINT TIER.
+     --paint-inkwell is the one that earns yesterday's veil commit: the cookie banner, the Capacity
+     Mode button and the shape overlay all read --veil-* now, so ONE paint moves all three. Before
+     that commit they were raw rgba(9,18,33,0.9x) literals and nothing could have reached them. */
+  --paint-inkwell:   #efede8;   /* his --bg    */
+  --paint-chalk:     #15212b;   /* his --white */
+  --paint-verdigris: #1b8e74;   /* his --teal  */
+  --paint-brass:     #a67828;   /* his --gold  */
+  --paint-red-lead:  #b85c46;   /* his --red   */
+  --paint-verdigris-deep: #197d69;
+  --paint-seafoam:   #2c8f78;
+  --paint-graphite-blue: #5A81A0;
+}
+/* PREVIEW ONLY — NOT COMMITTED. Values carried from Studio Mock.html as VALUES, never as var()
+   names, and taken as the LAST-WINS result of the donor's stacked light-mode revisions. */
+body.light-mode {
+  background-color:#f3f1ed !important;
+  background-image:
+    radial-gradient(circle at 76% 10%,rgba(114,143,170,.06),transparent 23%),
+    radial-gradient(circle at 15% 72%,rgba(27,142,116,.03),transparent 24%),
+    linear-gradient(180deg,#f3f1ed 0%,#ece9e4 48%,#e4e1db 100%) !important;
+  /* THE TEXT, DONE AT THE PAINT TIER RATHER THAN PATCHED PER SELECTOR.
+     --paint-chalk (#ffffff) is the white a draughtsman marks with, and the text roles derive from
+     it: --text-muted is color-mix(--paint-chalk 55%, transparent), --white follows too. Moving the
+     PAINT moves every role that derives from it in one value, which is what the tier is for.
+     ⚠️ It does NOT reach text that spells its own white as a literal - see the note at the end. */
+  /* (paints move on <html>, below - see the note there) */
+}
+body.light-mode .canvas-wrapper {
+  background-color:transparent;
+  background-image:
+    linear-gradient(rgba(84,128,152,.16) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(84,128,152,.16) 1px,transparent 1px),
+    linear-gradient(rgba(121,222,199,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(121,222,199,.05) 1px,transparent 1px),
+    radial-gradient(circle at 64% 18%,rgba(121,222,199,.08),transparent 30%),
+    linear-gradient(180deg,#f6f6f1 0%,#ecebe5 100%);
+  background-size:76px 76px,76px 76px,19px 19px,19px 19px,auto,auto;
+  box-shadow: inset 0 0 0 1px rgba(90,129,160,.18);
+}
+body.light-mode .drafting-panel,
+body.light-mode .studio-layout.mode-draft .drafting-panel {
+  background: linear-gradient(180deg,#f6f4f0 0%,#eeebe6 58%,#e7e3de 100%);
+  box-shadow: inset -1px 0 0 rgba(255,255,255,.65), inset -30px 0 60px rgba(90,110,120,0.05);
+}
+
+/* ── TRANCHE 2 — NAV, PHASE CARDS, AND THE PLOT ──────────────────────────────────────────────
+   Values are the LAST-WINS result of the donor's stacked light revisions, carried as VALUES. */
+body.light-mode #app-nav {
+  border-bottom:1px solid rgba(22,35,48,.14);
+  background:linear-gradient(180deg,#f7f5f1 0%,#f0eeea 100%);
+  box-shadow:0 10px 24px rgba(24,35,42,.05), inset 0 -1px 0 rgba(90,129,160,.09);
+}
+body.light-mode .sl-phase {
+  border:1px solid rgba(34,57,70,.14);
+  background:linear-gradient(180deg,#fcfbf8 0%,#f4f1ed 100%);
+  box-shadow: inset 3px 0 0 rgba(34,57,70,.16), inset 0 1px 0 rgba(255,255,255,.88),
+              inset 0 0 0 1px rgba(34,57,70,.03);
+}
+body.light-mode .sl-phase:hover {
+  border-color:rgba(27,142,116,.24);
+  background:linear-gradient(180deg,#fbfcfb 0%,#f1f4f2 100%);
+  box-shadow: inset 4px 0 0 #2c8f78, inset 0 1px 0 rgba(255,255,255,.88);
+}
+/* ⛔ THE PLOT'S TEAL IS AN SVG GRADIENT WITH TWO HARD-CODED HEX STOPS (studio.html:4436-4437,
+   #1D9E75 / #5DCAA5). A LITERAL CANNOT BE REACHED BY A TOKEN — same class-1 defect as the veils.
+   The donor authors a SEPARATE, LIGHTER teal for light mode; carried here as values.
+   Our gradient runs bottom(0%) -> top(100%), so the donor's 180deg pair is applied inverted. */
+body.light-mode #fillGradAsset stop:first-child { stop-color:#75AB9E; stop-opacity:.16; }
+body.light-mode #fillGradAsset stop:last-child  { stop-color:#46A88F; stop-opacity:.34; }
+/* SCAFFOLDING for legibility only — the real port derives these. */
+body.light-mode .nav-link, body.light-mode .brand-header { color:#15212b; }
+body.light-mode .view-btn { color:rgba(21,33,43,.66); border-color:rgba(34,57,70,.18); }
+
+
+/* -- THE STAGE OVERLAYS -- the Captain's "dingy" report, and he was right.
+   .canvas-wrapper::after paints --stage-vignette = rgba(2,8,15,0.28) at the edges: a NEAR-BLACK
+   vignette authored to darken a DARK stage. Over cream it is a grey wash, and it is why the canvas
+   read greyer than the panel beside it.
+   The donor has NO vignette on its canvas at all -- only a soft glow, which in light mode it tints
+   green. Carried as values. */
+body.light-mode .canvas-wrapper::after { background: none; }
+body.light-mode .canvas-wrapper::before {
+  background: radial-gradient(circle at 50% 45%, rgba(25,142,116,.055), transparent 48%);
+}
+
+/* ── THE RAW-LITERAL TEXT — THE ONLY THINGS A PAINT CANNOT REACH ─────────────────────────────
+   Each of these spells its colour as rgba(255,255,255,x) instead of reading a token, so no palette
+   change touches them. Alphas preserved exactly; only the ink flips. In the real commit these
+   become tokens (the veil treatment applied to type) rather than overrides. */
+body.light-mode .sl-icon, body.light-mode .sl-icon * { color:#15212b; stroke:#15212b; }
+body.light-mode .hud-disclaimer { color:rgba(21,33,43,.30); }
+body.light-mode .motion-toggle-btn { color:rgba(21,33,43,.60); }
+body.light-mode .dialogue-prompt { color:rgba(21,33,43,.40); }
+body.light-mode .readout-row, body.light-mode .data-line { color:rgba(21,33,43,.65); }
+body.light-mode .lbl-has-tip { color:rgba(21,33,43,.50); }
+body.light-mode label { color:rgba(21,33,43,.50); }
+/* ⚠️ STAND-IN ONLY: the wordmark is a white SVG *image*. The Captain is authoring a DATUMAE asset;
+   until it exists nothing in CSS can colour it properly. */
+body.light-mode .nav-wordmark { filter: brightness(0) saturate(0); opacity:.86; }
+
+/* ── THE DONOR'S OWN PER-LINE INK, NOT ONE INK AT DIFFERENT ALPHAS ───────────────────────────
+   ⛔ MY MISTAKE, CAUGHT BY THE CAPTAIN'S EYE: I derived every line from one ink at a different
+   opacity. The donor does not do that - it authors a DIFFERENT COLOUR per line, and the third line
+   is nearly BLACK where mine was the faintest thing on the card. An alpha ramp off one ink LOOKS
+   like a palette and is not one.
+     --text-strong #0f1c24 . --ink-2 #1b2a33 . --text-soft #445863 . #4f626c . gold #a67828 */
+html.light-mode { --paint-brass-light:#a67828; }
+body.light-mode .sl-plain   { color:#0f1c24; }            /* THE STARTING POINT - near black */
+body.light-mode .sl-desc    { color:#1b2a33; }            /* the italic line */
+body.light-mode .sl-name    { color:#a67828; }            /* DATA / ARCHITECTURE */
+body.light-mode .sl-chev    { color:#607075; }
+body.light-mode .nav-link   { color:#445863; }
+body.light-mode .nav-link:hover, body.light-mode .nav-link.active { color:#0f1c24; }
+body.light-mode .s1-header, body.light-mode .sl-mv-label,
+body.light-mode .sl-mv-sub, body.light-mode .sl-mv-num { color:#4f626c; }
+body.light-mode .return-home { color:#445863; }
+/* THE PLOT label lives in the estate SVG; the donor gives it --text-soft. */
+body.light-mode #bp-svg text { fill:#445863; }
+/* The cookie banner: its background moved with the veil paint, its TEXT did not - it spells white
+   as a literal inside the SHARED nav file. Overridden here; the commit has to decide where. */
+body.light-mode #privacy-banner, body.light-mode #privacy-banner * { color:#27353e; }
+body.light-mode #privacy-banner a { color:#1b8e74; }
+
+/* The BUILD IT / TEST IT / SHAPE IT / LIVE IT rail above the cards spells its ink as
+   rgba(247,249,248,.94) - a near-white literal, so no paint reaches it. */
+/* ⛔ THIS RULE USED TO READ `.s1-header span` AND THAT WAS A SPECIFICITY DEFECT OF MY OWN MAKING.
+   .s1-header wraps the movements AND the cards, so a bare descendant `span` at (0,2,2) outranked
+   every per-line rule above it at (0,2,1) — the card titles, the italics and the near-black third
+   line ALL collapsed to this one grey. The rules were parsed and correct; they simply lost.
+   🔑 A DESCENDANT SELECTOR IS A CLAIM ABOUT A SUBTREE, AND I DID NOT CHECK HOW BIG THE SUBTREE WAS.
+   Captain-caught by eye: "Data, Architecture etc. is all black instead of dark gold." */
+body.light-mode .journey-cue, body.light-mode .journey-cue span { color:#445863; }
+/* The crosshair spells its gold as rgba(201,168,76,0.3) — a literal, and 30% of gold reads on navy
+   but disappears on cream. Same ink, carried to an alpha that survives a light ground. */
+body.light-mode .crosshair { stroke: rgba(166,120,40,0.55); }
+
   /* ⛔ THE LAYER WE SHIPPED SHORT. proto2's stage carries TWO overlays and §82.8 ported only the
      vignette. This is the other one: a broad centre glow plus the sheen that gives the stage its
      curvature. 🔑 A SURFACE'S STACK INCLUDES ITS PSEUDO-ELEMENTS — that is what "the whole object"
@@ -2874,7 +3060,14 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     p = localStorage.getItem(window.DATUM_THEME_KEYS.paper);
   } catch (e) {}
   var light = (s === 'light');
-  if (light) document.body.classList.add('light-mode');
+  /* ⛔⛔ THE CLASS GOES ON <html> AS WELL AS <body>, AND THAT IS STRUCTURAL, NOT TIDINESS.
+     The ROLE tokens are declared at :root. A custom property is substituted where it is
+     DECLARED, not where it is used — so a paint set on <body> is ALREADY TOO LATE: :root's
+     roles have resolved it against :root's own value. Measured 2026-08-29: setting
+     --paint-chalk on body.light-mode moved NOTHING and every piece of text stayed white.
+     `body.light-mode` selectors ported from the donor keep working; the PAINT tier needs the
+     class one level up. BOTH are load-bearing. */
+  if (light) { document.documentElement.classList.add('light-mode'); document.body.classList.add('light-mode'); }
   /* ⛔ NO `|| light` HERE, BY CAPTAIN'S RULING 2026-08-29. The donor re-defaulted the paper
      from the site on every restore, so light-site + dark-paper could never survive a reload:
      the saved 'dark' was written, then overridden before anyone saw it. A PREFERENCE THAT IS
