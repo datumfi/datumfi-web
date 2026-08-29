@@ -37,6 +37,7 @@
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
+const { studioSource } = require('./_studio_source.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8449; const BASE = 'http://127.0.0.1:' + PORT;
 const REGRESS = process.argv.includes('--regress');
@@ -127,7 +128,12 @@ const sameHue = (a, b) => a && b && a.r === b.r && a.g === b.g && a.b === b.b;
      and says plainly that its RENDERING is unproven here. Registration and wiring, separately.
      ⚠️ ITS GLOW IS ALSO DELIBERATELY NOT ASSERTED EQUAL TO ITS FILL: brass-light over brass is what
      a light source normally does. Copying L2 onto it would red a design choice, not a defect. */
-  const src = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+  /* ⛔ studioSource() IS THE ONLY DOOR — never a bare disk read of studio.html. The first version of
+     this leg did `fs.readFileSync(ROOT/studio.html)` and it violated the Phase 0 contract: that file
+     is being SPLIT, and on the day this content moves out a disk read asserts about text that is no
+     longer there. Caught by _gate_studio_source.mjs — but only AFTER this file was committed, because
+     that census enumerates with `git ls-files` and an UNTRACKED gate is invisible to it. */
+  const src = studioSource();
   const declared = src.indexOf('#studioOverlayWrap .status-light.is-in{') !== -1;
   ok(declared,
      `L3 · REGISTRATION: the signed-in light's rule is declared [observed: rule present = ${declared}] — ` +

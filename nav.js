@@ -129,7 +129,7 @@
     document.addEventListener('DOMContentLoaded', function() {
       var banner = document.createElement('div');
       banner.id = 'privacy-banner';
-      banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;background:rgba(9,18,33,0.97);border-top:1px solid rgba(255,255,255,0.08);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;font-family:"DM Mono",monospace;font-size:10px;color:rgba(255,255,255,0.5);';
+      banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--veil-97, rgba(9, 18, 33, 0.97));border-top:1px solid rgba(255,255,255,0.08);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;font-family:"DM Mono",monospace;font-size:10px;color:rgba(255,255,255,0.5);';
       banner.innerHTML = '<span>We use session storage to remember your Sketch inputs during your visit. No tracking cookies. No ads. <a href="/privacy.html" style="color:rgba(93,202,165,0.7);text-decoration:none;">Learn more</a></span><button onclick="document.getElementById(\'privacy-banner\').remove();localStorage.setItem(\'datum_privacy_ok\',\'1\')" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.6);font-family:\'DM Mono\',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;padding:6px 14px;border-radius:3px;cursor:pointer;white-space:nowrap;flex-shrink:0;">Got it</button>';
       document.body.appendChild(banner);
     });

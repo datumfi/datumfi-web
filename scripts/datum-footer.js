@@ -132,7 +132,7 @@ var DATUM_FOOTER_LINK_STYLE = 'color:var(--text-muted,rgba(255,255,255,0.55));te
 var DATUM_FOOTER_P_STYLE = "font-family:var(--font-mono,'DM Mono',monospace);font-size:10px;"
   + 'color:var(--text-muted,rgba(255,255,255,0.55));line-height:1.6;margin:0;'
   + 'text-align:justify;text-align-last:center;';
-var DATUM_FOOTER_BOX_STYLE = 'width:100%;background:rgba(9,18,33,0.97);'
+var DATUM_FOOTER_BOX_STYLE = 'width:100%;background:var(--veil-97, rgba(9, 18, 33, 0.97));'
   + 'border-top:1px solid rgba(255,255,255,0.05);'
   + 'padding:10px clamp(14px, 4%, 40px) 12px;text-align:center;';
 

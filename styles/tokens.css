@@ -126,6 +126,25 @@
    * `box-shadow: inset 0 1px 0 var(--hairline)`. Reusing --border here loses the effect. (§76.3) */
   --hairline:    rgba(93, 202, 165, 0.06);   /* verdigris at 6% */
 
+  /* ── 🥁 THE VEILS · CHROME LAID OVER THE PAGE FIELD ────────────────────────────────────────────
+   * The nav, the footer, the privacy banner, the two HUDs and the requirements panel all paint the
+   * SAME colour as the page field at a near-opaque alpha — they are the field made solid enough to
+   * sit on top of itself. Until now every one of them spelled it as a raw rgba(9,18,33,0.9x), which
+   * meant THE PAINT COULD NOT REACH THEM: measured 2026-08-29 by flipping all 14 paints to a light
+   * palette, these seven surfaces were the entire "stayed dark" list.
+   * ⚠️ FIVE ALPHAS ARE PRESERVED BYTE-EXACT AND THAT IS DELIBERATE. 0.92 / 0.95 / 0.96 / 0.97 /
+   *    0.99 for one job looks like drift, and it probably is — but MERGING THEM MOVES PIXELS, and
+   *    this commit's whole claim is that it moves none. They are named by STRENGTH rather than by
+   *    consumer precisely so the drift stays legible: a role named for its consumer would hide the
+   *    fact that five of them do one thing. Whether they collapse is the Architect's ruling, and it
+   *    is a separate commit with its own before/after.
+   * 🔑 NAMED FOR WHAT THEY DO (§67.1): a veil is chrome you can almost see the field through. */
+  --veil-92:     rgba(9, 18, 33, 0.92);      /* inkwell at 92% — the want-face HUD dash */
+  --veil-95:     rgba(9, 18, 33, 0.95);      /* inkwell at 95% — the tension HUD */
+  --veil-96:     rgba(9, 18, 33, 0.96);      /* inkwell at 96% — the site nav, the requirements panel */
+  --veil-97:     rgba(9, 18, 33, 0.97);      /* inkwell at 97% — the disclosure footer, the privacy banner */
+  --veil-99:     rgba(9, 18, 33, 0.99);      /* inkwell at 99% — the nav's scrolled state */
+
   /* THE TWO GRID FREQUENCIES. 🔑 THE 4:1 RATIO IS WHAT READS AS DRAFTING PAPER, NOT THE HUE —
    * so the minor stays CYANOTYPE (our blueprint blue) rather than taking proto's accent. */
   /* ⚠️ NO LONGER `var(--paint-cyanotype)` BARE — the paint went opaque above, so the 5% that used
@@ -350,6 +369,15 @@
     --surface:    color-mix(in srgb, var(--paint-inkwell) 88%, transparent);
     --border:     color-mix(in srgb, var(--paint-verdigris) 18%, transparent);
     --hairline:   color-mix(in srgb, var(--paint-verdigris) 6%, transparent);
+    /* THE VEILS JOIN THE DERIVATIONS — and this block is what makes them mean anything. Without it
+     * the five literals above are the same hardcoded rgba() they replaced, just wearing token names,
+     * and --paint-inkwell would still move NOTHING on the nav, the footer or the HUDs.
+     * 🔑 REGISTRATION IS THE DECLARATION; WIRING IS THIS. (The same sentence the stage layers earned.) */
+    --veil-92:    color-mix(in srgb, var(--paint-inkwell) 92%, transparent);
+    --veil-95:    color-mix(in srgb, var(--paint-inkwell) 95%, transparent);
+    --veil-96:    color-mix(in srgb, var(--paint-inkwell) 96%, transparent);
+    --veil-97:    color-mix(in srgb, var(--paint-inkwell) 97%, transparent);
+    --veil-99:    color-mix(in srgb, var(--paint-inkwell) 99%, transparent);
     --grid-major: color-mix(in srgb, var(--paint-graphite-blue) 16%, transparent);
     /* ⚠️ --grid-line JOINS THE DERIVATIONS AND IT IS NOT A PURE NO-OP — SAID PLAINLY BECAUSE
      * "IMPERCEPTIBLE" IS A JUDGEMENT AND "NO-OP" IS A MEASUREMENT, AND THIS ARC KEEPS THEM APART.
