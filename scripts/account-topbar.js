@@ -124,6 +124,21 @@
       + '.acct-studio-toggle{display:flex;gap:3px;align-items:center;flex-shrink:0;'
       + '  position:absolute;left:var(--studio-panel-w);top:50%;transform:translateY(-50%);margin-left:0;}'
       + '.acct-view-active{background:rgba(29,158,117,.12)!important;border-color:#3ec3a0!important;color:#3ec3a0!important;}'
+      /* ⭐⭐ THE SITE THEME CONTROL, SIGNED-IN COPY — AND ITS EXISTENCE IS THE WHOLE POINT.
+         studio.html carries this button for the signed-OUT nav. THIS bar is a SECOND RENDERER, and
+         a control wired only to the first is genuinely present, passes every gate honestly, and is
+         INVISIBLE TO THE ONLY PERSON WHO IS EVER SIGNED IN. Found by the Captain's signed-in smoke
+         on 2026-08-29 — the same two-renderer fork that landed the Drafting -> SHEET rename in one
+         bar and not the other. ANY NAV CHANGE THAT LANDS IN ONE BAR AND NOT THE OTHER IS HALF-SHIPPED.
+         ⛔ ITS OWN SIZE VARIANT, NOT THE DONOR'S 32px SQUARE, BECAUSE THIS BAR IS 64px AND #app-nav
+         IS 56px. That is a size accommodation and NOTHING MORE — normalising the two nav heights is
+         a nav redesign, deferred at :122, and is explicitly NOT licensed by this commit. */
+      + '.acct-theme-toggle{width:30px;height:30px;flex:0 0 30px;display:grid;place-items:center;'
+      + '  padding:0;border:1px solid rgba(142,160,168,.22);background:transparent;color:#a7b2b8;'
+      + '  cursor:pointer;transition:border-color .18s ease,background .18s ease,color .18s ease;}'
+      + '.acct-theme-toggle:hover{color:#C9A84C;border-color:rgba(213,173,99,.46);background:rgba(213,173,99,.035);}'
+      + '.acct-theme-toggle .theme-icon{width:14px;height:14px;fill:none;stroke:currentColor;'
+      + '  stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round;}'
       + '@media(max-width:720px){'
       + '  .acct-topbar-nav{display:none;}'
       + '  .acct-wordmark-img{height:15px;}'
@@ -158,6 +173,28 @@
    *    name-then-descriptor grammar, so "Split — inputs and canvas" was AUTHORED 2026-08-22 and
    *    landed in BOTH renderers in this one commit. Porting the bare string would have shipped a
    *    set that is two-thirds patterned — the kind of thing noticed once and never fixed. */
+  /* ⭐ STUDIO-ONLY BY THE SAME GUARD studioToggles() ALREADY USES — an existing, proven, in-file
+     pattern rather than a new mechanism invented for this commit (L48, reuse-don't-fork). The
+     signed-OUT copy needs no guard at all: its markup lives in studio.html, so it cannot reach
+     another page. This copy CAN — account-topbar.js renders on five account pages — so here the
+     enforcement has to be explicit.
+     ⛔ NO id ATTRIBUTE. studio.html's copy holds id="siteThemeToggle" (the donor's own id) and both
+     bars can be in the DOM at once during the swap the Captain filmed — two elements sharing an id
+     is exactly the kind of quiet breakage this estate keeps finding. The [data-theme-toggle] hook is
+     what scripts/studio-theme.js delegates on, and it is safe to duplicate. */
+  function themeToggle(active) {
+    if (active !== 'studio') return '';
+    return '<button type="button" class="acct-theme-toggle" data-theme-toggle="site" aria-pressed="false" aria-label="Switch site to light mode" title="Switch site to light mode">'
+      + '<svg class="theme-icon sun-icon" viewBox="0 0 24 24" aria-hidden="true">'
+      +   '<circle cx="12" cy="12" r="3.4"></circle>'
+      +   '<path d="M12 2.5v2.2M12 19.3v2.2M4.7 4.7l1.55 1.55M17.75 17.75l1.55 1.55M2.5 12h2.2M19.3 12h2.2M4.7 19.3l1.55-1.55M17.75 6.25l1.55-1.55"></path>'
+      + '</svg>'
+      + '<svg class="theme-icon moon-icon" viewBox="0 0 24 24" aria-hidden="true">'
+      +   '<path d="M20 15.2A8 8 0 0 1 8.8 4a7.7 7.7 0 1 0 11.2 11.2Z"></path>'
+      + '</svg>'
+      + '</button>';
+  }
+
   function studioToggles(active) {
     if (active !== 'studio') return '';
     return '<div class="acct-studio-toggle" role="group" aria-label="Studio view">'
@@ -277,6 +314,7 @@
       + '<div class="acct-topbar-right">'
       +   signOutAction(active)
       +   '<a href="/pricing.html" class="acct-action-btn acct-upgrade">Upgrade</a>'
+      +   themeToggle(active)
       + '</div>'
       + '</header>';
   }
@@ -327,6 +365,15 @@
     wrapper.innerHTML = buildHTML(getActiveTab());
     var topbarEl = wrapper.firstElementChild;
     document.body.prepend(topbarEl);
+
+    /* ⭐ THE THEME BUTTON JUST ENTERED THE DOM AFTER studio-theme.js ALREADY RAN, so its aria-label,
+       title and aria-pressed still hold their build-time defaults and would MISREPORT the live theme
+       to a returning light-mode user. The click handler needs no help — it is delegated on document
+       — but the STATE DOES. Announced explicitly rather than watched for: a MutationObserver here
+       would be a second mechanism guessing at a fact this line already knows.
+       ⚠️ Guarded because account-topbar.js also renders on four pages that do NOT load
+       studio-theme.js, where this global is legitimately absent. */
+    if (typeof window.datumThemeSync === 'function') window.datumThemeSync();
 
     topbarEl.querySelectorAll('[data-acct-tab]').forEach(function (btn) {
       btn.addEventListener('click', function () {
