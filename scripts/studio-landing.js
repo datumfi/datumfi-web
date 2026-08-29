@@ -74,7 +74,7 @@ function _studioPhaseSpine() {
     { id: 'architecture', numeral: 'II',  letter: 'A', name: 'ARCHITECTURE', desc: 'Define the Mass.',        plain: 'ACCOUNTS AND ASSETS',               sec: 'sec-drafting', canvas: 'estate' },
     { id: 'tension',      numeral: 'III', letter: 'T', name: 'TENSION',      desc: 'Apply the Pressure.',     plain: 'SPENDING AND OBLIGATIONS',          sec: 'sec-upkeep' },
     { id: 'uncertainty',  numeral: 'IV',  letter: 'U', name: 'UNCERTAINTY',  desc: 'Structure the Noise.',    plain: 'SOCIAL SECURITY AND PENSION TIMING', sec: 'sec-income-layer' },
-    { id: 'measurement',  numeral: 'V',   letter: 'M', name: 'MEASUREMENT',  desc: 'Reveal the Range.',       plain: 'THOUSANDS OF POSSIBLE FUTURES',     sec: 'sec-climate' },
+    { id: 'measurement',  numeral: 'V',   letter: 'M', name: 'MEASUREMENT',  desc: 'Reveal the Range.',       plain: 'MARKET CONDITIONS AND SIMULATIONS',     sec: 'sec-climate' },
     { id: 'alignment',    numeral: 'VI',  letter: 'A', name: 'ALIGNMENT',    desc: 'Order the Estate.',       plain: 'ACCOUNT WITHDRAWAL STRATEGY',       sec: null },
     { id: 'endurance',    numeral: 'VII', letter: 'E', name: 'ENDURANCE',    desc: 'Carry the Horizon.',      plain: 'SUSTAINABLE RETIREMENT SPENDING',   sec: 'sec-datum' }
   ];
@@ -291,7 +291,11 @@ function _studioLandingHTML() {
   out = '<div class="sl-chain-wrap">'
       + '<div class="sl-chain" aria-hidden="true"><span class="sl-dot"></span></div>'
       + out + '</div>';
-  return '<div class="sl-formula" aria-hidden="true">(D + A) &times; (T + U) = M &rarr; (A + E)</div>' + out;
+  /* ⛔ THE FORMULA LINE WAS REMOVED HERE ON 2026-08-28, NOT IN studio.html — it was never markup.
+     This function prepended it to the movements list, which is why retiring it edited a SACRED host.
+     The landing now opens with the four-pillar journey cue instead; the formula still appears in the
+     entry overlay, which is a different surface and keeps it. */
+  return out;
 }
 
 /* ⛔ THE ZERO-STATE LINE SHOWS AT ZERO ANSWERED PHASES AND DISAPPEARS THE MOMENT ANY PHASE IS

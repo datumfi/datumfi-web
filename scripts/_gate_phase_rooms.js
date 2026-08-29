@@ -173,17 +173,22 @@ const eqSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
   }, null, { timeout: 9000 }).catch(() => fail('R0 PRECONDITION', 'the landing never finished painting in 9s (overlay still interactive, .seed-gated still set, _studioEnterRoom missing, or fewer than 7 phase rows) — every leg below would be measuring an unbuilt page'));
 
   // ── R1 · THE LANDING IS ONLY THE DATUMAE ──────────────────────────────────────────────────────
-  const landing = await page.evaluate((VF) => { const _vis = eval(VF); return ({
+  const landing = await page.evaluate((VF) => { /* ⚠️ RENAMED FROM formulaShown ON 2026-08-28. This predicate reads .s1-header's VISIBILITY, and it
+   always did — but the formula it was named after left the page in the same commit. The check would
+   have stayed GREEN and stayed MEANINGFUL, just not meaning what its name said.
+   🔑 THAT IS NOT AN EMPTY-SET GREEN, IT IS A GREEN UNDER A RENAMED CLAIM: a vacuous pass leaves no
+   trace, but this one leaves a MISLEADING trace the next reader would cite. */
+const _vis = eval(VF); return ({
     sections: (() => Array.from(document.querySelectorAll('.drafting-panel > .studio-section'))
       .filter(_vis)
       .map((e) => { const t = e.querySelector('.section-tag span'); return t ? t.textContent.trim() : '(unnamed)'; }))(),
-    formulaShown: (() => { const f = document.querySelector('.s1-header'); return _vis(f); })(),
+    landingHeaderShown: (() => { const f = document.querySelector('.s1-header'); return _vis(f); })(),
     phaseRows: document.querySelectorAll('#sl-movements-host .sl-phase').length,
   }); }, VIS_FN);
   if (landing.sections.length) fail('R1 LANDING', `${landing.sections.length} section(s) still visible on the landing — ${JSON.stringify(landing.sections)}. It must be ONLY the Datumae.`);
   /* ⛔ THE PRESENCE HALF. "Zero sections visible" is also true of a page that failed to render, so
      the formula and its seven rows must be PROVEN PRESENT or R1 is vacuous. */
-  if (!landing.formulaShown) fail('R1 LANDING', 'the Datumae formula block is not visible — "no sections" would be vacuously true of a blank panel');
+  if (!landing.landingHeaderShown) fail('R1 LANDING', 'the Datumae formula block is not visible — "no sections" would be vacuously true of a blank panel');
   if (landing.phaseRows !== 7) fail('R1 LANDING', `expected 7 clickable phase rows, found ${landing.phaseRows}`);
 
   // ── R2/R3/R5/R6 · EVERY ROOM ──────────────────────────────────────────────────────────────────
@@ -219,7 +224,7 @@ const eqSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
         label: _vis(lab) ? lab.textContent.trim() : null,
         next: _vis(nxt) ? nxt.textContent.trim() : null,
         nextDisabled: nxt ? !!nxt.disabled : null,
-        formulaShown: _vis(formula),
+        landingHeaderShown: _vis(formula),
         emptyShown: _vis(empty),
         emptyText: empty ? empty.textContent.trim().slice(0, 60) : null,
         headerish,
@@ -232,7 +237,7 @@ const eqSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
 
     if (!eqSet(got.vis, want.secs)) fail('R2 ROOM ' + want.id.toUpperCase(), `visible sections are ${JSON.stringify(got.vis)}, expected ${JSON.stringify(want.secs)}`);
     if (got.label !== want.label) fail('R2 ROOM ' + want.id.toUpperCase(), `header reads ${JSON.stringify(got.label)}, expected ${JSON.stringify(want.label)}`);
-    if (got.formulaShown) fail('R2 ROOM ' + want.id.toUpperCase(), 'the landing Datumae is still visible inside a room — the room is additive, not a room');
+    if (got.landingHeaderShown) fail('R2 ROOM ' + want.id.toUpperCase(), 'the landing Datumae is still visible inside a room — the room is additive, not a room');
     if (got.headerish !== 1) fail('R2 ROOM ' + want.id.toUpperCase(), `${got.headerish} phase headers are visible at once, expected exactly 1 — a room that states its own name twice`);
     if (got.forwards !== 1) fail('R3 WALK ' + want.id.toUpperCase(), `${got.forwards} forward controls are visible at once, expected exactly 1 — two exits on one screen create a doubt, not a choice`);
     if (!got.next || got.next.indexOf(want.next) !== 0) fail('R3 WALK ' + want.id.toUpperCase(), `continue control reads ${JSON.stringify(got.next)}, expected it to start ${JSON.stringify(want.next)}`);
@@ -298,9 +303,9 @@ const eqSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
     await page.waitForTimeout(600);
     const afterExit = await page.evaluate((VF) => { const _vis = eval(VF); return ({
       sections: Array.from(document.querySelectorAll('.drafting-panel > .studio-section')).filter(_vis).length,
-      formulaShown: (() => { const f = document.querySelector('.s1-header'); return _vis(f); })(),
+      landingHeaderShown: (() => { const f = document.querySelector('.s1-header'); return _vis(f); })(),
     }); }, VIS_FN);
-    if (!afterExit.formulaShown) fail('R4 EXIT', 'clicking ← The Studio did not restore the Datumae landing');
+    if (!afterExit.landingHeaderShown) fail('R4 EXIT', 'clicking ← The Studio did not restore the Datumae landing');
     if (afterExit.sections) fail('R4 EXIT', `${afterExit.sections} section(s) visible after returning to the landing`);
   }
 
@@ -310,7 +315,7 @@ const eqSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
   server.close();
 
   const mode = NOBOOT ? ' [--noboot]' : LEAK ? ' [--leak]' : TWOHEAD ? ' [--twohead]' : TWOFWD ? ' [--twofwd]' : '';
-  console.log('  landing    : sections=' + JSON.stringify(landing.sections) + ' formula=' + landing.formulaShown + ' rows=' + landing.phaseRows);
+  console.log('  landing    : sections=' + JSON.stringify(landing.sections) + ' formula=' + landing.landingHeaderShown + ' rows=' + landing.phaseRows);
   seen.forEach((s) => console.log('  ' + s.id.padEnd(13) + JSON.stringify(s.vis) + '  ->  ' + JSON.stringify(s.next)));
   console.log('  ← The Studio: ' + (back.present ? (back.reachable ? 'reachable "' + back.text + '"' : 'UNREACHABLE, hit=' + back.hit) : 'ABSENT'));
   fails.forEach((f) => console.log('  FAIL  ' + f));

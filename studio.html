@@ -403,9 +403,14 @@
      _p8_studio_mechanics Item 5, so it is HIDDEN INSIDE ROOMS, never removed — it stays on the
      landing where it belongs. Two back-pointing controls in one phase ("← Return to Overview" above
      "← The Studio") is exactly the §13.2 confusion: the user cannot tell which one leaves what.
-     ⭐ AND '← Return to Overview' IS RULED IN, NOT AN OVERSIGHT (Captain, 2026-08-22): it is the
+     ⭐ AND THIS CONTROL IS RULED IN, NOT AN OVERSIGHT (Captain, 2026-08-22): it is the
      tutorial / start-fresh / import-blueprint door, a job §82.1's strike never considered. It stays
-     ON THE LANDING ONLY, which is what the rule above already enforces. */
+     ON THE LANDING ONLY, which is what the rule above already enforces.
+     ⚠️ ITS LABEL SHORTENED TO "← Overview" ON 2026-08-28 — Captain overruling himself on brevity,
+     in his words "overruling myself with brevity editing". THE CONTROL IS UNCHANGED; ONLY THE WORDS
+     ARE. The §13.2 argument above still holds and still names the old label because that is the
+     confusion it was reasoning about — but the ruling it records is about the CONTROL, which stays.
+     🔑 A STRUCK LABEL LEFT SITTING IN A LIVE RULING READS AS A LIVE LABEL TO THE NEXT PERSON. */
   .studio-layout[data-room]:not([data-room="landing"]) .return-home { display: none; }
   /* ⛔ AND THE FIRST PASS'S "See the Tension →" CTA — its behaviour moved INTO the Architecture
      room's Next control (see _studioRoomNextHTML), so showing it too would be the same control
@@ -1072,6 +1077,10 @@
      ⭐ MEASURED 2026-08-20 (`--revert=nolift`, null 0/1,296,000 first): stripping it moves 89 px,
         max 2/255, ALL OF IT ON TEXT — #datum-footer-text 38 · h1 16 · .return-home 14 · .sl-line 14
         · a 7 · OUTSIDE EVERY RECT 0. So the mechanism is REAL and lands exactly where predicted.
+        ⚠️ `.sl-line` AND THE LANDING `h1` NAMED ABOVE WERE RETIRED 2026-08-28 (the journey-cue port).
+        THE NUMBERS ARE NOT RESTATED — a measurement describes the bytes it was taken on, and editing
+        it to match today's DOM would falsify it rather than update it. Re-run the probe if the
+        figure is needed for the CURRENT landing; do not read these four as live selectors.
      🔑🔑 THE MAGNITUDE IS SMALL ONLY BECAUSE THE GRID IS FAINT: `--panel-grid` is graphite-blue at
         0.08, and the `opacity: 0.22` above composites it to ~0.018 — SUB-UNIT ALMOST EVERYWHERE,
         surfacing only where rounding crosses a boundary against text antialiasing.
@@ -1115,8 +1124,32 @@
      The formula as four movements. Restrained on purpose: this is the first thing a user sees and
      it has to read as a METHOD, not a menu. Gold carries the structure (formula, movement labels),
      white carries the phase names, and the dot is the only state indicator — no badges, no chips. */
-  .sl-line { font-family: var(--font-serif); font-size: 15px; font-style: italic; line-height: 1.55;
-             color: rgba(255,255,255,0.72); margin: 10px 0 26px; max-width: 42ch; }
+  /* ── THE JOURNEY CUE (ported from Studio Mock, Captain-ruled 2026-08-28) ──────────────────
+     Two blocks in the donor style this element — V11 (:982) then V12 (:1001) — and the LATER one
+     wins per property. BOTH are ported IN ORDER so the cascade resolves here exactly as it does in
+     the mock, rather than being pre-resolved by hand into a single block I would have to be right
+     about. V12 is what retires V11's gold separators via .journey-cue i{display:none}.
+     ⛔ THE DONOR'S `.journey-cue + .formula{margin-top:13px}` IS DELIBERATELY NOT PORTED. It appears
+     in both blocks and matches ZERO elements — the mock has no class="formula", and this commit
+     deletes the live formula. A DECLARATION WITH NO SUBJECT IS A CLAIM WITH NO SOURCE.
+     ⚠️ The donor's `.sidebar.phase-active .journey-cue` variants and the JS that toggles .active on
+     a span are PHASE-CONTEXT BEHAVIOUR, not paint, and belong to whichever commit ships phase
+     context — the same rule that keeps .plot's DATA-phase hide out of this commit. */
+  .journey-cue {
+    display: flex; align-items: center; gap: 7px; margin-top: 27px;
+    font: 500 8.2px var(--font-mono); letter-spacing: .105em; text-transform: uppercase;
+    color: #8f9da5; white-space: nowrap;
+  }
+  .journey-cue span { color: #a7b3b8; }
+  .journey-cue i { font-style: normal; color: rgba(213,173,99,.58); }
+  .journey-cue {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    gap: 18px; margin: 31px 0 20px; padding: 0 2px;
+    font: 600 10.2px/1 var(--font-mono); letter-spacing: .105em; text-transform: uppercase;
+    color: rgba(247,249,248,.94); white-space: nowrap;
+  }
+  .journey-cue span { color: rgba(247,249,248,.94); }
+  .journey-cue i { display: none; }
   /* ── THE ROOM HEADER + ITS TWO NAV CONTROLS ─────────────────────────────────────────────────
      Mirrors .s2-header's proportions, which is the treatment the Captain approved on sight.
      ⚠️ The two controls are deliberately NOT the same weight: ← The Studio is a quiet return, the
@@ -1155,8 +1188,6 @@
                    line-height: 1.6; color: rgba(255,255,255,0.55); max-width: 44ch;
                    padding: 18px 0 4px; border-top: 1px solid rgba(255,255,255,0.07); }
 
-  .sl-formula { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em;
-                color: var(--gold); opacity: 0.55; margin-bottom: 22px; white-space: nowrap; }
   .sl-movements { margin-bottom: 34px; }
   /* ⭐ CAPTAIN-RULED 2026-08-14 — THE BRACKET RULES AND THEIR × + = → GLYPHS ARE GONE.
      His words: "adds a bit of visual confusion." He is right, and the reason is worth keeping: the
@@ -2605,7 +2636,7 @@
             aria-label="Resize the drafting panel"></button>
 
     <div class="drafting-panel">
-      <a href="#" class="return-home">← Return to Overview</a>
+      <a href="#" class="return-home">← &nbsp; Overview</a>
 
       <!-- ⭐ STEP 1 · THE LANDING. Replaces the old S1 title-block. THREE STRINGS WERE DELIBERATELY
            REMOVED and must not come back: the old single-phase label, the gold serif descriptor, and
@@ -2618,13 +2649,25 @@
            The movements/phases are painted by scripts/studio-landing.js. ADDITIVE AND INERT: the
            vertical sections below still work exactly as before, and no page is created. -->
       <div class="s1-header">
-        <h1>The Studio</h1>
-        <!-- 🖊️ CAPTAIN-AUTHORED 2026-08-15, replacing the Architect's line (§20 struck in place).
-             ⭐ THE OLD LINE DESCRIBED THE FORMULA; THIS ONE MAKES THE ARGUMENT. It is the product's
-             whole thesis in nine words, and it earns the seven phases printed underneath it — a
-             structure is something you build, which is why the movement labels below are verbs.
-             The formula line above it is unchanged. -->
-        <div class="sl-line">Your retirement is not a number. It&rsquo;s a structure.</div>
+        <!-- ⭐ THE JOURNEY CUE — the four pillars as one horizontal line (Captain-ruled 2026-08-28).
+             REPLACES three strings that are now GONE and must not return: the "The Studio" h1, the
+             gold serif thesis line, and the (D + A) × (T + U) = M → (A + E) formula. The formula was
+             NOT markup — scripts/studio-landing.js prepended it to the movements list, which is why
+             this item edits a SACRED host as well as this file.
+             ⛔ THEY ARE DESCRIBED HERE, NEVER QUOTED. An HTML comment ships to the browser and lands
+             in innerHTML, so quoting a removed string verbatim defeats every absence-grep written to
+             prove it is gone — including a publish proof. Originals are in git history at 0b0cd4c.
+             ⛔⛔ THE FOUR SPANS ARE ON ONE LINE WITH NO WHITESPACE BETWEEN THEM, AND THAT IS
+             LOAD-BEARING, NOT UNTIDY. .journey-cue is display:flex with justify-content:space-between;
+             inter-tag whitespace becomes visible text nodes that the flex layout then distributes,
+             fighting the spacing. Ported byte-exact from Studio Mock:5391. DO NOT PRETTY-PRINT.
+             ⭐ THE RE-SPACING IS PURE CSS — width:100% + flex + space-between. There is NO resize
+             handler and none is needed; dragging the divider re-spaces the labels for free.
+             ⚠️ .s1-header STAYS. It has four consumers including _gate_studio_preboot_paint L3 (which
+             asserts it is VISIBLE pre-DCL) and the SACRED preboot style rule. Only its CONTENTS moved. -->
+        <div class="journey-cue" aria-label="Studio journey">
+          <span data-pillar="build">Build it.</span><span data-pillar="test">Test it.</span><span data-pillar="shape">Shape it.</span><span data-pillar="live">Live it.</span>
+        </div>
         <div id="sl-movements-host"></div>
         <div id="sl-alignment-panel" style="display:none;"></div>
       </div>
@@ -3409,7 +3452,7 @@
       </div>
 
       <!-- Estate<->Shape flip toggle -->
-      <button id="shape-mode-toggle" onclick="toggleShapeMode()" title="Switch between Estate rooms and deterministic Shape view">Shape Mode</button>
+      <button id="shape-mode-toggle" onclick="toggleShapeMode()" title="Switch between Estate rooms and deterministic Capacity view">Capacity Mode</button>
 
       <!-- ⛔ THE WAY OUT OF A PANNED-AWAY CANVAS. Until 2026-08-14 there was none: the canvas
            advertised panning (cursor:grab) and offered no way home, and the Captain lost his entire
@@ -14036,7 +14079,7 @@
         // stranded want-mode flip-state (else .want-mode keeps .drafting-panel display:none and
         // it looks like Blueprint-focus). flipToHave removes want-mode, unflips, resets tabs.
         if (window.flipToHave) window.flipToHave();
-        if (btn) btn.textContent = 'Shape Mode';
+        if (btn) btn.textContent = 'Capacity Mode';
         var svg = document.getElementById('shape-panel-svg');
         if (svg) _removeJumpToFull(svg);
         if (_datumShapeHandle && _datumShapeHandle.resetReveal) _datumShapeHandle.resetReveal();

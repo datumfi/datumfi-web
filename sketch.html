@@ -66,7 +66,12 @@
   .panel-right { width: 65%; height: 100%; min-height: 500px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px 40px 20px 40px; overflow-y: auto; background-color: var(--bg-navy); background-image: linear-gradient(rgba(93, 202, 165, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(93, 202, 165, 0.03) 1px, transparent 1px), radial-gradient(circle at center, rgba(29, 158, 117, 0.05) 0%, transparent 70%); background-size: 40px 40px, 40px 40px, 100% 100%; background-position: center center; overflow-x: hidden;}
 
   /* --- LEFT PANEL TYPOGRAPHY --- */
-  /* P8 Item 5 — "Return to Overview" link (Studio parity); re-opens the Sketch overlay. */
+  /* P8 Item 5 — the "← Overview" link (Studio parity); re-opens the Sketch overlay.
+     ⚠️ LABEL SHORTENED 2026-08-28 ON BOTH HOSTS IN ONE COMMIT (Captain: brevity, overruling himself).
+     IT MOVED HERE *BECAUSE* IT MOVED IN THE STUDIO — shipping only the Studio half would have left
+     two surfaces reading different words for the same control, which is the §24 parity fork this
+     estate has already paid for once (the SHEET·SPLIT·STRUCTURE rename landed in one renderer of two).
+     🔑 A ONE-LINE CHANGE ON A SECOND HOST IS STILL A SECOND HOST. */
   .return-home { display: inline-block; font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; text-decoration: none; margin-bottom: 18px; transition: 0.2s; cursor: pointer; }
   .return-home:hover { color: var(--teal-mid); }
   .title-block { margin-bottom: 12px; }
@@ -1448,7 +1453,7 @@
 
   <div class="hero-screen" id="sketch-main">
       <div class="panel-left">
-        <a href="#" class="return-home">← Return to Overview</a>
+        <a href="#" class="return-home">← &nbsp; Overview</a>
         <div class="title-block anim-fade-up">
             <div class="sub-head hero-subtitle">PHASE I — DATA</div>
             <div style="font-family: var(--font-serif); font-size: 22px; font-style: italic; color: var(--gold); margin-bottom: 12px;">Discover Your Shape</div>
@@ -9999,7 +10004,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
   }
   _applySketchAuth(isSignedIn);
 
-  // P8 Item 5 (Sketch parity) — re-open hook for "Return to Overview". Always exposed (even
+  // P8 Item 5 (Sketch parity) — re-open hook for the "← Overview" link. Always exposed (even
   // when the overlay auto-hid on load). Re-shows + re-applies live auth. Sketch's dismiss is
   // already non-destructive (hide + mark seen, no reset), so the close X needs no special case.
   window._sketchOverlayOpen = function() {
@@ -10071,7 +10076,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
 
   if (_hideOnLoad) _overlayWrap.style.display = 'none';
 
-  // P8 Item 5 — wire "← Return to Overview" (Sketch parity) to re-open this overlay.
+  // P8 Item 5 — wire "← Overview" (Sketch parity) to re-open this overlay.
   var _returnHome = document.querySelector('.return-home');
   if (_returnHome) _returnHome.addEventListener('click', function(e) { e.preventDefault(); window._sketchOverlayOpen(); });
 })();
