@@ -61,10 +61,26 @@
       'Switch canvas to dark paper', 'Switch canvas to light paper');
   }
 
-  function setPaperTheme(theme, persist) {
+  /* ⭐ WHY THE PAPER REMEMBERS *WHY* IT IS LIGHT, NOT JUST THAT IT IS — CAPTAIN-RULED 2026-08-29.
+     The donor's coupling was one-way: entering site-light turned the paper white and leaving it
+     never turned the paper back, so the button "stayed white and dimmed" (Captain's smoke).
+     ⛔ BUT "ALWAYS REVERT" IS THE WRONG FIX AND WOULD BREAK HIS EARLIER RULING. If he DELIBERATELY
+     chose white paper, the site switch must not throw that away. So the rule is:
+         UNDO WHAT WE DID AUTOMATICALLY. NEVER UNDO WHAT THE USER CHOSE.
+     which needs one bit the donor never stored — whether this paper state was ours or his.
+     🔑 A SETTING AND THE REASON IT HOLDS ITS VALUE ARE TWO DIFFERENT FACTS. Storing only the value
+     makes an automatic default indistinguishable from a deliberate choice, and any rule written
+     over that single bit has to be wrong in one direction or the other. */
+  var KEY_AUTO = KEYS.paper + '-auto';
+  function paperWasAuto() { return readStore(KEY_AUTO) === '1'; }
+
+  function setPaperTheme(theme, persist, auto) {
     var light = theme === 'light';
     document.body.classList.toggle('canvas-light', light);
-    if (persist) writeStore(KEYS.paper, light ? 'light' : 'dark');
+    if (persist) {
+      writeStore(KEYS.paper, light ? 'light' : 'dark');
+      writeStore(KEY_AUTO, auto ? '1' : '0');
+    }
     syncButtons();
   }
 
@@ -75,10 +91,13 @@
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', light ? '#d7dfdb' : '#07101b');
 
-    /* Donor rule, verbatim: entering true light mode defaults the canvas to light drafting paper.
-       The paper control remains independent after that. */
-    if (light && !document.body.classList.contains('canvas-light')) {
-      setPaperTheme('light', persist);
+    /* The donor's coupling, now REVERSIBLE (see setPaperTheme). Entering site-light still defaults
+       the canvas to light paper; leaving site-light undoes exactly that and nothing else. */
+    var paperLight = document.body.classList.contains('canvas-light');
+    if (light && !paperLight) {
+      setPaperTheme('light', persist, true);            // ours — and marked as ours
+    } else if (!light && paperLight && paperWasAuto()) {
+      setPaperTheme('dark', persist, false);            // undo ours; a chosen white is left alone
     }
 
     if (persist) writeStore(KEYS.site, light ? 'light' : 'dark');
@@ -95,13 +114,16 @@
     if (kind === 'site') {
       setSiteTheme(document.body.classList.contains('light-mode') ? 'dark' : 'light', true);
     } else if (kind === 'paper') {
-      setPaperTheme(document.body.classList.contains('canvas-light') ? 'dark' : 'light', true);
+      /* A CLICK IS ALWAYS DELIBERATE, so it clears the auto flag: from here the site switch will
+         not touch this choice again. */
+      setPaperTheme(document.body.classList.contains('canvas-light') ? 'dark' : 'light', true, false);
     }
   });
 
   window.datumThemeSync = syncButtons;
   window.datumSetSiteTheme = setSiteTheme;
   window.datumSetPaperTheme = setPaperTheme;
+  window.datumPaperWasAuto = paperWasAuto;
   window.datumThemeRead = function () {
     return { site: readStore(KEYS.site), paper: readStore(KEYS.paper) };
   };

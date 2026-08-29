@@ -25,7 +25,8 @@
  *   --strip-css      the donor's first toggle rule is removed    -> REDS L1b ONLY
  *   --restore-quirk  the donor's paper re-default is restored    -> REDS L6  ONLY
  *   --icon-quirk     the retired V30 moon rule is restored       -> REDS L7  ONLY
- * FIVE controls; FOUR of the five red sets are SINGLETONS and all five are DISTINCT. Stated
+ *   --oneway-quirk   the donor's one-way coupling is restored    -> REDS L3e + L3g
+ * SIX controls; FOUR red sets are SINGLETONS and all six are DISTINCT. Stated
  * rather than claimed: L3 and L5 share a control because persistence cannot be observed without
  * a click that works, so no mutation can separate them.
  */
@@ -44,6 +45,7 @@ const DEAD_HANDLER  = process.argv.includes('--dead-handler');
 const STRIP_CSS     = process.argv.includes('--strip-css');
 const RESTORE_QUIRK = process.argv.includes('--restore-quirk');
 const ICON_QUIRK    = process.argv.includes('--icon-quirk');
+const ONEWAY_QUIRK  = process.argv.includes('--oneway-quirk');
 
 /* The Captain's own storage keys, verbatim from the design donor. NOT ours to rename. */
 const KEY_SITE  = 'datumae-studio-site-theme-v31';
@@ -54,6 +56,7 @@ const A_CSSRULE = '  .theme-toggle {' + String.fromCharCode(10) + '    width:32p
 const A_HANDLER = "t.closest('[data-theme-toggle]')";
 const A_BOOT    = "  if (p === 'light') document.body.classList.add('canvas-light');";
 const A_MOBCSS  = '  .theme-toggle-mobile { display: flex;';
+const A_REVERT  = '} else if (!light && paperLight && paperWasAuto()) {';
 
 let pass = 0, fail = 0; const lines = [];
 const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL ') + m); };
@@ -82,6 +85,10 @@ const server = http.createServer((req, res) => {
   if (ICON_QUIRK && /studio\.html$/.test(p)) {
     body = Buffer.from(mutate(body.toString('utf8'), A_MOBCSS,
       '  body.canvas-light .moon-icon { display:block; }' + String.fromCharCode(10) + A_MOBCSS, 'A_MOBCSS'), 'utf8');
+  }
+  if (ONEWAY_QUIRK && /studio-theme\.js$/.test(p)) {
+    body = Buffer.from(mutate(body.toString('utf8'), A_REVERT,
+      '} else if (false) {', 'A_REVERT'), 'utf8');
   }
   if (DEAD_HANDLER && /studio-theme\.js$/.test(p)) {
     body = Buffer.from(mutate(body.toString('utf8'), A_HANDLER, "t.closest('[data-theme-toggle-OFF]')", 'A_HANDLER'), 'utf8');
@@ -174,9 +181,14 @@ const server = http.createServer((req, res) => {
   ok(s1.paper === true,
     'L3d · DONOR COUPLING: entering site-light defaults the canvas to light paper [observed: '
     + s0.paper + ' -> ' + s1.paper + ']');
-  ok(s2.paper === true,
-    'L3e · AND THE COUPLING IS ONE-WAY: leaving site-light does NOT drag the paper back [observed: '
-    + s2.paper + ']');
+  /* ⭐ CAPTAIN-RULED 2026-08-29, AND THIS LEG USED TO ASSERT THE OPPOSITE. It pinned the donor's
+     one-way coupling as correct; his smoke found that leaving light mode left the paper stuck white
+     and "dimmed". The rule is now: UNDO WHAT WE DID AUTOMATICALLY, NEVER UNDO WHAT THE USER CHOSE.
+     ⛔ RECORDED RATHER THAN QUIETLY REWRITTEN: a gate that changes its mind is a RULING, and the
+     next reader must be able to tell that apart from a gate loosened to accommodate a defect. */
+  ok(s2.paper === false,
+    'L3e · THE COUPLING IS REVERSIBLE: leaving site-light undoes the paper IT set [observed: '
+    + s1.paper + ' -> ' + s2.paper + ' (want false)]');
   /* INDEPENDENCE asserted as a TRANSITION, not an end state: the paper control must move the paper
      and leave the site where it is, whatever the two happen to be when it is pressed. */
   await page.click('#paperToggle'); await page.waitForTimeout(150);
@@ -184,6 +196,16 @@ const server = http.createServer((req, res) => {
   ok(s3.paper === !s2.paper && s3.light === s2.light,
     'L3f · INDEPENDENCE: the paper control flips the canvas and leaves the site untouched [observed: paper '
     + s2.paper + ' -> ' + s3.paper + ', site ' + s2.light + ' -> ' + s3.light + ']');
+
+  /* ── L3g · THE OTHER HALF OF THE RULING: A DELIBERATE CHOICE IS NOT UNDONE ───────────────────
+     The click above was explicit, so the site switch must now leave the paper alone in BOTH
+     directions. Without this leg, "always revert" would pass L3e and silently throw away a choice
+     the user made — a fix that satisfies the complaint and breaks the earlier ruling. */
+  await page.click('#siteThemeToggle'); await page.waitForTimeout(150);
+  await page.click('#siteThemeToggle'); await page.waitForTimeout(150);
+  const s4 = await state();
+  ok(s4.paper === s3.paper,
+    'L3g · A CHOSEN PAPER SURVIVES A FULL SITE ROUND TRIP [observed: ' + s3.paper + ' -> ' + s4.paper + ']');
 
   /* ── L4 · THE TWO-RENDERER LAW — the leg this gate exists for ────────────────────────────────*/
   let acctSrc = fs.readFileSync(path.join(ROOT, 'scripts/account-topbar.js'), 'utf8');
@@ -211,8 +233,13 @@ const server = http.createServer((req, res) => {
      sequence would make this leg a transcript of my clicks — it would go green over a module that
      wrote the right words to the wrong key, and it would have to be EDITED the day the sequence
      changed. What must be true is that what is STORED agrees with what is SHOWN. */
-  const wantSite = s3.light ? 'light' : 'dark';
-  const wantPaper = s3.paper ? 'light' : 'dark';
+  /* ⛔ READ THE LIVE STATE, NEVER AN EARLIER SNAPSHOT. This compared `stored` (fresh) against s3
+     (taken several clicks earlier) and PASSED BY COINCIDENCE on the clean run — the two happened to
+     agree. --oneway-quirk moved the page after s3 and exposed it. A leg that is right only while an
+     unrelated leg leaves the page in a particular state is not measuring what it claims. */
+  const sNow = await state();
+  const wantSite = sNow.light ? 'light' : 'dark';
+  const wantPaper = sNow.paper ? 'light' : 'dark';
   ok(stored.site === wantSite && stored.paper === wantPaper,
     'L5 · PERSISTENCE: what is stored under the donor keys AGREES with what is on screen [observed: site '
     + stored.site + ' vs ' + wantSite + ', paper ' + stored.paper + ' vs ' + wantPaper + ']');
