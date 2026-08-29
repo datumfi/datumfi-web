@@ -2049,7 +2049,12 @@
         var gb = document.createElementNS("http://www.w3.org/2000/svg", "path");
         gb.setAttribute('class', 'grounds-boundary');
         gb.setAttribute('d', outer);
-        gb.setAttribute('style', 'fill:none; stroke:' + _grLine + '; stroke-dasharray:12 12; stroke-width:1.5; pointer-events:none;');
+        /* THE OUTLINE IS THE ONE LINE THE USER SEES THE WHOLE TIME — it survives every ground state
+           (THE PLOT -> THE GROUNDS -> THE YARD), so its weight is read far more often than any room's.
+           Captain-ruled 2026-08-29: a fine, tightly-repeated mark reads as drafted; a long spaced dash
+           reads as a placeholder. Square ends, deliberately — round caps were offered and refused.
+           Guarded both directions by scripts/_gate_plot_outline.js. */
+        gb.setAttribute('style', 'fill:none; stroke:' + _grLine + '; stroke-dasharray:1 2; stroke-width:1; stroke-linecap:butt; pointer-events:none;');
         svgContainer.appendChild(gb);
       })();
 
