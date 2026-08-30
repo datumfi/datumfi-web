@@ -27,6 +27,7 @@
  *   --icon-quirk     the retired V30 moon rule is restored       -> REDS L7  ONLY
  *   --nolight        the light-mode CSS block is disarmed        -> REDS L8a ONLY
  *   --paper-deaf     the canvas re-scoped to light-mode again    -> REDS L9  ONLY
+ *   --cap-half       Capacity Mode's half-fix restored           -> REDS L10 ONLY
  *   --oneway-quirk   the donor's one-way coupling is restored    -> REDS L3e + L3g
  * SIX controls; FOUR red sets are SINGLETONS and all six are DISTINCT. Stated
  * rather than claimed: L3 and L5 share a control because persistence cannot be observed without
@@ -50,6 +51,7 @@ const ICON_QUIRK    = process.argv.includes('--icon-quirk');
 const ONEWAY_QUIRK  = process.argv.includes('--oneway-quirk');
 const NOLIGHT       = process.argv.includes('--nolight');
 const PAPERDEAF     = process.argv.includes('--paper-deaf');
+const CAPHALF       = process.argv.includes('--cap-half');
 
 /* The Captain's own storage keys, verbatim from the design donor. NOT ours to rename. */
 const KEY_SITE  = 'datumae-studio-site-theme-v31';
@@ -63,6 +65,7 @@ const A_MOBCSS  = '  .theme-toggle-mobile { display: flex;';
 const A_REVERT  = '} else if (!light && paperLight && paperWasAuto()) {';
 const A_LIGHTCSS = '  background-color:#f3f1ed !important;';
 const A_PAPERSCOPE = 'body.canvas-light .canvas-wrapper {';
+const A_CAPSCOPE   = 'body.canvas-light #shape-mode-toggle {';
 
 let pass = 0, fail = 0; const lines = [];
 const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL ') + m); };
@@ -97,6 +100,12 @@ const server = http.createServer((req, res) => {
      gate then timed out clicking through an invisible overlay. A CONTROL THAT BREAKS MORE THAN ITS
      TARGET PROVES NOTHING ABOUT ITS TARGET. This swaps ONE value back to the dark field and leaves
      the stylesheet valid. */
+  /* Restores the HALF fix: the light-paper rule keys on light-mode again, so dark-site+light-paper
+     goes back to a dark button — the exact state the Captain found. */
+  if (CAPHALF && /studio\.html$/.test(p)) {
+    body = Buffer.from(mutate(body.toString('utf8'), A_CAPSCOPE,
+      'body.light-mode.canvas-light #shape-mode-toggle {', 'A_CAPSCOPE'), 'utf8');
+  }
   if (PAPERDEAF && /studio\.html$/.test(p)) {
     body = Buffer.from(mutate(body.toString('utf8'), A_PAPERSCOPE,
       'body.light-mode .canvas-wrapper {', 'A_PAPERSCOPE'), 'utf8');
@@ -369,6 +378,44 @@ const server = http.createServer((req, res) => {
   ok(distinct === 4,
     'L9c · ALL FOUR SITE/PAPER COMBINATIONS PAINT THE CANVAS DIFFERENTLY [observed ' + distinct
     + '/4 distinct] — two switches that collapse onto one surface are one switch wearing two names');
+
+  /* ── L10 · CANVAS-LOCAL CHROME FOLLOWS THE PAPER, IN ALL FOUR STATES ─────────────────────────
+     ⛔⛔ THIS LEG EXISTS BECAUSE I FIXED THIS DEFECT ONCE AND FIXED ONLY HALF OF IT. The Capacity
+     Mode button bound to the SITE switch; I corrected light-site+dark-paper, reported it fixed, and
+     left dark-site+light-paper untouched — so it still went wrong the moment the Captain approached
+     it from the other side. He caught it in one press.
+     🔑 A RELATIONSHIP HAS TWO EDGES. FIXING THE ONE THAT WAS REPORTED IS FIXING THE HALF SOMEBODY
+     HAPPENED TO LOOK AT FIRST. So this asserts the RULE — canvas-local chrome tracks canvas-light
+     and IGNORES light-mode — across all four combinations, which is the only form that cannot be
+     satisfied by half a fix.
+     ⭐ THE RULE GENERALISES BEYOND THIS BUTTON: anything painted ON the canvas belongs to the paper
+     switch. Third surface in three commits to get this wrong (the canvas, then this, then this
+     again from the other side). */
+  const capBg = () => page.evaluate(() => {
+    const e = document.getElementById('shape-mode-toggle');
+    return e ? getComputedStyle(e).backgroundColor : 'MISSING';
+  });
+  const lum2 = (c) => { const m = String(c).match(/[0-9.]+/g); return m && m.length >= 3
+    ? (0.2126 * +m[0] + 0.7152 * +m[1] + 0.0722 * +m[2]) : null; };
+  await page.evaluate((k) => { localStorage.setItem(k[0], 'dark'); localStorage.setItem(k[1], 'dark'); }, [KEY_SITE, KEY_PAPER]);
+  await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(900);
+  const capDD = await capBg();
+  await page.click('#paperToggle'); await page.waitForTimeout(200);
+  const capDL = await capBg();
+  await page.click('#siteThemeToggle'); await page.waitForTimeout(200);
+  const capLL = await capBg();
+  await page.click('#paperToggle'); await page.waitForTimeout(200);
+  const capLD = await capBg();
+  ok(lum2(capDL) > 150 && lum2(capLL) > 150,
+    'L10a · LIGHT PAPER gives a LIGHT Capacity button in BOTH site themes [observed dark-site '
+    + Math.round(lum2(capDL)) + ', light-site ' + Math.round(lum2(capLL)) + ', want >150 both]');
+  ok(lum2(capDD) < 80 && lum2(capLD) < 80,
+    'L10b · DARK PAPER gives a DARK one in BOTH site themes [observed dark-site '
+    + Math.round(lum2(capDD)) + ', light-site ' + Math.round(lum2(capLD)) + ', want <80 both]');
+  ok(Math.abs(lum2(capDL) - lum2(capLL)) < 12 && Math.abs(lum2(capDD) - lum2(capLD)) < 12,
+    'L10c · AND THE SITE SWITCH DOES NOT MOVE IT: same paper, same button, either site [observed '
+    + 'light-paper delta ' + Math.round(Math.abs(lum2(capDL) - lum2(capLL)))
+    + ', dark-paper delta ' + Math.round(Math.abs(lum2(capDD) - lum2(capLD))) + ']');
 
   for (const l of lines) console.log(l);
   console.log('SCORE ' + pass + '/' + (pass + fail) + (fail ? ' RED' : ' GREEN'));

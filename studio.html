@@ -2272,7 +2272,15 @@ body.light-mode .crosshair { stroke: rgba(166,120,40,0.55); }
    light site and dark paper it stayed pale on a dark canvas. Captain-caught. Same class of error
    as the canvas itself: a canvas-local control listening to the wrong one of two switches.
    🔑 THE RULE THAT FALLS OUT: ANYTHING PAINTED *ON* THE CANVAS BELONGS TO canvas-light. */
-body.light-mode:not(.canvas-light) #shape-mode-toggle {
+/* ⛔⛔ BOTH DIRECTIONS. The first version handled only LIGHT SITE + DARK PAPER and left DARK SITE +
+   LIGHT PAPER untouched, so the button stayed dark on white paper. Captain-caught immediately.
+   🔑 A RELATIONSHIP HAS TWO EDGES AND I GATED ONE. Fixing the direction that was reported is not
+   fixing the defect — it is fixing the half of it somebody happened to look at first.
+   Keyed on canvas-light ALONE now, because the site switch was never this control's owner. */
+body.canvas-light #shape-mode-toggle {
+  background: rgba(239,237,232,0.88); color: #1b8e74; border-color: rgba(27,142,116,0.42);
+}
+body:not(.canvas-light) #shape-mode-toggle {
   background: rgba(9,18,33,0.88); color: #5DCAA5; border-color: rgba(29,158,117,0.4);
 }
 
@@ -2293,7 +2301,13 @@ body.light-mode #studioOverlayWrap .brief {
 }
 body.light-mode #studioOverlayWrap .brief-header {
   border-bottom-color: rgba(90,129,160,.14);
-  background: linear-gradient(90deg,rgba(76,135,183,.05),transparent 36%,rgba(166,120,40,.03)), #f7f4ef;
+  /* ⛔ NO OPAQUE BASE — THE DONOR HAS NONE, AND THE #f7f4ef I ADDED IS WHAT MADE THE HARD EDGE.
+     Its header is a TINT over the panel, so the two read as one surface; a base colour behind the
+     tint turns a wash into a band. Captain: "in the mock it's fairly seamless... I prefer the mock
+     without the hard delineation of the top bar."
+     🔑 I ADDED A VALUE THE DONOR DID NOT HAVE, WHICH IS A DIFFERENT ERROR FROM PORTING ONE WRONG —
+     and it is the harder one to find, because nothing is mismatched. There is simply MORE. */
+  background: linear-gradient(90deg,rgba(76,135,183,.05),transparent 36%,rgba(166,120,40,.03));
 }
 body.light-mode #studioOverlayWrap .brief-header-left { color:#63717a; }
 body.light-mode #studioOverlayWrap .brief-header-right { color:#9d7228; }
@@ -17665,7 +17679,13 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     #studioOverlayWrap .phase{grid-template-columns:30px 44px 1fr}
     #studioOverlayWrap .action-dock{padding:14px}
   }
-  #studioOverlayWrap .phase-traveler{--traveler-color:var(--teal); position:absolute; left:19px; top:12.5%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%) scale(1); background:var(--traveler-color); border:1px solid rgba(255,255,255,.72); box-shadow: 0 0 0 4px color-mix(in srgb,var(--traveler-color) 12%,transparent), 0 0 14px color-mix(in srgb,var(--traveler-color) 36%,transparent); z-index:5; opacity:0; pointer-events:none;}
+  /* ⚠️ margin-top:0.5px — MEASURED, NOT NUDGED. The keyframes stop at 12.5/37.5/62.5/87.5% of the
+     phase list; the dots actually centre at 12.597/37.588/62.598/87.588%. The 75% SPAN is exact,
+     so the set is not mis-spaced — it is uniformly half a pixel low, and the traveler therefore
+     lands half a pixel HIGH at every stop, leaving the bottom rim of each dot showing.
+     Corrected here rather than in four keyframe stops: one offset cannot drift out of step with
+     itself, and the percentages stay readable as the design's own numbers. */
+  #studioOverlayWrap .phase-traveler{--traveler-color:var(--teal); position:absolute; left:19px; top:12.5%; margin-top:0.5px; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%) scale(1); background:var(--traveler-color); border:1px solid rgba(255,255,255,.72); box-shadow: 0 0 0 4px color-mix(in srgb,var(--traveler-color) 12%,transparent), 0 0 14px color-mix(in srgb,var(--traveler-color) 36%,transparent); z-index:5; opacity:0; pointer-events:none;}
   #studioOverlayWrap:not(.dismissed) .phase-traveler{opacity:1; animation:studioSequenceTraveler 12s linear infinite;}
   @media (prefers-reduced-motion:reduce){
     #studioOverlayWrap:not(.dismissed) .phase-traveler{animation:none; opacity:0;}
