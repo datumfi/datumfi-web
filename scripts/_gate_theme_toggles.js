@@ -25,7 +25,8 @@
  *   --strip-css      the donor's first toggle rule is removed    -> REDS L1b ONLY
  *   --restore-quirk  the donor's paper re-default is restored    -> REDS L6  ONLY
  *   --icon-quirk     the retired V30 moon rule is restored       -> REDS L7  ONLY
- *   --nolight        the light-mode CSS block is disarmed        -> REDS L8  ONLY
+ *   --nolight        the light-mode CSS block is disarmed        -> REDS L8a ONLY
+ *   --paper-deaf     the canvas re-scoped to light-mode again    -> REDS L9  ONLY
  *   --oneway-quirk   the donor's one-way coupling is restored    -> REDS L3e + L3g
  * SIX controls; FOUR red sets are SINGLETONS and all six are DISTINCT. Stated
  * rather than claimed: L3 and L5 share a control because persistence cannot be observed without
@@ -48,6 +49,7 @@ const RESTORE_QUIRK = process.argv.includes('--restore-quirk');
 const ICON_QUIRK    = process.argv.includes('--icon-quirk');
 const ONEWAY_QUIRK  = process.argv.includes('--oneway-quirk');
 const NOLIGHT       = process.argv.includes('--nolight');
+const PAPERDEAF     = process.argv.includes('--paper-deaf');
 
 /* The Captain's own storage keys, verbatim from the design donor. NOT ours to rename. */
 const KEY_SITE  = 'datumae-studio-site-theme-v31';
@@ -60,6 +62,7 @@ const A_BOOT    = "  if (p === 'light') document.body.classList.add('canvas-ligh
 const A_MOBCSS  = '  .theme-toggle-mobile { display: flex;';
 const A_REVERT  = '} else if (!light && paperLight && paperWasAuto()) {';
 const A_LIGHTCSS = '  background-color:#f3f1ed !important;';
+const A_PAPERSCOPE = 'body.canvas-light .canvas-wrapper {';
 
 let pass = 0, fail = 0; const lines = [];
 const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL ') + m); };
@@ -94,6 +97,10 @@ const server = http.createServer((req, res) => {
      gate then timed out clicking through an invisible overlay. A CONTROL THAT BREAKS MORE THAN ITS
      TARGET PROVES NOTHING ABOUT ITS TARGET. This swaps ONE value back to the dark field and leaves
      the stylesheet valid. */
+  if (PAPERDEAF && /studio\.html$/.test(p)) {
+    body = Buffer.from(mutate(body.toString('utf8'), A_PAPERSCOPE,
+      'body.light-mode .canvas-wrapper {', 'A_PAPERSCOPE'), 'utf8');
+  }
   if (NOLIGHT && /studio\.html$/.test(p)) {
     body = Buffer.from(mutate(body.toString('utf8'), A_LIGHTCSS, '  background-color:#091221 !important;', 'A_LIGHTCSS'), 'utf8');
   }
@@ -327,6 +334,41 @@ const server = http.createServer((req, res) => {
   ok(/light-mode/.test(lt.htmlClass) && !/light-mode/.test(dk.htmlClass),
     'L8c · THE CLASS REACHES <html>, WHERE THE PAINTS ARE DECLARED [observed dark "' + dk.htmlClass
     + '", light "' + lt.htmlClass + '"] — on <body> alone the paint tier does not move');
+
+  /* ── L9 · THE PAPER SWITCH MUST MOVE THE PAPER, NOT JUST THE CLASS ──────────────────────────
+     ⛔⛔ THIS LEG EXISTS BECAUSE THE GATE SCORED 21/21 GREEN OVER A PAPER BUTTON THAT DID NOTHING ON
+     PRODUCTION. The light canvas was scoped to `body.light-mode` instead of `body.canvas-light`, so
+     the control toggled its class, its aria-pressed and its icon while THE SURFACE NEVER RESPONDED —
+     in either theme. Every existing leg asserted the CLASS, and the class was always right.
+     🔑 A CONTROL IS NOT PROVEN BY THE STATE IT SETS. IT IS PROVEN BY SOMETHING CHANGING BECAUSE OF IT.
+     Captain-caught by pressing the button; no instrument here could have.
+     ⭐ ASSERTED AS FOUR DISTINCT SURFACES over the two switches' four combinations — that is the
+     strongest form, because it fails if ANY pair collapses onto one another, which is exactly how
+     this defect presented (two pairs identical). */
+  const canvasPaint = () => page.evaluate(() => {
+    const e = document.querySelector('.canvas-wrapper');
+    const c = getComputedStyle(e);
+    return c.backgroundImage + '||' + c.backgroundColor;
+  });
+  await page.evaluate((k) => { localStorage.setItem(k[0], 'dark'); localStorage.setItem(k[1], 'dark'); }, [KEY_SITE, KEY_PAPER]);
+  await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(900);
+  const seen = {};
+  seen.darkDark = await canvasPaint();
+  await page.click('#paperToggle'); await page.waitForTimeout(200);
+  seen.darkPaper = await canvasPaint();
+  await page.click('#siteThemeToggle'); await page.waitForTimeout(200);
+  seen.lightPaper = await canvasPaint();
+  await page.click('#paperToggle'); await page.waitForTimeout(200);
+  seen.lightDark = await canvasPaint();
+  const distinct = new Set(Object.values(seen)).size;
+  ok(seen.darkPaper !== seen.darkDark,
+    'L9a · THE PAPER SWITCH WORKS IN DARK MODE: the canvas repaints when only the paper changes '
+    + '[observed changed: ' + (seen.darkPaper !== seen.darkDark) + ']');
+  ok(seen.lightDark !== seen.lightPaper,
+    'L9b · AND IN LIGHT MODE [observed changed: ' + (seen.lightDark !== seen.lightPaper) + ']');
+  ok(distinct === 4,
+    'L9c · ALL FOUR SITE/PAPER COMBINATIONS PAINT THE CANVAS DIFFERENTLY [observed ' + distinct
+    + '/4 distinct] — two switches that collapse onto one surface are one switch wearing two names');
 
   for (const l of lines) console.log(l);
   console.log('SCORE ' + pass + '/' + (pass + fail) + (fail ? ' RED' : ' GREEN'));

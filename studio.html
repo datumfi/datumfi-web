@@ -2108,8 +2108,33 @@ body.light-mode {
      ⚠️ It does NOT reach text that spells its own white as a literal - see the note at the end. */
   /* (paints move on <html>, below - see the note there) */
 }
-body.light-mode .canvas-wrapper {
+/* ⛔⛔ SCOPED TO canvas-light, NOT light-mode — AND THE FIRST VERSION GOT THIS WRONG, WHICH BROKE
+   THE PAPER BUTTON ON PRODUCTION. Keyed on `body.light-mode`, the light canvas painted whenever the
+   SITE was light and there was no rule at all when the site was dark — so the paper control toggled
+   its class, its aria-pressed and its icon while NOTHING ON THE CANVAS RESPONDED, in either theme.
+   🔑 THE CONTROL WAS NEVER BROKEN; THE SURFACE WAS LISTENING TO THE WRONG SWITCH. Every gate stayed
+   green because every gate asserts the CLASS, and the class was correct. Captain-caught by using it.
+   ⚠️ THE DONOR HAS THIS RIGHT AND I DID NOT COPY IT: it keys the paper on `body.canvas-light .canvas`
+   and gives light-site-with-dark-paper its OWN rule. Two independent switches need two independent
+   scopes; one class cannot carry both. */
+body.canvas-light .canvas-wrapper {
   background-color:transparent;
+  background-image:
+    linear-gradient(rgba(65,111,126,.15) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(65,111,126,.15) 1px,transparent 1px),
+    linear-gradient(rgba(25,125,105,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(25,125,105,.045) 1px,transparent 1px),
+    radial-gradient(circle at 62% 18%,rgba(25,125,105,.065),transparent 29%),
+    linear-gradient(180deg,#eef2ef,#e7ece9);
+  background-size:76px 76px,76px 76px,19px 19px,19px 19px,auto,auto;
+  box-shadow: inset 0 0 0 1px rgba(90,129,160,.18);
+}
+/* ⭐ LIGHT SITE + LIGHT PAPER IS ITS OWN STATE IN THE DONOR, NOT A REPEAT OF THE ONE ABOVE — and
+   porting only one of the two is what made this gate read 3/4 distinct instead of 4. Paper on a
+   DARK site is a sheet lit by a dark room; paper on a LIGHT site sits on a lit page and takes a
+   warmer, brighter base. TWO SWITCHES MEAN FOUR STATES, AND A DESIGN THAT AUTHORS FOUR IS NOT
+   SERVED BY THREE. */
+body.light-mode.canvas-light .canvas-wrapper {
   background-image:
     linear-gradient(rgba(84,128,152,.16) 1px,transparent 1px),
     linear-gradient(90deg,rgba(84,128,152,.16) 1px,transparent 1px),
@@ -2118,7 +2143,6 @@ body.light-mode .canvas-wrapper {
     radial-gradient(circle at 64% 18%,rgba(121,222,199,.08),transparent 30%),
     linear-gradient(180deg,#f6f6f1 0%,#ecebe5 100%);
   background-size:76px 76px,76px 76px,19px 19px,19px 19px,auto,auto;
-  box-shadow: inset 0 0 0 1px rgba(90,129,160,.18);
 }
 body.light-mode .drafting-panel,
 body.light-mode .studio-layout.mode-draft .drafting-panel {
@@ -2161,9 +2185,22 @@ body.light-mode .view-btn { color:rgba(21,33,43,.66); border-color:rgba(34,57,70
    read greyer than the panel beside it.
    The donor has NO vignette on its canvas at all -- only a soft glow, which in light mode it tints
    green. Carried as values. */
-body.light-mode .canvas-wrapper::after { background: none; }
-body.light-mode .canvas-wrapper::before {
+body.canvas-light .canvas-wrapper::after { background: none; }
+body.canvas-light .canvas-wrapper::before {
   background: radial-gradient(circle at 50% 45%, rgba(25,142,116,.055), transparent 48%);
+}
+
+/* LIGHT SITE + DARK PAPER — the donor authors this state explicitly rather than letting the dark
+   default show through, because the stage sits on a cream page and needs its own edge. */
+body.light-mode:not(.canvas-light) .canvas-wrapper {
+  background-image:
+    linear-gradient(rgba(42,78,104,.16) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(42,78,104,.16) 1px,transparent 1px),
+    linear-gradient(rgba(121,222,199,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(121,222,199,.045) 1px,transparent 1px),
+    radial-gradient(circle at 62% 18%,rgba(121,222,199,.07),transparent 29%),
+    linear-gradient(180deg,rgba(4,10,18,.91),rgba(8,16,28,.96));
+  background-size:76px 76px,76px 76px,19px 19px,19px 19px,auto,auto;
 }
 
 /* ── THE RAW-LITERAL TEXT — THE ONLY THINGS A PAINT CANNOT REACH ─────────────────────────────
@@ -2216,6 +2253,60 @@ body.light-mode .journey-cue, body.light-mode .journey-cue span { color:#445863;
 /* The crosshair spells its gold as rgba(201,168,76,0.3) — a literal, and 30% of gold reads on navy
    but disappears on cream. Same ink, carried to an alpha that survives a light ground. */
 body.light-mode .crosshair { stroke: rgba(166,120,40,0.55); }
+
+/* ── THE ENTRY OVERLAY, IN LIGHT ─────────────────────────────────────────────────────────────
+   Our overlay was ported from the donor under SHELL YES, BRAIN NO and KEPT ITS CLASS VOCABULARY
+   (.brief / .brief-header / .action-dock / .choice), so the donor's own light rules map across
+   almost one-for-one — the rare case where the two files DO share names.
+   ⛔ Each selector carries #studioOverlayWrap because the overlay's base rules are ID-scoped; a
+   class-only light rule would parse, sit there, and lose. (See the .s1-header lesson above.) */
+body.light-mode #studioOverlayWrap { background: rgba(28,39,47,.28); backdrop-filter: blur(4px); }
+body.light-mode #studioOverlayWrap .brief {
+  border-color: rgba(90,129,160,.18);
+  background-image:
+    linear-gradient(rgba(76,135,183,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(76,135,183,.045) 1px,transparent 1px),
+    linear-gradient(180deg,#fcfbf8 0%,#f7f4ef 100%);
+}
+body.light-mode #studioOverlayWrap .brief-header {
+  border-bottom-color: rgba(90,129,160,.14);
+  background: linear-gradient(90deg,rgba(76,135,183,.05),transparent 36%,rgba(166,120,40,.03)), #f7f4ef;
+}
+body.light-mode #studioOverlayWrap .brief-header-left { color:#63717a; }
+body.light-mode #studioOverlayWrap .brief-header-right { color:#9d7228; }
+body.light-mode #studioOverlayWrap .brief-intro {
+  border-right-color: rgba(90,129,160,.12);
+  background: linear-gradient(90deg,rgba(7,16,29,.025),transparent 48%);
+}
+body.light-mode #studioOverlayWrap .brief h1 { color:#0f1c24; text-shadow:none; }
+body.light-mode #studioOverlayWrap .brief-copy { color:#22343d; }
+body.light-mode #studioOverlayWrap .brief-copy strong { color:#0f1c24; }
+body.light-mode #studioOverlayWrap .brief-formula { color:#9d7228; }
+body.light-mode #studioOverlayWrap .eyebrow { color:#5e717a; }
+body.light-mode #studioOverlayWrap .close { color:#3c515c; }
+body.light-mode #studioOverlayWrap .phases {
+  background: radial-gradient(circle at 68% 8%,rgba(26,143,116,.05),transparent 38%),
+              linear-gradient(180deg,rgba(255,255,255,.55),transparent 44%);
+}
+body.light-mode #studioOverlayWrap .phase-dot { background:#f7f4ef; }
+body.light-mode #studioOverlayWrap .action-dock {
+  border-top-color: rgba(90,129,160,.18);
+  background: linear-gradient(180deg,#ece9e3 0%,#e4e0da 100%);
+}
+body.light-mode #studioOverlayWrap .choice {
+  border:1px solid rgba(24,38,48,.14); color:#15242c;
+  background: linear-gradient(180deg,#ffffff 0%,#f7f4ef 100%);
+}
+body.light-mode #studioOverlayWrap .choice:hover {
+  border-color: rgba(90,129,160,.28);
+  background: linear-gradient(180deg,#ffffff,#f6f3ee);
+}
+body.light-mode #studioOverlayWrap .choice-title { color:#0f1c24; }
+body.light-mode #studioOverlayWrap .choice-kicker { color:#1a8f74; }
+body.light-mode #studioOverlayWrap .choice-sub,
+body.light-mode #studioOverlayWrap .action-meta { color:#445863; }
+body.light-mode #studioOverlayWrap .dock-signin { color:#5e717a; }
+
 
   /* ⛔ THE LAYER WE SHIPPED SHORT. proto2's stage carries TWO overlays and §82.8 ported only the
      vignette. This is the other one: a broad centre glow plus the sheen that gives the stage its
