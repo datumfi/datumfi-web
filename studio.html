@@ -14089,7 +14089,19 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           if (retWarnEl) { retWarnEl.textContent = 'Enter a realistic Target Retirement Date.'; retWarnEl.style.display = 'block'; }
           return;
         }
-        var currentAge = parseAgeFromDob(dobVal) || 43;
+        /* ⛔⛔ FINDING 49a — `|| 43` INVENTED AN AGE AND IT REACHED THE SCREEN. With no parseable
+           DOB this supplied 43 and derived the whole plan-through window from it. MEASURED: with no
+           DOB and a target retirement of 03/2062 the Plan Through slider read 99 yrs; with a REAL
+           DOB of 03/1985 the same retirement date gives 97. The user was shown a plan-through age
+           two years off, computed entirely from an age nobody supplied.
+           ⚠️ THE DATE FIELD WAS ALREADY HONEST (F51 leaves it blank with no sourced DOB) WHILE THE
+              SLIDER AND ITS LABEL LIED — the two halves of one quantity disagreeing, with only the
+              silent half correct.
+           🔑 L47 ON THE DATA SURFACE: an unparseable DOB yields NO age. Derive nothing rather than
+              derive from a guess — the slider keeps its own default, which is a default nobody has
+              dressed up as an answer. */
+        var currentAge = parseAgeFromDob(dobVal);
+        if (!currentAge) { if (retWarnEl) retWarnEl.style.display = 'none'; return; }
         var retireAge = retYear - (currentYear - currentAge);
         if (retireAge >= 100) {
           if (retWarnEl) { retWarnEl.textContent = 'Target Retirement Date implies retirement age over 100. Check Date of Birth or Target Retirement Date.'; retWarnEl.style.display = 'block'; }
@@ -18246,13 +18258,29 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       if (!_sketch) return;
       setTimeout(function() {
         var _now = new Date().getFullYear();
+        /* ⛔⛔ FINDING 49a — THE SKETCH CARRY USED TO INVENT A BIRTH MONTH. It wrote
+           '01 / ' + (year - sketch.age) into pri-dob and the same shape into target-ret, so opening
+           a saved Sketch populated the Profile with a JANUARY birthday and a JANUARY retirement date
+           the user had never given. MEASURED: a sketch of {age:44, retire_age:56} produced
+           pri-dob "01 / 1982" and target-ret "01 / 2038". The sketch stores an AGE; an age does not
+           contain a month, so the month could only ever be manufactured.
+           🔑 FOURTH INVENTED MONTH IN THIS FEATURE AREA (June in syncFromSketchAges, January in
+              _dateForField, this, and the hardcoded 08/1982 filed separately as F52). The habit is
+              the finding: when a personal fact is missing, this code's settled reflex is to supply one.
+           ⭐ THE CARRY ITSELF IS KEPT — only its route changes. The sketch's ages now go STRAIGHT to
+              the sliders they belong to, which is exactly what this same function already does for
+              portfolio, contributions and datum a few lines below. Going via an invented Profile date
+              was the only reason a month had to be conjured at all. Clamped to each slider's own
+              declared range rather than to numbers restated here. */
         if (_sketch.age) {
-          var _dobEl = document.getElementById('pri-dob');
-          if (_dobEl) _dobEl.value = '01 / ' + (_now - _sketch.age);
+          var _sAge = document.getElementById('slider-age');
+          if (_sAge) _sAge.value = String(Math.max(parseInt(_sAge.min, 10) || 18,
+                                          Math.min(parseInt(_sAge.max, 10) || 85, _sketch.age)));
         }
-        if (_sketch.age && _sketch.retire_age) {
-          var _retEl = document.getElementById('target-ret');
-          if (_retEl) _retEl.value = '01 / ' + (_now + (_sketch.retire_age - _sketch.age));
+        if (_sketch.retire_age) {
+          var _sRet = document.getElementById('slider-activation');
+          if (_sRet) _sRet.value = String(Math.max(parseInt(_sRet.min, 10) || 45,
+                                          Math.min(parseInt(_sRet.max, 10) || 90, _sketch.retire_age)));
         }
         // #4b: spend-input mirrors the HAVE datum slider, so seed it from the CURRENT
         // (S1) datum, not the collapsed designed datum_spend. (Mirror is overwritten by
@@ -18314,9 +18342,13 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            impersonating the user was only the mechanism, so the mechanism goes and the intent stays.
            Runs ONCE rather than twice: syncFromProfileDates reads BOTH fields on every call, so the
            second dispatch never did anything the first had not already done. */
-        if (_dobEl || _retEl) {
-          if (typeof window._studioApplyProfileDates === 'function') window._studioApplyProfileDates();
-        }
+        /* ⭐ F49a — CALLED UNCONDITIONALLY NOW. The old guard was `if (_dobEl || _retEl)`, i.e. it
+           only repainted when the (invented) Profile dates had been written. Those writes are gone,
+           and the repaint is still needed — by the age/activation sliders seeded above AND by the
+           plan-through seed, which the comment two blocks up already says depends on this call. A
+           guard that tested for a side effect we have just removed would have silently stopped the
+           labels, the Shape and the engine payload from picking up ANY seeded value. */
+        if (typeof window._studioApplyProfileDates === 'function') window._studioApplyProfileDates();
         if (typeof updateSVGs === 'function') updateSVGs();
         // Entry toast suppressed (Captain): the prefill above is silent — no
         // "Sketch outline loaded" pop on hydration.
