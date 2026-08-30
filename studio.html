@@ -15034,7 +15034,14 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     }
     function updateAgeLabel()        { var s = $('slider-age');        var l = $('val-age');        if (s && l) l.textContent = s.value + ' yrs'; }
     function updateActivationLabel() { var s = $('slider-activation'); var l = $('val-activation'); if (s && l) l.textContent = s.value + ' yrs'; }
-    function updatePlanThroughLabel(){ var s = $('sl-plan-through');   var l = $('val-plan-through');if (s && l) l.textContent = s.value + ' yrs'; }
+    /* ⛔ THE WARNING CLEARS HERE BECAUSE THIS IS THE ONE POINT EVERY PLAN-THROUGH VALUE CHANGE PASSES
+       — a successful typed commit, a slider move, and a labels refresh all reach it, while
+       _commitPlanEndDate's FAILURE branch deliberately does NOT (measured), so a real rejection
+       still shows. A DEFECT THIS COMMIT CREATES IS THIS COMMIT'S TO OWN: the stale message cannot
+       occur today only because the warning never appears at all, and an authored sentence that is
+       false at the moment it is read is the product lying in its own voice — here about the horizon
+       of someone's retirement, after they have already corrected it. */
+    function updatePlanThroughLabel(){ var s = $('sl-plan-through');   var l = $('val-plan-through');if (s && l) l.textContent = s.value + ' yrs'; var w = $('plan-end-warn'); if (w) { w.textContent = ''; w.style.display = 'none'; } }
     function updateTaxLabel()        { var s = $('slider-tax');        var l = $('val-tax');        if (s && l) l.textContent = s.value + '%'; }
 
     function refreshAllLabels() {
@@ -15819,7 +15826,24 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     function wireProfileBindings() {
       ['pri-dob', 'target-ret', 'plan-end-age'].forEach(function (id) {
         var el = $(id); if (!el) return;
-        el.addEventListener('change', function () { window._studioApplyProfileDates(); });
+        /* ⛔⛔ plan-end-age OWNS ITS OWN COMMIT (inline onblur -> _commitPlanEndDate) AND MUST NOT BE
+           SYNCED FROM HERE. `change` fires BEFORE `blur`, so syncFromProfileDates' unconditional
+           _mirrorPlanEnd() repainted the field FROM THE SLIDER over the value the user had just
+           typed; the blur-time committer then read the stale text and committed the OLD age. The
+           edit vanished with no warning, and an invalid date was indistinguishable from a valid one
+           because the mirror handed the validator a good date every time.
+           🔑 A FIELD CANNOT BE BOTH A DISPLAY AND AN INPUT. Both intentions shipped, and whichever
+              ran first won — here `change` beat `blur`, so the display always won.
+           ⭐ THE INTERFERER IS REMOVED, NOT THE OWNER. Moving the commit here instead would create a
+              SECOND committer, and the second commit re-validates the already-reverted (valid) text
+              and CLEARS the warning — measured. Readiness still refreshes; only the SYNC is skipped. */
+        el.addEventListener('change', function () {
+          if (id === 'plan-end-age') {
+            if (typeof window.updateRangeReadiness === 'function') window.updateRangeReadiness();
+            return;
+          }
+          window._studioApplyProfileDates();
+        });
       });
       var taxProfEl = $('eff-tax-rate');
       if (taxProfEl) taxProfEl.addEventListener('change', function () {

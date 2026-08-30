@@ -153,7 +153,10 @@ const read = (page) => page.evaluate(() => ({
   await page.evaluate(() => { const d = document.getElementById('pri-dob'); if (d) d.value = ''; });
   await page.evaluate((v) => { const el = document.getElementById('plan-end-age'); el.focus(); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); if (window._commitPlanEndDate) window._commitPlanEndDate(el); }, '01 / ' + (Y - caNow + 95));
   await page.waitForTimeout(150);
-  check('(d) valid Plan-Through date moves the slider (2A intact)', (await read(page)).plan === 95, 'plan=' + (await read(page)).plan);
+  /* ⛔ SUBJECT RESTATED 2026-08-30 — same direct-call blindness as _p8_studio_mechanics' 2A legs:
+     this calls _commitPlanEndDate itself and never types. A GATE THAT INVOKES A HANDLER PROVES THE
+     HANDLER, NOT THE FEATURE. The typed-UI claim lives in scripts/_gate_plan_through_typed.js. */
+  check('(d) _commitPlanEndDate CALLED DIRECTLY moves the slider for a valid date (HANDLER ONLY)', (await read(page)).plan === 95, 'plan=' + (await read(page)).plan);
   const planPayload = await page.evaluate(() => { try { const bp = window.DatumBlueprint['new'](); window.DatumBlueprint.captureDOM(bp); return bp.profile.plan_end_age; } catch (e) { return 'ERR:' + e.message; } });
   check('(e) payload plan_end_age stays an INTEGER age', typeof planPayload === 'number' && Number.isInteger(planPayload), JSON.stringify(planPayload));
 

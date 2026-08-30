@@ -383,12 +383,21 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   await page.evaluate(() => { const d = document.getElementById('pri-dob'); if (d) d.value = ''; });
   await page.evaluate((v) => { const el = document.getElementById('plan-end-age'); el.focus(); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); if (window._commitPlanEndDate) window._commitPlanEndDate(el); }, '01 / ' + (Y - caNow + 95));
   await page.waitForTimeout(200);
-  check('2A: typed valid date sets slider age', (await page.evaluate(() => parseInt(document.getElementById('sl-plan-through').value, 10))) === 95);
+  /* ⛔⛔ SUBJECT RESTATED 2026-08-30 — THIS LEG AND THE ONE BELOW CALL _commitPlanEndDate DIRECTLY.
+     They said "typed ... " and "invalid date reverts slider + warns", which are claims about what a
+     USER DOES. They travel none of the path a user travels: no click, no keystrokes, no Tab. Both
+     stood GREEN inside the suite for months while typing into that field was BROKEN in production —
+     the `change` listener repainted the field from the slider before `blur` could commit it.
+     🔑 A GATE THAT INVOKES A HANDLER PROVES THE HANDLER. IT PROVES NOTHING ABOUT THE FEATURE.
+     ⭐ Kept rather than deleted because the handler-level claim is true and modestly useful; only
+     the SUBJECT was a lie. The user-visible claim now lives in scripts/_gate_plan_through_typed.js,
+     which drives the real UI and never calls the handler. */
+  check('2A: _commitPlanEndDate CALLED DIRECTLY sets the slider from a valid date (HANDLER ONLY — the typed-UI path is _gate_plan_through_typed.js)', (await page.evaluate(() => parseInt(document.getElementById('sl-plan-through').value, 10))) === 95);
   const peBefore = await page.evaluate(() => parseInt(document.getElementById('sl-plan-through').value, 10));
   await page.evaluate(() => { const el = document.getElementById('plan-end-age'); el.value = '01 / 3052'; el.dispatchEvent(new Event('input', { bubbles: true })); if (window._commitPlanEndDate) window._commitPlanEndDate(el); });
   await page.waitForTimeout(200);
   const peAfter = await page.evaluate(() => ({ plan: parseInt(document.getElementById('sl-plan-through').value, 10), warn: document.getElementById('plan-end-warn').style.display }));
-  check('2A: invalid date reverts slider + warns', peAfter.plan === peBefore && peAfter.warn === 'block', JSON.stringify(peAfter));
+  check('2A: _commitPlanEndDate CALLED DIRECTLY rejects an invalid date and sets the warning (HANDLER ONLY — see the note above; this exact leg asserted the USER-VISIBLE claim in green while it was false)', peAfter.plan === peBefore && peAfter.warn === 'block', JSON.stringify(peAfter));
   const planPayload = await page.evaluate(() => { try { const bp = window.DatumBlueprint['new'](); window.DatumBlueprint.captureDOM(bp); return bp.profile.plan_end_age; } catch (e) { return 'ERR:' + e.message; } });
   check('2A: payload plan_end_age stays an INTEGER age (shape unchanged)', typeof planPayload === 'number' && Number.isInteger(planPayload) && planPayload >= 75 && planPayload <= 105, JSON.stringify(planPayload));
   await ctx.close();
