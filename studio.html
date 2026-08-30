@@ -1172,7 +1172,14 @@
   .journey-cue {
     width: 100%; display: flex; align-items: center; justify-content: space-between;
     gap: clamp(12px, calc(12px + (var(--studio-panel-w, 480px) - 340px) * 0.075), 18px);
-    margin: 31px 0 20px; padding: 0 2px;
+    /* ⛔ WAS 31px TOP. MEASURED at the same viewport: the gap between the Overview control and this
+       row was 61px here against the donor's 33px — 28px more, which is this margin almost exactly.
+       3px lands at ~33px. ⚠️ AND I FIRST EDITED THE OTHER .journey-cue RULE ABOVE, WHICH THIS ONE
+       OVERRIDES — the measurement did not move and that is how I found out. Two rules for one
+       selector, later wins, and the earlier one is a decoy for anyone who greps and stops.
+       🔑 Captain's reason is about the CARDS, not this row: the dead space cost a card of
+       first-screen. */
+    margin: 3px 0 20px; padding: 0 2px;
     font-family: var(--font-mono); font-weight: 600; line-height: 1;
     font-size: clamp(9.2px, calc(9.2px + (var(--studio-panel-w, 480px) - 340px) * 0.0125), 10.2px);
     letter-spacing: .105em; text-transform: uppercase;
@@ -2089,6 +2096,13 @@ html.light-mode {
   --paint-verdigris: #1b8e74;   /* his --teal  */
   --paint-brass:     #a67828;   /* his --gold  */
   --paint-red-lead:  #b85c46;   /* his --red   */
+  /* THE OVERLAY'S PHASE COLOURS. The donor redefines --purple and --blue for light because the
+     dark values are chosen to glow on navy: #8178d7 and #7ac0ff read as pastel on cream, and the
+     blue in particular drops below comfortable reading contrast. Captain-caught on the overlay's
+     TEST IT / SHAPE IT lines and on IMPORT OUTLINE, which is the same token in a third place —
+     one paint, three surfaces, which is the tier doing its job. */
+  --paint-amethyst:        #716cc6;
+  --paint-cyanotype-light: #4c87b7;
   --paint-verdigris-deep: #197d69;
   --paint-seafoam:   #2c8f78;
   --paint-graphite-blue: #5A81A0;
@@ -2253,6 +2267,15 @@ body.light-mode .journey-cue, body.light-mode .journey-cue span { color:#445863;
 /* The crosshair spells its gold as rgba(201,168,76,0.3) — a literal, and 30% of gold reads on navy
    but disappears on cream. Same ink, carried to an alpha that survives a light ground. */
 body.light-mode .crosshair { stroke: rgba(166,120,40,0.55); }
+/* ⭐ CAPACITY MODE SITS ON THE CANVAS, SO IT FOLLOWS THE PAPER SWITCH, NOT THE SITE SWITCH.
+   It reads --surface, which derives from --paint-inkwell and therefore tracks the SITE — so with a
+   light site and dark paper it stayed pale on a dark canvas. Captain-caught. Same class of error
+   as the canvas itself: a canvas-local control listening to the wrong one of two switches.
+   🔑 THE RULE THAT FALLS OUT: ANYTHING PAINTED *ON* THE CANVAS BELONGS TO canvas-light. */
+body.light-mode:not(.canvas-light) #shape-mode-toggle {
+  background: rgba(9,18,33,0.88); color: #5DCAA5; border-color: rgba(29,158,117,0.4);
+}
+
 
 /* ── THE ENTRY OVERLAY, IN LIGHT ─────────────────────────────────────────────────────────────
    Our overlay was ported from the donor under SHELL YES, BRAIN NO and KEPT ITS CLASS VOCABULARY
