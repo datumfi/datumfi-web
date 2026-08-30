@@ -25,13 +25,17 @@
  *    And it refuses through TWO DIFFERENT INVALID SHAPES (a future birth date, and an age out of
  *    range the other way), because ONE REJECTION PATH IS A LITERAL IN DISGUISE.
  *
- * Usage: node scripts/_gate_refused_input_retracted.js [--leave-alone|--never-mirror]
- *   --leave-alone   restores the bare `return` (the shipped defect) -> REDS L2a + L2b ONLY
- *   --never-mirror  the mirror never writes at all                  -> REDS L3 ONLY
- * TWO controls, DISJOINT. L2a/L2b share one control on purpose and it is stated: they are ONE claim
- * measured through two rejection shapes, and no mutation can separate them without being a
- * different defect. --never-mirror exists so L3 is provably able to fail: a fix of the form "never
- * write anything" would satisfy every L2 leg and silently destroy the feature.
+ * Usage: node scripts/_gate_refused_input_retracted.js [--leave-alone|--skip-retraction|--never-mirror]
+ *   --leave-alone     restores the bare `return` in the mirror  -> REDS ALL FOUR L2 legs
+ *   --skip-retraction removes the DIRECT mirror call on refusal -> REDS THE NO-RETIREMENT-DATE
+ *                     legs only (L2a, L22a) — the exact defect that survived the first fix
+ *   --never-mirror    the mirror never writes at all            -> REDS L1 + L3 ONLY
+ * THREE controls. --leave-alone and --skip-retraction are the TWO HALVES OF THE FIX and are
+ * separable by construction: the first kills the clear itself (all four L2 legs), the second kills
+ * only the unconditional call (the two NO-retirement-date legs). A single control could not tell
+ * them apart, which is precisely how the first version of this gate shipped a live defect.
+ * --never-mirror exists so L3 is provably able to fail: a fix of the form "never write anything"
+ * would satisfy every L2 leg and silently destroy the feature.
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
@@ -40,6 +44,18 @@ const PORT = 8573; const BASE = 'http://127.0.0.1:' + PORT;
 
 const LEAVE = process.argv.includes('--leave-alone');
 const NEVER = process.argv.includes('--never-mirror');
+const SKIP  = process.argv.includes('--skip-retraction');
+
+/* ⛔⛔ THE SECOND CONTROL EXISTS BECAUSE THE FIRST VERSION OF THIS GATE PASSED OVER A LIVE DEFECT.
+   It typed a Target Retirement Date first "so the derivation would work" — and _updatePlanEndAge
+   RETURNS EARLY without one, so that setup was the ONLY reason the retraction ran at all. With no
+   retirement date the clear was never reached and the impossible date survived on production, which
+   is where the Captain found it AFTER the fix shipped.
+   🔑 A FIXTURE THAT ESTABLISHES PRECONDITIONS CAN SELECT A DIFFERENT CODE PATH THAN THE USER'S.
+   So every refusal below is now run TWICE — with and without a retirement date — and the two halves
+   of the fix have SEPARATE controls, because a single control could not tell them apart. */
+const A_DIRECT = "        if (window._mirrorPlanEnd) window._mirrorPlanEnd();\n        _updatePlanEndAge();";
+const B_DIRECT = "        _updatePlanEndAge();";
 
 const A_GUARD = "if (!_dobEl || !/\\d{1,2}\\s*\\/\\s*\\d{4}/.test(String(_dobEl.value || ''))) {\n        if (pEl.value) pEl.value = '';\n        return;\n      }";
 const B_GUARD = "if (!_dobEl || !/\\d{1,2}\\s*\\/\\s*\\d{4}/.test(String(_dobEl.value || ''))) return;";
@@ -61,10 +77,11 @@ const server = http.createServer((req, res) => {
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   let body = fs.readFileSync(fp);
-  if (/studio\.html$/.test(p) && (LEAVE || NEVER)) {
+  if (/studio\.html$/.test(p) && (LEAVE || NEVER || SKIP)) {
     let s = body.toString('utf8');
     if (LEAVE) s = mutate(s, A_GUARD, B_GUARD, 'A_GUARD');
     if (NEVER) s = mutate(s, A_MIRROR, B_MIRROR, 'A_MIRROR');
+    if (SKIP)  s = mutate(s, A_DIRECT, B_DIRECT, 'A_DIRECT');
     body = Buffer.from(s, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -75,7 +92,8 @@ const server = http.createServer((req, res) => {
   await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
   const browser = await chromium.launch();
   console.log('[RUN] A REFUSED INPUT LEAVES NOTHING BEHIND'
-    + (LEAVE ? '   [MUTATED --leave-alone]' : NEVER ? '   [MUTATED --never-mirror]' : ''));
+    + (LEAVE ? '   [MUTATED --leave-alone]' : NEVER ? '   [MUTATED --never-mirror]'
+       : SKIP ? '   [MUTATED --skip-retraction]' : ''));
 
   async function fresh() {
     const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
@@ -125,17 +143,21 @@ const server = http.createServer((req, res) => {
      🔑 THE RETRACTION TARGET IS CREATED BY THE BAD INPUT ITSELF: `oninput` derives from the
         half-typed future year before `onblur` ever refuses it, so the stale date exists precisely
         in the case where there is no good value to fall back to. That is the Captain's case. */
-  for (const [label, bad, leg] of [['FUTURE birth date', '03/2057', 'L2a'],
-                                   ['an age far over the limit', '03/1900', 'L2b']]) {
-    const { ctx, page } = await fresh();
-    await type(page, '#target-ret', '03/2050');
-    await type(page, '#pri-dob', bad);
-    const after = await read(page);
-    ok(after.dob === '' && after.plan === '' && after.warn !== '' && after.warnDisp !== 'none',
-      leg + ' · A REFUSED DOB (' + label + ') LEAVES NO DERIVED DATE, AND STILL EXPLAINS ITSELF '
-      + '[observed dob "' + after.dob + '", plan "' + after.plan + '", warn "'
-      + after.warn.slice(0, 44) + '" (' + after.warnDisp + ')]');
-    await ctx.close();
+  for (const [shape, bad] of [['FUTURE birth date', '03/2057'],
+                              ['an age far over the limit', '03/1900']]) {
+    for (const [where, withRet, tag] of [['NO retirement date', false, 'a'],
+                                         ['with a retirement date', true, 'b']]) {
+      const leg = 'L2' + (shape[0] === 'F' ? '' : '2') + tag;
+      const { ctx, page } = await fresh();
+      if (withRet) await type(page, '#target-ret', '03/2050');
+      await type(page, '#pri-dob', bad);
+      const after = await read(page);
+      ok(after.dob === '' && after.plan === '' && after.warn !== '' && after.warnDisp !== 'none',
+        leg + ' · REFUSED (' + shape + ', ' + where + ') LEAVES NO DERIVED DATE, AND STILL EXPLAINS '
+        + 'ITSELF [observed dob "' + after.dob + '", plan "' + after.plan + '", warn "'
+        + after.warn.slice(0, 40) + '" (' + after.warnDisp + ')]');
+      await ctx.close();
+    }
   }
 
   /* ── L3 · THE HONEST HALF SURVIVES ───────────────────────────────────────────────────────────

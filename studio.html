@@ -14225,6 +14225,23 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         // DOB never owns ret-date-warn, so always refresh the plan-end mirror from the
         // committed (or reverted) DOB to keep the plan slider consistent.
         _enforceProfileDate(el);
+        /* ⛔⛔ FINDING 51, SECOND PASS — THE RETRACTION MAY NOT DEPEND ON _updatePlanEndAge REACHING
+           THE MIRROR. That function RETURNS EARLY when Target Retirement Date is absent or not a
+           4-digit year, so with no retirement date typed the clear inside _mirrorPlanEnd was never
+           reached — while the WRITE still happened by a different route (pri-dob's `change` ->
+           _studioApplyProfileDates -> syncFromProfileDates -> _mirrorPlanEnd, from the still
+           unvalidated text). WRITE ROUTE AND RETRACTION ROUTE WERE NOT THE SAME ROUTE, and only the
+           retraction one could be skipped.
+           ⛔ MEASURED, Captain-found on production AFTER the first fix shipped: with no retirement
+           date, 08/2055 left "08 / 2148" and 08/1900 left "08 / 1993". WITH one, both cleared — so
+           the first gate passed honestly while proving the wrong thing.
+           🔑 THE FIRST FIX'S FIXTURE TYPED A RETIREMENT DATE "SO THE DERIVATION WOULD WORK" AND
+              THEREBY SELECTED A CODE PATH THE USER WAS NEVER ON. Setting up the state you need can
+              quietly change the subject — the same lesson the previous commit recorded, repeated
+              one commit later by the agent who wrote it down.
+           ⭐ Called DIRECTLY here so the retraction is unconditional: _mirrorPlanEnd clears when the
+              DOB is unsourced, whatever else is or is not filled in. */
+        if (window._mirrorPlanEnd) window._mirrorPlanEnd();
         _updatePlanEndAge();
       }
       window._validatePriDob = _validatePriDob;
