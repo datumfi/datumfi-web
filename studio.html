@@ -15212,8 +15212,33 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     function _commitAgeDate(committedAge) {
       var pd = _agePendingDate; _agePendingDate = null;
       if (!pd || committedAge !== pd.age) return false;
-      if (pd.kind === 'dob')    { var d = $('pri-dob');    if (d) d.value = _pad2(pd.mo) + ' / ' + pd.yr; return true; }
-      if (pd.kind === 'retire') { var r = $('target-ret'); if (r) r.value = _pad2(pd.mo) + ' / ' + pd.yr; return true; }
+      /* ⛔⛔ FINDING 50, SECOND PATH — AND IT INVENTS A DIFFERENT MONTH FROM THE FIRST.
+         Opening a sketch box on an EMPTY profile fills it from _dateForField, which returns
+         '01 / <year>' when there is no Profile date to prefer. Committing that box WITHOUT TYPING
+         ANYTHING then arrived here as a parsed "date" and was written to the Profile. MEASURED on a
+         cold profile: opening Current Age and pressing Enter wrote dob "01 / 1986"; the same on
+         Retirement wrote ret "01 / 2051". JANUARY here, JUNE in syncFromSketchAges.
+         🔑 A GATE ASSERTING THE ABSENCE OF `: 6` WOULD HAVE GONE GREEN WHILE THIS ONE STILL RAN —
+            which is why the leg asserts NO MONTH IS INVENTED BY ANY PATH, never a missing literal.
+         ⛔ WE CANNOT TELL "TYPED" FROM "DERIVED-AND-COMMITTED-UNCHANGED" HERE — both arrive as a
+            parsed date. So the empty field is left alone: under the authority ruling a Sketch->Profile
+            write needs consent anyway, and refusing it is the safe direction. Editing the Profile
+            field directly still works and is unaffected.
+         ⭐ STILL RETURNS TRUE: the caller reads false as "fall back to syncFromSketchAges", which is
+            the OTHER fabricating path. Returning false here would invent June instead of January. */
+      /* ⭐ THE DISCRIMINATOR: DID THE USER ACTUALLY TYPE THIS, OR JUST COMMIT WHAT THE BOX WAS
+         PRE-FILLED WITH? The box opens holding _dateForField(kind); committing it UNCHANGED is not
+         an answer, it is an echo. A committed value that DIFFERS from that pre-fill was typed by a
+         person and is a real source — so it writes, exactly as before.
+         ⛔ THE FIRST VERSION OF THIS FIX HAD NO DISCRIMINATOR and simply refused to write into an
+         empty Profile. That stopped the fabrication AND the genuine typed date with it — caught by
+         _p8_studio_mechanics' Item4 legs, which type 08/1982 and 06/1979 into the box and require
+         the month to reach the Profile. A FIX SCOPED TO "INVENTED" MUST NOT ALSO CATCH "SUPPLIED". */
+      var _echo = (_pad2(pd.mo) + ' / ' + pd.yr) === _dateForField(pd.kind);
+      if (pd.kind === 'dob')    { var d = $('pri-dob');
+        if (d && (!_echo || _ageDateRe.test(String(d.value || '')))) d.value = _pad2(pd.mo) + ' / ' + pd.yr; return true; }
+      if (pd.kind === 'retire') { var r = $('target-ret');
+        if (r && (!_echo || _ageDateRe.test(String(r.value || '')))) r.value = _pad2(pd.mo) + ' / ' + pd.yr; return true; }
       return false; // 'pta' has no date Profile field
     }
     function syncFromSketchAges() {
@@ -15221,18 +15246,27 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       var dobEl = $('pri-dob'), retEl = $('target-ret');
       var DB = window.DatumDateBounds;
       var thisYear = new Date().getFullYear();
-      if (sA && dobEl) {
+      /* ⛔⛔ FINDING 50 — L47 (SOURCED-OR-BLANK) ON THE DATA SURFACE, NOT JUST THE COPY SURFACE.
+         These two branches used to default the MONTH to 06 when the Profile held no date, so a
+         slider the user merely dragged wrote a BIRTHDAY HE NEVER GAVE. MEASURED on a cold profile:
+         dragging Current Age wrote dob "06 / 1979" AND ret "06 / 2044" — two fabricated months, in
+         two fields, from one drag.
+         🔑 A FABRICATED MONTH IS INVISIBLE: plausible, precise, and sitting in a field that looks
+            answered. The user cannot catch what does not look wrong — and it is silently off by up
+            to ±11 months on `current_age`, which the whole model hangs from.
+         ⭐ THE MONTH IS ONLY PRESERVED, NEVER INVENTED. An existing Profile date still keeps its
+            month (that was the honest half of this code and it is untouched); an EMPTY field stays
+            empty, because the sketch may derive an AGE for its own shape without ever writing a
+            birthday it was not given. */
+      if (sA && dobEl && _ageDateRe.test(String(dobEl.value || ''))) {
         var ca = parseInt(sA.value, 10) || 40;
-        // Item 4 — preserve an existing typed month; only default to 06 when none is set.
-        var dm = String(dobEl.value || '').match(_ageDateRe);
-        var dMo = dm ? parseInt(dm[1], 10) : 6;
+        var dMo = parseInt(String(dobEl.value).match(_ageDateRe)[1], 10);
         dobEl.value = DB ? _fmtDateStr(DB.dateFromAge(0, dMo, thisYear - ca)) : (_pad2(dMo) + ' / ' + (thisYear - ca));
       }
-      if (sR && retEl) {
+      if (sR && retEl && _ageDateRe.test(String(retEl.value || ''))) {
         var ra = parseInt(sR.value, 10) || 65;
         var ca2 = parseInt(sA ? sA.value : 40, 10) || 40;
-        var rm = String(retEl.value || '').match(_ageDateRe);
-        var rMo = rm ? parseInt(rm[1], 10) : 6;
+        var rMo = parseInt(String(retEl.value).match(_ageDateRe)[1], 10);
         retEl.value = DB ? _fmtDateStr(DB.dateFromAge(0, rMo, thisYear - ca2 + ra)) : (_pad2(rMo) + ' / ' + (thisYear - ca2 + ra));
       }
     }
