@@ -15287,8 +15287,28 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
        * 🔑 MONTH-SURVIVAL MAY ONLY PRESERVE A MONTH IT CAN PROVE WAS TYPED. Provenance is not
        * tracked, so the only honest rule is: with no sourced DOB there is nothing to derive from —
        * leave the field alone. It is filled the moment a real DOB lands, by the same call. */
+      /* ⛔⛔ FINDING 51 — "LEAVE THE FIELD ALONE" IS ONLY HONEST WHEN THE FIELD IS ALREADY EMPTY.
+         The rule above is right and its implementation was half of it: with no sourced DOB there is
+         nothing to derive from, so this returned WITHOUT WRITING. That keeps a cold field blank
+         (correct) and it also PRESERVES A STALE DATE DERIVED FROM A DOB THAT HAS SINCE BEEN REFUSED.
+         MEASURED on production bytes, Captain-found: type a FUTURE date of birth, e.g. 03/2057. Each
+         keystroke derives through here (pri-dob fires _updatePlanEndAge on `oninput`, UNVALIDATED),
+         writing 2057 + 93 = "03 / 2150". Blur then validates, refuses the age, clears the DOB and
+         shows the right message — and this function, asked to refresh, LEFT THE IMPOSSIBLE DATE
+         STANDING. Identical before and after F50, so pre-existing, not caused by it.
+         🔑 A VALUE DERIVED FROM UNVALIDATED INPUT IS ITSELF UNVALIDATED. If the input is later
+            REFUSED, everything derived from it must be retracted in the same breath — "validate on
+            blur, derive on input" guarantees the derivation wins the race, so the retraction has to
+            be explicit or it never happens.
+         ⭐ THE BLANK IS NOT A NEW BEHAVIOUR, IT IS THE ONE ALREADY SHIPPED NEXT DOOR: with an empty
+            Profile the field is correctly blank today, and _p8_studio_mechanics already asserts
+            "plan-end-age is BLANK with no sourced DOB". This makes that true BY CONSTRUCTION rather
+            than by whatever the fixture happened to leave behind. */
       var _dobEl = $('pri-dob');
-      if (!_dobEl || !/\d{1,2}\s*\/\s*\d{4}/.test(String(_dobEl.value || ''))) return;
+      if (!_dobEl || !/\d{1,2}\s*\/\s*\d{4}/.test(String(_dobEl.value || ''))) {
+        if (pEl.value) pEl.value = '';
+        return;
+      }
       // Month-survival: if the field already holds a date that IMPLIES the slider's current PTA
       // age, keep it VERBATIM (the typed/seeded 03/2068 must not be rebuilt to a DOB-month date).
       // Only recompute — preserving the typed month, year from the shared rounding source — when
