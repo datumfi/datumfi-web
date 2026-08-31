@@ -267,6 +267,43 @@ async function boot(ctx, BASE, opts) {
     await p.close();
   }
 
+  /* ── L10 / L11 — FINDING 58. THE SEQUENCE, NOT THE SNAPSHOT.
+     A leg that proves a state is REACHED must be followed by one that proves the state is
+     SURVIVABLE. L4/L5 stop at the moment the conflict is named; the Captain typed a SECOND bad
+     date and found the field reverting to the value the product had just called impossible —
+     because _enforceProfileDate banks el._lastGoodDate on res.ok, and a DEFERRED acceptance is
+     res.ok, so an UNJUDGED value was recorded where an APPROVED one lives.
+     ⛔ L11 IS THE PAIRING: the conflicting value and its authored explanation must be present or
+     absent TOGETHER. On the shipped defect the value came back while the sentence explaining it
+     was replaced by the generic bound message — the field and its own warning telling different
+     stories, which is the disagreeing-pair fault one layer up. */
+  for (const who of [
+    { label: 'co', ret: 'co-ret', warn: 'co-ret-warn', dob: 'co-dob', co: true, copy: COPY_CO },
+    { label: 'primary', ret: 'target-ret', warn: 'ret-date-warn', dob: 'pri-dob', co: false, copy: COPY_PRIMARY }
+  ]) {
+    const p = await boot(ctx, BASE, { co: who.co });
+    const CONFLICTED = '03 / ' + (Y + 4);            // accepted while unanchored
+    const DOB = '03 / ' + (Y - 26);                  // makes the above land at age 30
+    const SECOND_BAD = '03 / ' + (Y + 14);           // also below the floor — a real rejection
+    await edit(p, who.ret, CONFLICTED); await p.waitForTimeout(300);
+    await edit(p, who.dob, DOB); await p.waitForTimeout(450);
+    const named = await look(p, who.ret, who.warn);
+    const conflictSentence = who.copy(30);
+    check('L11 ' + who.label + ': at the moment of conflict, the value and its authored explanation agree',
+      (named.value.replace(/\s/g, '') === CONFLICTED.replace(/\s/g, '')) === (named.warnText.trim() === conflictSentence),
+      'value=' + JSON.stringify(named.value) + '\n          warn =' + JSON.stringify(named.warnText.trim()));
+
+    await edit(p, who.ret, SECOND_BAD); await p.waitForTimeout(350);
+    const after = await look(p, who.ret, who.warn);
+    check('L10 ' + who.label + ': a SECOND invalid edit does NOT restore the known-impossible value',
+      after.value.replace(/\s/g, '') !== CONFLICTED.replace(/\s/g, ''),
+      'value=' + JSON.stringify(after.value) + ' (the value already declared impossible was ' + JSON.stringify(CONFLICTED) + ')');
+    check('L11b ' + who.label + ': after that edit, value and explanation STILL agree (fail and recover together)',
+      (after.value.replace(/\s/g, '') === CONFLICTED.replace(/\s/g, '')) === (after.warnText.trim() === conflictSentence),
+      'value=' + JSON.stringify(after.value) + '\n          warn =' + JSON.stringify(after.warnText.trim()));
+    await p.close();
+  }
+
   await ctx.close(); await browser.close(); server.close();
   results.forEach((r) => console.log('  ' + r));
   console.log(fails === 0 ? '\nPROFILE ANCHOR DEFERRED (F54): GREEN' : '\nPROFILE ANCHOR DEFERRED (F54): ' + fails + ' FAILURE(S)');

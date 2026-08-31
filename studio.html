@@ -14266,6 +14266,17 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           var w = document.getElementById(m.warn); if (!w) return;
           var res = _validateProfileDate(el);
           if (res.ok) { w.textContent = ''; w.style.display = 'none'; return; }
+          /* ⛔ FINDING 58 — A DEFERRED ACCEPTANCE IS NOT AN APPROVAL, AND THIS IS WHERE THE
+             DIFFERENCE FINALLY MATTERS. _enforceProfileDate banks el._lastGoodDate whenever
+             res.ok, and an unanchored acceptance IS res.ok — so a value nobody had judged was
+             recorded in the slot where APPROVED values live. Captain-found by typing a SECOND bad
+             date after the conflict was named: the field reverted to the very value the product
+             had just called impossible, and the authored sentence explaining why was replaced by
+             the generic bound message — the value came back and its explanation went away.
+             🔑 THE SNAPSHOT DIES WHEN IT IS DISPROVEN, NOT WHEN IT IS MERELY UNJUDGED: we delete
+                it HERE, at the one moment we learn the value cannot stand, and nowhere else — so
+                the ordinary unanchored revert-to-last-good courtesy survives untouched. */
+          delete el._lastGoodDate;
           w.textContent = (m.person === 'co')
             ? 'With their date of birth in, this retirement date puts them at ' + res.age + '. Retirement needs to land between 45 and 90 — adjust either one.'
             : 'With your date of birth in, this retirement date puts you at ' + res.age + '. Retirement needs to land between 45 and 90 — adjust either one.';
