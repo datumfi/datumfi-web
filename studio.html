@@ -14179,27 +14179,44 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       // warn keeps explaining why. Plan-Through is the shipped template (_commitPlanEndDate).
       var _PROFILE_DATE_META = {
         'pri-dob':    { kind: 'dob',    warn: 'pri-dob-warn' },
-        'target-ret': { kind: 'retire', warn: 'ret-date-warn', anchor: 'pri-dob' },
+        'target-ret': { kind: 'retire', warn: 'ret-date-warn', anchor: 'pri-dob', person: 'primary' },
         'co-dob':     { kind: 'dob',    warn: 'co-dob-warn' },
-        'co-ret':     { kind: 'retire', warn: 'co-ret-warn',  anchor: 'co-dob' }
+        'co-ret':     { kind: 'retire', warn: 'co-ret-warn',  anchor: 'co-dob', person: 'co' }
       };
-      // DOB anchor for a target-date field: {mo,yr,age} from the anchor DOB when valid,
-      // else derived from the current-age slider (mirrors _readDobMoYr's DOB-absent path).
+      /* DOB anchor for a target-date field: {mo,yr,age} from the anchor DOB, or NULL.
+         ⛔⛔ FINDING 54 — THIS USED TO MANUFACTURE THE ANCHOR, AND IT BORROWED IT FROM THE OTHER
+         PERSON. With no anchor DOB it returned { mo: 1, yr: thisYear - PRIMARY slider-age,
+         age: slider-age }, and _enforceProfileDate then REVERTED-OR-CLEARED the user's typed date
+         on that basis. MEASURED, four arms, before a line changed:
+           - co-ret "06 / 2030" with no co-dob: REJECTED AND ERASED at primary slider-age 40,
+             ACCEPTED at 60. Nothing about the co-architect differed. THE CO-ARCHITECT WAS BEING
+             JUDGED AS THE PRIMARY — an asserted relationship between two people that nobody stated,
+             then enforced against one of them.
+           - co-ret "06 / 2031": ACCEPTED with co-dob EMPTY, then REJECTED AND ERASED once the
+             co-architect's TRUE December birth month was supplied. THE FABRICATED JANUARY WAS
+             STRICTLY MORE PERMISSIVE THAN REALITY, so answering honestly cost the user their date.
+         🔑 A VALIDATOR'S JOB IS TO REJECT THE IMPOSSIBLE. WITH NO ANCHOR THERE IS NO IMPOSSIBLE
+            VALUE, SO THERE IS NOTHING TO REJECT AND SILENCE IS THE HONEST ANSWER. Returning null
+            is the whole fix; the judgement is DEFERRED, not abandoned — see _rejudgeDependents. */
       function _profileDobAnchor(anchorEl) {
         var DB = window.DatumDateBounds;
         if (DB && anchorEl) {
           var p = DB.parseMoYr(anchorEl.value);
           if (p) return { mo: p.mo, yr: p.yr, age: DB.ageFromDob(anchorEl.value) };
         }
-        var sA = document.getElementById('slider-age');
-        var ca = sA ? (parseInt(sA.value, 10) || 40) : 40;
-        return { mo: 1, yr: new Date().getFullYear() - ca, age: ca };
+        return null;
       }
       function _validateProfileDate(el) {
         var DB = window.DatumDateBounds, meta = el && _PROFILE_DATE_META[el.id];
         if (!meta || !DB) return { ok: false, err: 'Enter a full date as MM / YYYY.' };
         if (meta.kind === 'dob') return DB.validateDob(el.value);
         var anchor = _profileDobAnchor(document.getElementById(meta.anchor));
+        // No anchor: the ONLY thing still impossible is a date we cannot read. Every other
+        // rejection validateTarget can make is derived from the anchor we do not have.
+        if (!anchor) {
+          return DB.parseMoYr(el.value) ? { ok: true, deferred: true }
+                                        : { ok: false, err: 'Enter a full date as MM / YYYY.' };
+        }
         return DB.validateTarget(el.value, 'retire', { mo: anchor.mo, yr: anchor.yr }, anchor.age, 0);
       }
       window._validateProfileDate = _validateProfileDate;
@@ -14226,6 +14243,37 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       }
       window._enforceProfileDate = _enforceProfileDate;
 
+      /* ⛔⛔ FINDING 54, SECOND HALF — DEFERRED MEANS DEFERRED, NOT ABANDONED. _profileDobAnchor
+         now declines to invent an anchor, so a target date typed before its DOB is accepted
+         unjudged. If nothing ever re-judged it we would not have removed the manufactured anchor —
+         we would have replaced it with NO anchor and called the field validated.
+         🔑 THE DEPENDENCY IS ALREADY DECLARED IN DATA. _PROFILE_DATE_META carries `anchor:`, so
+            this READS that registry backwards rather than re-stating which field anchors which. A
+            second list is a second opinion, and it drifts the day a field moves.
+         ⛔ NAME THE CONFLICT, ERASE NEITHER VALUE. The user supplied both facts; the product may
+            not decide which to discard. So this deliberately does NOT call _enforceProfileDate —
+            that reverts-or-clears, which is right for the field IN HAND (the user is looking at it,
+            and sees the clear and the message together) and wrong for a field filled minutes ago
+            and now off screen. The cost of a correction is not the value destroyed; it is the
+            chance the user never notices it was destroyed.
+         ⛔ {age} IS TAKEN FROM validateTarget'S OWN RETURN, never re-derived here, so the sentence
+            and the decision it explains cannot disagree. Copy is Architect-authored and verbatim. */
+      function _rejudgeDependents(dobId) {
+        Object.keys(_PROFILE_DATE_META).forEach(function (id) {
+          var m = _PROFILE_DATE_META[id];
+          if (m.anchor !== dobId) return;
+          var el = document.getElementById(id); if (!el || !el.value) return;
+          var w = document.getElementById(m.warn); if (!w) return;
+          var res = _validateProfileDate(el);
+          if (res.ok) { w.textContent = ''; w.style.display = 'none'; return; }
+          w.textContent = (m.person === 'co')
+            ? 'With their date of birth in, this retirement date puts them at ' + res.age + '. Retirement needs to land between 45 and 90 — adjust either one.'
+            : 'With your date of birth in, this retirement date puts you at ' + res.age + '. Retirement needs to land between 45 and 90 — adjust either one.';
+          w.style.display = 'block';
+        });
+      }
+      window._rejudgeDependents = _rejudgeDependents;
+
       function _validateRetDate(el) {
         // Enforce first (revert-or-clear); only refresh the plan-end mirror on a VALID
         // commit, since _updatePlanEndAge also owns ret-date-warn (don't erase our reason).
@@ -14236,7 +14284,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       function _validatePriDob(el) {
         // DOB never owns ret-date-warn, so always refresh the plan-end mirror from the
         // committed (or reverted) DOB to keep the plan slider consistent.
-        _enforceProfileDate(el);
+        var _priDobOk = _enforceProfileDate(el);
         /* ⛔⛔ FINDING 51, SECOND PASS — THE RETRACTION MAY NOT DEPEND ON _updatePlanEndAge REACHING
            THE MIRROR. That function RETURNS EARLY when Target Retirement Date is absent or not a
            4-digit year, so with no retirement date typed the clear inside _mirrorPlanEnd was never
@@ -14255,10 +14303,16 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
               DOB is unsourced, whatever else is or is not filled in. */
         if (window._mirrorPlanEnd) window._mirrorPlanEnd();
         _updatePlanEndAge();
+        /* FINDING 54 — the anchor has arrived; judge what was deferred on it. MUST RUN LAST:
+           _updatePlanEndAge ALSO owns ret-date-warn and hides it on several paths, so re-judging
+           any earlier would write a conflict message that the next line silently erased. Same
+           write target, two owners, and only the ORDER decides which one the user reads. */
+        if (_priDobOk) _rejudgeDependents('pri-dob');
       }
       window._validatePriDob = _validatePriDob;
 
-      function _validateCoDob(el) { _enforceProfileDate(el); }
+      // A committed DOB is the anchor arriving — judge what was deferred on it (FINDING 54).
+      function _validateCoDob(el) { if (_enforceProfileDate(el)) _rejudgeDependents('co-dob'); }
       window._validateCoDob = _validateCoDob;
 
       function _validateCoRet(el) { _enforceProfileDate(el); }
