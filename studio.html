@@ -13712,9 +13712,48 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       if (_sfstrip) { _sfstrip.style.display = 'none'; }
       if (_sfbtn)   { _sfbtn.innerHTML = 'Test Claiming Paths &#x2192;'; _sfbtn.disabled = false; }
       state.accounts = [];
-      var d = document.getElementById('pri-dob');    if (d) d.value = '08 / 1982';
-      var r = document.getElementById('target-ret'); if (r) r.value = '03 / 2035';
-      var s = document.getElementById('spend-input'); if (s) s.value = '$120,000';
+      /* F52/F53 — START FRESH MUST LAND ON A COLD FIRST ENTRY, AND NOTHING ELSE.
+         Restores every control in the three input sections to THE VALUE THE MARKUP SHIPS, read
+         from the element itself. It re-declares no default anywhere.
+         ⛔ WHY A READ AND NEVER A LIST OF VALUES: the three lines this replaces re-typed their
+         target state by hand, and one of them had already drifted — the markup ships $100,000 in
+         #spend-input while this function typed $120,000, leaving "Start Fresh" $20,000 from the
+         product's own default with nothing on screen to say so. A reset that re-declares its
+         target rebuilds that hazard the day any default changes; defaultValue cannot drift.
+         ⛔ WHY A SWEEP AND NEVER A LIST OF FIELDS: measured 2026-08-31 against a real cold boot
+         with all 29 controls driven, TWENTY-SIX fields differed. Three were the fabrications this
+         finding was filed for; the other twenty-three were THE DEPARTING USER'S OWN DATA — their
+         name, location, salary, tax rate and filing status, their co-architect's date of birth
+         and salary, every slider and every market/inflation/tax radio — surviving a button whose
+         label promises to discard it. A named list would have covered the three we could see.
+         ⚠️ ORDER IS LOAD-BEARING: values first, THEN the co-architect toggle's own handler (it
+         hides the second person's fields and drops their accounts), THEN the redraw — so the
+         canvas is drawn from settled inputs and not from the departing session.
+         ⛔ THE change EVENT IS DELIBERATELY NON-BUBBLING. saveDraft is bound on document for
+         'change'; a bubbling event here would write a fresh draft moments after this function
+         cleared one, and that draft would resurrect through the boot comparator. */
+      ['sec-profile', 'sec-sketch', 'sec-datum'].forEach(function (sid) {
+        var sec = document.getElementById(sid); if (!sec) return;
+        sec.querySelectorAll('input[id], select[id]').forEach(function (el) {
+          if (el.type === 'file') return;
+          if (el.type === 'checkbox' || el.type === 'radio') { el.checked = el.defaultChecked; return; }
+          if (el.tagName === 'SELECT') {
+            for (var i = 0; i < el.options.length; i++) el.options[i].selected = el.options[i].defaultSelected;
+            return;
+          }
+          /* ⛔ data-exact-val IS A SHADOW VALUE THAT OUTRANKS THE CONTROL'S OWN POSITION.
+             _scenarioFromInputs reads dataset.exactVal FIRST for the three log sliders and only
+             falls back to the slider position when it is absent, and the markup ships none of it —
+             it is written by click-to-type, the datum drag mirror and blueprint loads. Restoring
+             `value` alone left every slider READING cold while an invisible attribute quietly
+             outvoted it, which is why the HUD still showed the departing user's estate.
+             🔑 RESTORING A CONTROL MEANS RESTORING EVERYTHING THAT SPEAKS FOR IT, NOT ITS VALUE. */
+          if (el.type === 'range') delete el.dataset.exactVal;
+          el.value = el.defaultValue;
+        });
+      });
+      var _coTog = document.getElementById('co-arch-toggle');
+      if (_coTog) _coTog.dispatchEvent(new Event('change'));
       renderInputs(); updateSVGs();
       var ban = document.getElementById('draft-restored-banner'); if (ban) ban.remove();
     };
