@@ -13669,10 +13669,58 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       if (document.getElementById('draft-restored-banner')) return;
       var b = document.createElement('div');
       b.id = 'draft-restored-banner';
-      b.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.4);color:var(--teal);font-family:var(--font-mono);font-size:11px;letter-spacing:0.06em;padding:8px 16px;border-radius:4px;display:flex;gap:16px;align-items:center;white-space:nowrap;';
-      b.innerHTML = 'Restored from your last session. <button onclick="clearDraftAndRefresh()" style="background:none;border:1px solid rgba(29,158,117,0.5);color:var(--teal);font-family:var(--font-mono);font-size:10px;cursor:pointer;padding:2px 8px;border-radius:2px;letter-spacing:0.05em;">Start Fresh</button>';
+      /* F61 — BOTTOM-ANCHORED, AND THE OFFSET IS MEASURED RATHER THAN GUESSED.
+         This banner sat at top:60px and had NEVER RENDERED — its only caller, restoreDraft, has
+         never run (F56). Forced to run for the first time 2026-08-31 it landed ON the
+         "Shape You Have" toggle: a 116x27px overlap at 12% alpha, so both strings printed through
+         each other and neither was legible.
+         ⛔ THE TOP BAND HAS A PERMANENT RESIDENT (the Shape toggle row). A transient notice is a
+         VISITOR, and a visitor may not take a resident's seat.
+         ⛔ AND THE BOTTOM BAND IS NOT EMPTY EITHER — MEASURED, NOT ASSUMED: nav.js's
+         #privacy-banner is position:fixed, FULL WIDTH, the bottom 56px, at z-index 9999. A naive
+         `bottom:20px` would reproduce this defect at the other end, and the overlap is REACHABLE:
+         the restore fires on reload while the consent bar persists until clicked, so a mid-session
+         reload without a prior "Got it" shows both.
+         ⚠️ z-index is 9998, BELOW the consent bar ON PURPOSE: if these two ever do meet, the
+         REGULATORY DISCLOSURE must win, not the convenience notice. */
+      var _GAP = 20;
+      function _restoreBannerBottom() {
+        var pb = document.getElementById('privacy-banner');
+        if (!pb) return _GAP;
+        var cs = window.getComputedStyle(pb);
+        if (cs.display === 'none' || cs.visibility === 'hidden') return _GAP;
+        var r = pb.getBoundingClientRect();
+        if (r.height < 1 || r.bottom < window.innerHeight - 4) return _GAP;
+        return Math.round(r.height) + _GAP;
+      }
+      function _placeRestoreBanner() { b.style.bottom = _restoreBannerBottom() + 'px'; }
+      b.style.cssText = 'position:fixed;bottom:' + _restoreBannerBottom() + 'px;left:50%;transform:translateX(-50%);z-index:9998;background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.4);color:var(--teal);font-family:var(--font-mono);font-size:11px;letter-spacing:0.06em;padding:8px 16px;border-radius:4px;display:flex;gap:16px;align-items:center;white-space:nowrap;';
+      var _note = document.createElement('span');
+      _note.id = 'draft-restored-note';
+      _note.textContent = 'Picked up where you left off — your last session is back.';
+      var _act = document.createElement('button');
+      _act.setAttribute('data-restore-action', '1');
+      _act.setAttribute('style', 'background:none;border:1px solid rgba(29,158,117,0.5);color:var(--teal);font-family:var(--font-mono);font-size:10px;cursor:pointer;padding:2px 8px;border-radius:2px;letter-spacing:0.05em;');
+      _act.textContent = 'Start fresh';
+      _act.addEventListener('click', function () { clearDraftAndRefresh(); });
+      b.appendChild(_note); b.appendChild(_act);
       document.body.appendChild(b);
-      setTimeout(function() { b.style.transition = 'opacity 0.5s'; b.style.opacity = '0'; setTimeout(function() { if (b.parentNode) b.remove(); }, 500); }, 9000);
+      /* Re-place if the consent bar leaves, so the action does not float on a phantom reserve. */
+      if (window.MutationObserver) {
+        var _mo = new MutationObserver(function () { _placeRestoreBanner(); });
+        _mo.observe(document.body, { childList: true });
+        var _pb = document.getElementById('privacy-banner');
+        if (_pb) _mo.observe(_pb, { attributes: true, attributeFilter: ['style', 'class'] });
+      }
+      /* ⛔ THE NOTICE FADES; THE ACTION DOES NOT GO WITH IT.
+         A NOTICE MAY EXPIRE. AN ACTION MAY NOT. Previously the ONLY route to this choice was a
+         button that deleted itself after nine seconds — so READING the sentence cost the user the
+         option it described, and the slower the reader the more certainly they lost it. */
+      setTimeout(function () {
+        _note.style.transition = 'opacity 0.5s';
+        _note.style.opacity = '0';
+        setTimeout(function () { if (_note.parentNode) _note.remove(); _placeRestoreBanner(); }, 500);
+      }, 9000);
     }
     // THE ONLY host-side route to discarding the draft. The draft moved sessionStorage ->
     // localStorage (autosave Commit 2); three literal removeItem calls used to hard-code the store,
