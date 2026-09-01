@@ -1554,6 +1554,46 @@
     var coT = d.getElementById('co-arch-toggle');
     if (coT) bp.profile.co_architect_enabled = !!coT.checked;
 
+    /* ⛔⛔ F64 — THE PROFILE DID NOT CAPTURE WHAT THE USER TYPED, AND THAT IS THE WHOLE DEFECT.
+       Six of the thirteen #sec-profile controls were read by NOTHING on the way out: the user
+       filled them, the draft never held them, a reload returned them blank. MEASURED (all 13 typed,
+       reloaded, compared): 5 came back. EVERY failure was on THIS side — restoreDraft returns all
+       six keys the draft actually holds, so the restore was never the defect. F64 was filed as a
+       restore bug and it is a capture bug.
+       ⛔ WRITE ONLY WHAT THE USER SUPPLIED. THIS GUARD IS LOAD-BEARING AND THIS FILE IS THE
+       PREVIOUS VICTIM — see :1354: 'pre-1.0.1 drafts round-tripped the old hard defaults (datum
+       120000 / tax 0.22) through captureDOM and re-poisoned the sliders on every load.' A capture
+       path that stores a value the user never gave LAUNDERS A DEFAULT INTO AN ANSWER, and after one
+       round-trip nothing can tell them apart. 🔑 THAT IS WHY EVERY WRITE BELOW IS GUARDED ON A REAL
+       VALUE, and why mmYYYY is used rather than the raw field: it returns '' for a half-typed date
+       instead of storing half of one. DO NOT TIDY THESE GUARDS AWAY. */
+    var coDob = mmYYYY(v('co-dob'));  if (coDob) bp.profile.co_architect_dob = coDob;
+    var coRet = mmYYYY(v('co-ret'));  if (coRet) bp.profile.co_architect_retirement_date = coRet;
+
+    /* plan_end_age (the INTEGER) is captured above from the slider. THIS is the typed MONTH, and it
+       is the entirety of the plan-end-age defect. seedFromBlueprint ALREADY seeds the field from
+       plan_end_date so _mirrorPlanEnd keeps it VERBATIM instead of rebuilding a DOB-month date — the
+       receiver was built, correct, and commented, waiting for a value nobody ever sent. Typed
+       09 / 2062 came back 04 / 2062; the 04 is the DOB month. ONE WRITE CLOSES IT. */
+    var planDate = mmYYYY(v('plan-end-age')); if (planDate) bp.profile.plan_end_date = planDate;
+
+    /* ⛔ THE TAX BLOCK — three controls whose slots ALREADY EXIST and are codec-carried, written
+       until now ONLY by applyDossier (the Dossier), never from the Studio's own DOM. MEASURED: a
+       user who chose Wyoming / Head of Household / 35% had a blueprint reading FL / Married Filing
+       Jointly / 20%. NOT BLANK — WRONG. Three schema defaults standing where the user's own answers
+       belonged, and all three lean the same flattering direction.
+       ⚠⚠ pri-location IS CAPTURED HERE AND IT CHANGES NOTHING THE ENGINE COMPUTES. DECLARED, NOT
+       IMPLIED: buildStudioRequest (studio.html:14228) sends location:'FL' as a LITERAL and never
+       reads bp.tax.location, so every user is planned as a Floridian whatever this stores. That is
+       F65 and it is NOT fixed here. The capture is still correct on its own terms — a field the user
+       fills must not be silently discarded — and when F65 lands the value must ALREADY be in the
+       draft, or the engine receives a blank instead of a literal, which is a different wrong answer. */
+    if (!bp.tax) bp.tax = {};
+    var _loc = v('pri-location');  if (_loc) bp.tax.location = _loc;
+    var _fil = v('filing-status'); if (_fil) bp.tax.filing   = _fil;
+    var _txr = parseFloat(String(v('eff-tax-rate')).replace('%', ''));
+    if (isFinite(_txr) && _txr > 0 && _txr < 100) bp.tax.working_year_effective_rate = _txr / 100;
+
     var portE = d.getElementById('bp-portfolio-total');
     if (portE) bp.portfolio_total = moneyToInt(portE.value);
     var contE = d.getElementById('bp-contributions-total');

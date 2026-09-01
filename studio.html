@@ -13967,6 +13967,60 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           if (_ssLabel) document.querySelectorAll('.ss-btn').forEach(function (btn) { var t = ((btn.querySelector('strong') || {}).textContent || '').trim(); btn.classList.toggle('active', t === _ssLabel); });
         }
         if (prof.co_architect_enabled) { var tog = document.getElementById('co-arch-toggle'); if (tog && !tog.checked) { tog.checked = true; tog.dispatchEvent(new Event('change')); } }
+        /* ⛔⛔ F64 — THE OTHER HALF OF THE SIX. These read back what captureDOM now stores. They run
+           AFTER the co-arch toggle above: the toggle's change handler reveals #co-arch-fields, and
+           while the values would survive either order (MEASURED — the handler hides the container and
+           drops co-arch ACCOUNTS, it never clears these inputs), the visible order is the honest one.
+           ⚠ co-dob IS NOT COSMETIC. buildMatrixRequest (:17294) derives the co-architect's age from
+           it for the SS Matrix engine payload, so a joint household that reloaded was planned as a
+           single one — silently, no error, a plausible number on screen. */
+        if (prof.co_architect_dob)             { var _cd = document.getElementById('co-dob'); if (_cd) _cd.value = prof.co_architect_dob; }
+        if (prof.co_architect_retirement_date) { var _cr = document.getElementById('co-ret'); if (_cr) _cr.value = prof.co_architect_retirement_date; }
+
+        /* ⛔⛔ plan-end-age — THE TYPED MONTH, RESTORED **HERE**, AND MY FIRST READ OF THIS WAS WRONG.
+           seedFromBlueprint DOES already seed this field from prof.plan_end_date, with a comment
+           saying it does so precisely so _mirrorPlanEnd keeps the month verbatim. I concluded no
+           restore-side work was needed. MEASURED WITH THE CAPTURE ALREADY FIXED: the draft held
+           plan_end_date '09 / 2062' and the field STILL came back '04 / 2062'.
+           🔑 BECAUSE THE RECEIVER RUNS BEFORE ITS PRECONDITION. seedFromBlueprint runs BEFORE this
+           function, when #pri-dob is still EMPTY — and _mirrorPlanEnd BLANKS the field when there is
+           no sourced DOB, which is F51 behaving CORRECTLY. The seeded month was erased microseconds
+           later and rebuilt from the DOB month the moment the DOB arrived.
+           🔑 A RECEIVER THAT RUNS BEFORE ITS PRECONDITION IS NOT A RECEIVER. Written here — after the
+           DOB, with sl-plan-through already holding the matching PTA age — month-survival keeps this
+           VERBATIM instead of rebuilding it. ⚠ THE ORDER IS THE FIX; DO NOT MOVE THIS WRITE EARLIER. */
+        if (prof.plan_end_date) { var _pe = document.getElementById('plan-end-age'); if (_pe) _pe.value = prof.plan_end_date; }
+
+        /* ⛔⛔ THE TAX SELECTS FAIL TOWARD BLANK, AND THAT IS THE WHOLE DESIGN OF THIS BLOCK.
+           newBlueprint() ships tax defaults FL / Married Filing Jointly / 0.20. captureDOM only
+           overwrites them when the user actually answered, so a user who left Location EMPTY still
+           has 'FL' sitting in the draft — and an UNGUARDED restore would write Florida into a select
+           they never touched, turning today's honest blank into an on-screen fabrication. That would
+           be WORSE than the bug being fixed.
+           🔑 SO A STORED VALUE IS TREATED AS AN ANSWER ONLY IF IT DIFFERS FROM THE SCHEMA DEFAULT.
+           This is the same test the _spend guard above uses against el.defaultValue, and the same one
+           the v1.0.1 migration uses at studio-blueprint.js:1354 (=== 0.22 -> reset). Precedent twice.
+           ⚠ THE COST, STATED: a user who genuinely IS in Florida, genuinely files MFJ, or genuinely
+           picked 20% does not get that one field restored — it returns blank, which is exactly
+           today's behaviour and therefore not a regression. IT CAN UNDER-RESTORE; IT CAN NEVER
+           FABRICATE. A blank is honest, 'Florida' is a lie, and L47 settles which way to fail.
+           ⛔ THE DEFAULTS ARE READ FROM THE LIVE SCHEMA, NEVER PINNED AS LITERALS HERE — a copy of
+           'FL' in this file would silently stop matching the day the schema changed, and the guard
+           would fail OPEN into the fabrication it exists to prevent.
+           🔑 THE REAL FIX IS A PROVENANCE FLAG (the Studio cannot tell 'the user told me' from 'I
+           supplied this'); until that exists this is the honest approximation, not the answer. */
+        var _tx = bp.tax || {};
+        var _defTax = {};
+        try { _defTax = (window.DatumBlueprint && typeof DatumBlueprint['new'] === 'function') ? (DatumBlueprint['new']().tax || {}) : {}; } catch (_e) { _defTax = {}; }
+        var _optHas = function (el, val) { return !!el && Array.prototype.some.call(el.options || [], function (o) { return (o.value || o.text) === val; }); };
+        if (_tx.location && _tx.location !== _defTax.location) { var _lo = document.getElementById('pri-location'); if (_optHas(_lo, _tx.location)) _lo.value = _tx.location; }
+        if (_tx.filing   && _tx.filing   !== _defTax.filing)   { var _fi = document.getElementById('filing-status'); if (_optHas(_fi, _tx.filing))   _fi.value = _tx.filing; }
+        if (typeof _tx.working_year_effective_rate === 'number' && _tx.working_year_effective_rate > 0
+            && _tx.working_year_effective_rate !== _defTax.working_year_effective_rate) {
+          var _rv = Math.round(_tx.working_year_effective_rate * 100) + '%';
+          var _te = document.getElementById('eff-tax-rate');
+          if (_optHas(_te, _rv)) _te.value = _rv;
+        }
         /* ⛔ ANNOUNCE A RESTORE ONLY IF SOMETHING WAS ACTUALLY RESTORED. readSessionDraft() can
            hand back a NON-NULL but EMPTY draft, so `if (!bp) return;` is NOT the same test as
            "there was something to bring back".
