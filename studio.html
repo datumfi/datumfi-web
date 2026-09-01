@@ -11798,6 +11798,23 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     // §4.2 term-derived LIFE-OF-LOAN cost — distinct from remaining. term = completed months between
     // origDate and maturityDate (never hardcoded 15/20/30/refi); CUMIPMT over the full original term.
     // Null unless origAmount + both dates + rate all present (L47).
+    /* ⛔ TODAY, IN THE SAME FRAME THE DATES ARE PARSED IN.
+       _monthsBetween parses BOTH arguments with `+ 'T00:00:00'`, which is LOCAL. The elapsed-months
+       call used `new Date().toISOString().slice(0, 10)` for "today" — and toISOString renders UTC.
+       ⛔ MEASURED 2026-08-31 at 20:25 EDT: local date 2026-08-31, UTC date 2026-09-01. A mortgage
+       originating 2006-08-01 with a 240-month term read elapsed = 241 — PAST TERM — while it was
+       still, locally, the last day of its final month.
+       ⚠️ SO THE PRODUCT WAS WRONG ABOUT "TODAY" FOR THE LAST FOUR HOURS OF EVERY DAY in a
+       UTC-negative timezone, and wrong BY A WHOLE MONTH for those hours at each month end — on the
+       one screen that tells someone whether their mortgage has finished.
+       🔑 THE BUG IS THE SEAM, NOT EITHER SIDE. Build and compare in one frame.
+       ⛔ DO NOT 'SIMPLIFY' THIS BACK TO toISOString(): it is not a formatting preference, it is a
+       timezone conversion, and the failure is invisible for twenty hours out of twenty-four. */
+    function _todayLocalISO() {
+      var n = new Date();
+      var p = function (x) { return (x < 10 ? '0' : '') + x; };
+      return n.getFullYear() + '-' + p(n.getMonth() + 1) + '-' + p(n.getDate());
+    }
     function _monthsBetween(d1, d2) {
         var a = new Date(d1 + 'T00:00:00'), b = new Date(d2 + 'T00:00:00');
         if (isNaN(a) || isNaN(b)) return 0;
@@ -11937,7 +11954,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         // off the end. A loan past term still carrying a balance is contract and reality visibly parted, and
         // that earns its OWN beat (§20.2b, HELD) rather than being folded into the divergence note — one fact,
         // one voice. For this pass we cap, and the standard note speaks.
-        var elapsedRaw = acc.origDate ? _monthsBetween(acc.origDate, new Date().toISOString().slice(0, 10)) : 0;
+        var elapsedRaw = acc.origDate ? _monthsBetween(acc.origDate, _todayLocalISO()) : 0;
         var elapsed = Math.max(0, Math.min(elapsedRaw, term));
         var bal = orig, rows = [], totalInterest = 0, interestToDate = 0;
         var d = new Date(acc.origDate + 'T00:00:00');
