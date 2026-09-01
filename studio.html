@@ -13758,15 +13758,31 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         var _pb = document.getElementById('privacy-banner');
         if (_pb) _mo.observe(_pb, { attributes: true, attributeFilter: ['style', 'class'] });
       }
-      /* ⛔ THE NOTICE FADES; THE ACTION DOES NOT GO WITH IT.
-         A NOTICE MAY EXPIRE. AN ACTION MAY NOT. Previously the ONLY route to this choice was a
-         button that deleted itself after nine seconds — so READING the sentence cost the user the
-         option it described, and the slower the reader the more certainly they lost it. */
+      /* ⛔⛔ THE BANNER LEAVES AS ONE UNIT — NOTICE AND ACTION, ONE LIFETIME, NOTHING STRANDED.
+         ~~"THE NOTICE FADES; THE ACTION DOES NOT GO WITH IT. A NOTICE MAY EXPIRE. AN ACTION MAY
+         NOT."~~ STRUCK 2026-09-01 (Architect-ruled), and struck rather than deleted because the
+         REASONING was sound while the IMPLEMENTATION was not what it described. It shipped as
+         PERSISTS FOREVER: measured at ~11s the notice was gone, the button remained (width 124,
+         re-centred x 443-997 -> x 658-782) and NEVER left. Its only exit was to be PRESSED — and
+         pressing it DISCARDS the very fields that had just been restored.
+         ⛔ A CONTROL THAT CANNOT BE DISMISSED IS FURNITURE. The rail rejected furniture; this
+         arrived as furniture by another door, which is why the fix is the UNIT, not the copy.
+         ⛔ AND THE HOLD IS FIVE SECONDS, NOT NINE — the Captain read it on a real screen ("9
+         seconds is too long, 5 seconds is plenty then fade"). That supersedes "~10s is by design":
+         an argument lost to an observation.
+         ⚠ NAMED RESIDUAL, ACCEPTED KNOWINGLY: with the action gone there is no route back to a
+         fresh start until "<- Overview" is the permanent door. Queued, and now load-bearing.
+         🔑 THE OBSERVER LEAVES WITH IT. _mo re-places the banner on EVERY body mutation; left
+         armed over a removed node it would run for the life of the page. A unit that leaves takes
+         its own machinery — that is what "nothing stranded" has to mean, or it only means pixels. */
       setTimeout(function () {
-        _note.style.transition = 'opacity 0.5s';
-        _note.style.opacity = '0';
-        setTimeout(function () { if (_note.parentNode) _note.remove(); _placeRestoreBanner(); }, 500);
-      }, 9000);
+        b.style.transition = 'opacity 0.5s';
+        b.style.opacity = '0';
+        setTimeout(function () {
+          if (typeof _mo !== 'undefined' && _mo) { try { _mo.disconnect(); } catch (_e) {} }
+          if (b.parentNode) b.remove();
+        }, 500);
+      }, 5000);
     }
 
     /* ⛔ A NOTICE ABOUT THE SESSION BELONGS IN THE STUDIO, NOT ON THE DOOR.

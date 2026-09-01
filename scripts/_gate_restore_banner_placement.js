@@ -3,8 +3,8 @@
 /* _gate_restore_banner_placement.js — STANDING GATE for FINDING 61.
  *
  * THE CLAIM: the session-restore banner is USABLE — it obscures no live control, it coexists with
- * the consent bar that owns the bottom band, its action outlives the notice, and it says what the
- * Architect authored.
+ * the consent bar that owns the bottom band, it LEAVES AS ONE UNIT when its hold expires, and it
+ * says what the Architect authored.
  *
  * ⛔ WHY THIS EXISTS. showRestoredBanner() had NEVER RENDERED in the product's lifetime: its only
  *    caller is restoreDraft(), dead since it was written (F56). Forced to run for the first time on
@@ -14,11 +14,17 @@
  * 🔑 A COMPONENT THAT HAS NEVER RENDERED HAS NEVER BEEN LAID OUT EITHER. Its copy was reviewable on
  *    paper; its GEOMETRY was not. Its conflicts were not absent — they were UNKNOWN.
  *
- * ⛔ THE SECOND DEFECT, WHICH PLACEMENT ALONE DOES NOT FIX: the only route to the choice was a
- *    button that DELETED ITSELF after nine seconds.
- * 🔑 THE TIMED-ACTION LAW: A NOTICE MAY EXPIRE. AN ACTION MAY NOT. If the only route to a choice is
- *    a control on a timer, READING the sentence costs the user the option it describes — and the
- *    slower the reader, the more certainly they lose it.
+ * ⛔ THE SECOND DEFECT, AND ITS FIRST FIX WAS WRONG IN THE OTHER DIRECTION. Originally the only
+ *    route to the choice was a button that DELETED ITSELF after nine seconds.
+ * ~~🔑 THE TIMED-ACTION LAW: A NOTICE MAY EXPIRE. AN ACTION MAY NOT.~~ SUPERSEDED 2026-09-01,
+ *    struck rather than deleted. That law produced an implementation that PERSISTED FOREVER: at
+ *    ~11s the notice was gone and the button remained, 124px wide, re-centred, with no exit but to
+ *    be PRESSED — and pressing it DISCARDED the fields that had just been restored.
+ * 🔑 THE UNIT LAW, WHICH REPLACES IT: NOTICE AND ACTION ARE ONE UNIT WITH ONE LIFETIME. The hold
+ *    is 5s + a 0.5s fade and the whole thing leaves together, taking its MutationObserver with it.
+ *    A CONTROL THAT CANNOT BE DISMISSED IS FURNITURE, whichever door it arrived by.
+ * ⚠ THE RESIDUAL IS NAMED AND ACCEPTED: with the action gone there is no route back to a fresh
+ *    start until "<- Overview" becomes the permanent door. Queued, and now load-bearing.
  *
  * ⛔ L2 IS THE HONEST HALF AND IT GUARDS THE OBVIOUS FIX. Bottom-anchoring is the ruled remedy, and
  *    a naive `bottom:20px` REPRODUCES F61 AT THE OTHER END: #privacy-banner is position:fixed,
@@ -108,7 +114,14 @@ async function boot(ctx, BASE) {
      🔑 SO THIS IS THE ONLY REAL PATH ON WHICH THE RESTORE BANNER IS EVER SEEN, and it took
         travelling it to discover that the banner had to WAIT for this click. */
   await page.evaluate(() => { const x = document.getElementById('studioCloseIntro'); if (x) x.click(); });
-  await page.waitForTimeout(1800);
+  /* ⛔ WAIT FOR THE BANNER; DO NOT SLEEP PAST IT. This was a flat 1800ms. The hold is now 5s + a
+     0.5s fade, so a fixed sleep spends a third of the window the later legs need in order to observe
+     anything — and a fixed sleep racing its own subject is the flake species we have already paid
+     for. Returning the moment it appears gives every leg the widest margin. If it NEVER appears we
+     fall through rather than throw, so L0 still runs and reports ABSENT instead of the gate dying in
+     setup and printing no score at all. */
+  await page.waitForFunction(() => !!document.getElementById('draft-restored-banner'), null, { timeout: 6000 }).catch(() => {});
+  await page.waitForTimeout(300);
   return page;
 }
 
@@ -208,27 +221,47 @@ const overlaps = (page) => page.evaluate(() => {
     'typed=' + JSON.stringify(worked.before) + ' afterClick=' + JSON.stringify(afterVal) + ' clicked=' + worked.ran);
   await p.close();
 
-  /* ── L3 — THE TIMED-ACTION LAW, IN ITS OWN PAGE.
-        ⛔ ORDERING IS LOAD-BEARING AND RED-FIRST PROVED IT: this leg's 11s wait DESTROYS the banner
-        on the unfixed build, so when it ran first, L4 and L5 red for a DEPENDENT reason
-        (notice=undefined, clicked=false) rather than on their own subject. An honest half that reds
-        because an earlier leg consumed its fixture is not an honest half.
-        ⛔ ASSERTS THE RELATIONSHIP — the action outlives the notice — never a duration. */
+  /* ── L3 — THE UNIT LAW. ⛔ THIS REPLACES THE TIMED-ACTION LAW, WHICH THIS GATE ENCODED
+        FAITHFULLY AND WHICH HAS BEEN SUPERSEDED. The old leg asserted 'the action outlives the
+        notice' — and it passed for the entire life of a build in which the action outlived
+        EVERYTHING. Architect-ruled 2026-09-01: notice and action are ONE UNIT, ONE LIFETIME.
+        ⛔ RED-FIRST, MEASURED BEFORE THIS LEG WAS WRITTEN: run against the fixed bytes the OLD L3
+        printed actionPresent=false and went RED while all five other legs stayed GREEN. The
+        superseded law really was encoded here — this is a REPLACEMENT, not the quiet deletion of
+        a leg that had stopped biting.
+        ⛔ IT IS A PAIR ON PURPOSE. 'The banner is gone' is satisfied by a banner that NEVER
+        RENDERED — which is precisely the F56 species this gate exists to catch, and it would go
+        green on the very regression that matters most. L3a proves the unit was up and working
+        first, so L3b's absence can only mean DEPARTED, never ABSENT.
+        ⛔ NEITHER LEG PINS THE 5000. They BRACKET it — whole well inside the hold, gone well past
+        the fade. The product owns the constant; the gate owns the relationship. */
   const p2 = await boot(ctx, BASE);
-  await p2.waitForTimeout(11000);
-  const late = await p2.evaluate(() => {
+  const early = await p2.evaluate(() => {
     const b = document.getElementById('draft-restored-banner');
-    const btn = b ? b.querySelector('button') : document.querySelector('[data-restore-action]');
-    if (!btn) return { actionPresent: false, bannerPresent: !!b };
+    if (!b) return { up: false };
+    const note = document.getElementById('draft-restored-note');
+    const btn = b.querySelector('[data-restore-action]');
+    if (!btn) return { up: true, note: !!note, action: false };
     const r = btn.getBoundingClientRect();
     const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-    return { actionPresent: r.width > 8 && r.height > 8, bannerPresent: !!b, label: btn.textContent.trim(),
+    return { up: true, note: !!note, action: r.width > 8 && r.height > 8,
       clickable: top === btn || btn.contains(top), rect: 'y ' + Math.round(r.top) + '-' + Math.round(r.bottom) };
   });
-  check('L3 TIMED-ACTION: the Start-fresh action still exists and is clickable after the notice has expired',
-    late.actionPresent && late.clickable,
-    'actionPresent=' + late.actionPresent + ' clickable=' + (late.clickable === undefined ? 'n/a' : late.clickable)
-    + (late.rect ? ' ' + late.rect : '') + '  (a notice may expire; an action may not)');
+  check('L3a HONEST HALF: inside the hold the unit is WHOLE — notice and a clickable action, both present',
+    early.up && early.note && early.action && early.clickable,
+    'banner=' + early.up + ' notice=' + !!early.note + ' action=' + early.action
+    + ' clickable=' + (early.clickable === undefined ? 'n/a' : early.clickable) + (early.rect ? ' ' + early.rect : ''));
+
+  await p2.waitForTimeout(7000);
+  const late = await p2.evaluate(() => ({
+    banner: !!document.getElementById('draft-restored-banner'),
+    note:   !!document.getElementById('draft-restored-note'),
+    orphanActions: document.querySelectorAll('[data-restore-action]').length
+  }));
+  check('L3b UNIT: after the hold the banner has LEFT — no notice, and no orphan action anywhere in the document',
+    late.banner === false && late.note === false && late.orphanActions === 0,
+    'banner=' + late.banner + ' notice=' + late.note + ' orphanActions=' + late.orphanActions
+    + '  (the stranded button measured 124px wide and never left)');
   await p2.close();
 
   await ctx.close(); await browser.close(); server.close();
