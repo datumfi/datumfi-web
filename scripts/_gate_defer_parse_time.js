@@ -79,8 +79,16 @@ const F_EQEQ = argv.includes('--fault-eqeq');
 const F_COMMENT = argv.includes('--fault-comment');   // probe only; measured NON-BITING, not advertised as a control
 const NOCOMP = argv.includes('--nocompensate');
 
-/* THE POSITIVE CONTROL IS A PAIR: the known-dead CALL and the dependency that kills it. */
-const CONTROL_CALL = 'restoreDraft';
+/* THE POSITIVE CONTROL IS A PAIR: a parse-time call and the deferred global it reads.
+   ⛔ IT USED TO BE restoreDraft -> DatumBlueprint. THAT PAIR NO LONGER EXISTS, BECAUSE F56 COMMIT 2
+   MOVED THE CALL TO BOOT — the gate reported its own control missing (L0 RED) on the very commit
+   that fixed its motivating case, which is the gate working, not failing.
+   ⭐ REPLACED WITH renderUpkeep -> DatumBlueprint: still a genuine parse-time read of a deferred
+   global, and one that is CORRECT (it has a compensating repaint), so it proves the sweep can still
+   SEE the shape without depending on a defect staying unfixed.
+   🔑 A POSITIVE CONTROL ANCHORED ON A DEFECT EXPIRES WHEN THE DEFECT IS FIXED. Anchor it on the
+      SHAPE the instrument detects, not on an instance you intend to remove. */
+const CONTROL_CALL = 'renderUpkeep';
 const CONTROL_DEP = 'DatumBlueprint';
 
 /* ⛔ DECLARED OPEN — uncompensated parse-time reads we KNOW about and have accepted for now.
@@ -88,9 +96,10 @@ const CONTROL_DEP = 'DatumBlueprint';
    it, so a session draft never restores. Fix is F56 commit 2. WHEN IT LANDS, THIS ENTRY MUST BE
    REMOVED IN THE SAME COMMIT — the equality assertion below will red until it is. */
 const DECLARED_OPEN = [
-  { host: 'studio.html', call: 'restoreDraft', dep: 'DatumBlueprint',
-    why: 'OPEN DEFECT (F56) — runs at t=77ms, DatumBlueprint arrives t=174ms, nothing re-runs it. '
-       + 'Fix is F56 commit 2; REMOVE THIS ENTRY IN THAT COMMIT or L1b reds.' },
+  /* ✅ F56's ENTRY WAS REMOVED HERE, IN THE COMMIT THAT FIXED IT — because L1b RED until it was.
+     The exemption could not outlive the defect it excused, which is the whole point of asserting
+     SET EQUALITY rather than mere absence of new instances. Recorded so the next reader can see
+     the mechanism actually fired rather than trusting that it would. */
   /* ⚠️ NOT A DEFECT — A STATED LIMIT OF A STATIC INSTRUMENT, RECORDED RATHER THAN SUPPRESSED.
      updateArchitectNames -> renderInputs -> populateInlineDetails reaches openAccountModal by a
      REAL synchronous call (studio.html:13637), but that call sits inside

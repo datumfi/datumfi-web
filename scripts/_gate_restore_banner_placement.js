@@ -27,10 +27,13 @@
  *    the consent bar persists until clicked, so a mid-session reload without a prior "Got it" shows
  *    both. L2 is GREEN on the unfixed build (the banner is at the TOP) and must STAY green.
  *
- * ⛔ HANDLER ONLY, WITH ITS EXPIRY CONDITION. The banner is forced by exposing the private function
- *    through ONE served-page line, because its natural caller is dead. THE ELEMENT, ITS MARKUP,
- *    STYLES, BUTTON AND LIFETIME ARE THE PRODUCT'S OWN AND UNTOUCHED.
- *    ⚠️ WHEN F56 COMMIT 2 WAKES restoreDraft(), THIS GATE MUST TRAVEL THE REAL PATH instead.
+ * ⭐ IT TRAVELS THE REAL PATH. This gate SHIPPED AS HANDLER ONLY — it forced the banner by exposing
+ *    a private function, because its natural caller was dead (F56) and there was no path to walk.
+ *    ITS OWN TEXT CARRIED THE EXPIRY CONDITION, AND F56 COMMIT 2 FIRED IT: the fixture now types a
+ *    Profile, RELOADS THE PAGE, and lets restoreDraft() raise the banner by itself. Nothing is
+ *    exposed, nothing is forced, and studio.html is served UNMODIFIED.
+ * 🔑 A DELIBERATE LIMITATION THAT NAMES WHEN IT STOPS BEING ACCEPTABLE CANNOT QUIETLY BECOME A
+ *    PERMANENT BLIND SPOT. This is that condition being honoured rather than inherited.
  *
  * PREDICTED ON UNFIXED BYTES: L1 L3 L4 RED · L0 L2 L5 GREEN.
  *   L0 L5 are the instrument and the honest half of the ACTION (the button must still clear the
@@ -51,21 +54,11 @@ const ROOT = path.resolve(__dirname, '..');
 const COPY_NOTICE = 'Picked up where you left off — your last session is back.';
 const COPY_BUTTON = 'Start fresh';
 
-const EXPOSE_ANCHOR = '    window._studioClearDraft = function() {';
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/studio.html';
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
-  if (p === '/studio.html') {
-    let h = fs.readFileSync(fp, 'utf8');
-    if ((h.split(EXPOSE_ANCHOR).length - 1) !== 1) {
-      console.log('  ABORT: the expose anchor is not unique in studio.html — the rig cannot force the banner.');
-      console.log('\nOVERALL: RED'); process.exit(1);
-    }
-    h = h.replace(EXPOSE_ANCHOR, '    window.__showRestoredBanner = showRestoredBanner;\n' + EXPOSE_ANCHOR);
-    res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(h); return;
-  }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
   fs.createReadStream(fp).pipe(res);
 });
@@ -94,6 +87,28 @@ async function boot(ctx, BASE) {
   await page.waitForFunction(() => typeof window._studioEnterRoom === 'function', null, { timeout: 9000 });
   await page.evaluate(() => window._studioEnterRoom('data'));
   await page.waitForTimeout(900);
+  /* THE REAL PATH: type a Profile, let the 400ms-debounced autosave land, then RELOAD. The banner
+     is raised by restoreDraft() itself — no handler is called and nothing is exposed.
+     ⛔ DO NOT RE-ENTER AFTER THE RELOAD: clicking "Start from Scratch" is a real user action that
+     DISCARDS the restored session, and it would throw away the very state under test. */
+  await page.evaluate(() => {
+    const d = document.getElementById('pri-dob');
+    d.focus(); d.value = '04 / 1977';
+    d.dispatchEvent(new Event('input', { bubbles: true }));
+    d.dispatchEvent(new Event('change', { bubbles: true }));
+    d.blur();
+  });
+  await page.waitForTimeout(1600);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(2200);
+  /* ⛔ THE OVERLAY RETURNS ON A RELOAD, AND ONLY ONE EXIT PRESERVES THE SESSION.
+     "Start from Scratch" DISCARDS the restored draft — correctly, it is what it says. The X
+     (#studioCloseIntro -> dismissOverlay) is the exit that KEEPS it, which
+     scripts/_gate_overlay_x_preserves.js already proves independently.
+     🔑 SO THIS IS THE ONLY REAL PATH ON WHICH THE RESTORE BANNER IS EVER SEEN, and it took
+        travelling it to discover that the banner had to WAIT for this click. */
+  await page.evaluate(() => { const x = document.getElementById('studioCloseIntro'); if (x) x.click(); });
+  await page.waitForTimeout(1800);
   return page;
 }
 
@@ -140,14 +155,12 @@ const overlaps = (page) => page.evaluate(() => {
   await blockClerk(ctx);
   const p = await boot(ctx, BASE);
 
-  const exposed = await p.evaluate(() => typeof window.__showRestoredBanner === 'function');
-  await p.evaluate(() => window.__showRestoredBanner());
-  await p.waitForTimeout(500);
+  const arrivedByItself = await p.evaluate(() => !!document.getElementById('draft-restored-banner'));
   const geo = await overlaps(p);
 
-  check('L0 INSTRUMENT: the banner was forced, rendered, and has real geometry; the consent bar is up',
-    exposed && !geo.missing && geo.consent && geo.consent.present,
-    'exposed=' + exposed + ' banner=' + (geo.missing ? 'ABSENT' : geo.banner)
+  check('L0 INSTRUMENT: the banner arrived BY ITSELF after a reload, with real geometry, consent bar up',
+    arrivedByItself && !geo.missing && geo.consent && geo.consent.present,
+    'arrivedByItself=' + arrivedByItself + ' banner=' + (geo.missing ? 'ABSENT' : geo.banner)
     + ' consentBar=' + (geo.consent ? geo.consent.rect : 'ABSENT'));
 
   /* ── L1 — THE F61 DEFECT ITSELF. */
@@ -202,7 +215,6 @@ const overlaps = (page) => page.evaluate(() => {
         because an earlier leg consumed its fixture is not an honest half.
         ⛔ ASSERTS THE RELATIONSHIP — the action outlives the notice — never a duration. */
   const p2 = await boot(ctx, BASE);
-  await p2.evaluate(() => window.__showRestoredBanner());
   await p2.waitForTimeout(11000);
   const late = await p2.evaluate(() => {
     const b = document.getElementById('draft-restored-banner');

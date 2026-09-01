@@ -13711,6 +13711,34 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         return Math.round(r.height) + _GAP;
       }
       function _placeRestoreBanner() { b.style.bottom = _restoreBannerBottom() + 'px'; }
+      /* ⛔ THE CONSENT BAR WAS NOT THE ONLY OCCUPANT, AND KNOWING ONE OCCUPANT IS NOT MEASURING A
+         BAND. With the banner cleared of #privacy-banner it still grazed the Design panel's
+         "↺ Reset Design" button by 274x9px. So after placing, MEASURE what the banner actually
+         intersects and lift it clear — bounded, because an unbounded loop over a moving layout is
+         its own bug.
+         🔑 THE ARCHITECT'S CONDITION WAS "DO NOT PLACE A COMPONENT INTO A BAND WHOSE OCCUPANTS YOU
+            HAVE NOT MEASURED". Measuring ONE occupant satisfies the letter of that and not its
+            point: the band's population is whatever is on screen, not whatever I had in mind. */
+      function _liftClearOfControls() {
+        for (var pass = 0; pass < 4; pass++) {
+          var br = b.getBoundingClientRect();
+          var worst = 0;
+          var nodes = document.querySelectorAll('button, a[href], [role="button"]');
+          for (var i = 0; i < nodes.length; i++) {
+            var el = nodes[i];
+            if (el === b || b.contains(el)) continue;
+            var cs = window.getComputedStyle(el);
+            if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') continue;
+            var r = el.getBoundingClientRect();
+            if (r.width < 10 || r.height < 8) continue;
+            var ox = Math.min(br.right, r.right) - Math.max(br.left, r.left);
+            var oy = Math.min(br.bottom, r.bottom) - Math.max(br.top, r.top);
+            if (ox > 2 && oy > 2 && oy > worst) worst = oy;
+          }
+          if (!worst) return;
+          b.style.bottom = (parseInt(b.style.bottom, 10) || 0) + Math.ceil(worst) + 8 + 'px';
+        }
+      }
       b.style.cssText = 'position:fixed;bottom:' + _restoreBannerBottom() + 'px;left:50%;transform:translateX(-50%);z-index:9998;background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.4);color:var(--teal);font-family:var(--font-mono);font-size:11px;letter-spacing:0.06em;padding:8px 16px;border-radius:4px;display:flex;gap:16px;align-items:center;white-space:nowrap;';
       var _note = document.createElement('span');
       _note.id = 'draft-restored-note';
@@ -13722,9 +13750,10 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       _act.addEventListener('click', function () { clearDraftAndRefresh(); });
       b.appendChild(_note); b.appendChild(_act);
       document.body.appendChild(b);
+      _liftClearOfControls();
       /* Re-place if the consent bar leaves, so the action does not float on a phantom reserve. */
       if (window.MutationObserver) {
-        var _mo = new MutationObserver(function () { _placeRestoreBanner(); });
+        var _mo = new MutationObserver(function () { _placeRestoreBanner(); _liftClearOfControls(); });
         _mo.observe(document.body, { childList: true });
         var _pb = document.getElementById('privacy-banner');
         if (_pb) _mo.observe(_pb, { attributes: true, attributeFilter: ['style', 'class'] });
@@ -13738,6 +13767,34 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         _note.style.opacity = '0';
         setTimeout(function () { if (_note.parentNode) _note.remove(); _placeRestoreBanner(); }, 500);
       }, 9000);
+    }
+
+    /* ⛔ A NOTICE ABOUT THE SESSION BELONGS IN THE STUDIO, NOT ON THE DOOR.
+       The restore now runs at boot (F56), which is BEFORE the user has answered the entry overlay.
+       MEASURED once the gate stopped forcing the banner and travelled the real path: it landed on
+       #studioOverlayWrap's three choices — "Start from Sketch" (393x37px), "Start from Scratch"
+       and "Start from Blueprint" (70x37px each).
+       ⛔ AND THE CLASH IS SEMANTIC BEFORE IT IS GEOMETRIC: the overlay is ASKING how to begin while
+       the banner ASSERTS the last session is already back. Moving it would not fix that; waiting
+       does. The notice is held until the door closes, then announced.
+       🔑 THE FORCED-INVOCATION VERSION OF THIS GATE ENTERED A ROOM FIRST, SO IT TESTED A MOMENT
+          THAT DOES NOT OCCUR. This defect existed only in the real sequence. */
+    function _announceRestoreWhenEntered() {
+      var ov = document.getElementById('studioOverlayWrap');
+      function _overlayUp() {
+        if (!ov || !ov.isConnected) return false;
+        var cs = window.getComputedStyle(ov);
+        if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return false;
+        var r = ov.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      }
+      if (!_overlayUp()) { showRestoredBanner(); return; }
+      if (!window.MutationObserver) return;   // no observer: stay silent rather than cover the door
+      var mo = new MutationObserver(function () {
+        if (!_overlayUp()) { mo.disconnect(); showRestoredBanner(); }
+      });
+      mo.observe(ov, { attributes: true, attributeFilter: ['style', 'class'] });
+      mo.observe(document.body, { childList: true });
     }
     // THE ONLY host-side route to discarding the draft. The draft moved sessionStorage ->
     // localStorage (autosave Commit 2); three literal removeItem calls used to hard-code the store,
@@ -13868,12 +13925,21 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       if (sessionStorage.getItem('datum_currentAge') || sessionStorage.getItem('datum_targetSpend')) return;
       try {
         var prof = bp.profile || {};
-        if (prof.primary_dob)            { var d = document.getElementById('pri-dob');     if (d) d.value = prof.primary_dob; }
-        if (prof.target_retirement_date) { var r = document.getElementById('target-ret');  if (r) r.value = prof.target_retirement_date; }
+        var _restoredAnything = false;
+        if (prof.primary_dob)            { var d = document.getElementById('pri-dob');     if (d) { d.value = prof.primary_dob; _restoredAnything = true; } }
+        if (prof.target_retirement_date) { var r = document.getElementById('target-ret');  if (r) { r.value = prof.target_retirement_date; _restoredAnything = true; } }
         if (prof.primary_name)           { var pn = document.getElementById('primary-name'); if (pn) pn.value = prof.primary_name; }
         if (prof.co_architect_name)      { var cn = document.getElementById('co-name');    if (cn) cn.value = prof.co_architect_name; }
         var _spend = bp.datum && bp.datum.net_datum_v1;
-        if (_spend) { var s = document.getElementById('spend-input'); if (s) s.value = '$' + Math.round(_spend).toLocaleString('en-US'); }
+        /* ⛔ A RESTORED VALUE ONLY COUNTS AS A RESTORE IF IT DIFFERS FROM WHAT THE MARKUP SHIPS.
+           MEASURED on a cold browser: a session draft ALREADY EXISTS at boot (the autosave writes
+           one) carrying datum.net_datum_v1 = 100000 — THE SPEND FIELD'S OWN DEFAULT. Counting that
+           as "something restored" made EVERY cold boot announce a restore over an empty Studio.
+           Comparing against el.defaultValue — the value the markup itself ships — is the same test
+           F59's reset uses, and it re-declares no constant. */
+        if (_spend) { var s = document.getElementById('spend-input');
+          if (s) { var _sv = '$' + Math.round(_spend).toLocaleString('en-US'); s.value = _sv;
+                   if (_sv !== s.defaultValue) _restoredAnything = true; } }
         var _clEnum = bp.climate && bp.climate.outlook;
         if (_clEnum) {
           var _clLabel = { history_repeats: 'History Repeats', valuations_matter: 'Valuations Matter', cautious: 'Cautious', optimistic: 'Optimistic', custom: 'Custom Matrix' }[_clEnum];
@@ -13885,7 +13951,13 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           if (_ssLabel) document.querySelectorAll('.ss-btn').forEach(function (btn) { var t = ((btn.querySelector('strong') || {}).textContent || '').trim(); btn.classList.toggle('active', t === _ssLabel); });
         }
         if (prof.co_architect_enabled) { var tog = document.getElementById('co-arch-toggle'); if (tog && !tog.checked) { tog.checked = true; tog.dispatchEvent(new Event('change')); } }
-        showRestoredBanner();
+        /* ⛔ ANNOUNCE A RESTORE ONLY IF SOMETHING WAS ACTUALLY RESTORED. readSessionDraft() can
+           hand back a NON-NULL but EMPTY draft, so `if (!bp) return;` is NOT the same test as
+           "there was something to bring back".
+           🔑 THE NOTICE IS A CLAIM ABOUT THE USER'S OWN DATA. A claim nothing supports is the
+              product telling the user something untrue about their session — L47 on the DATA
+              surface, in the one sentence whose whole job is to describe what just happened. */
+        if (_restoredAnything) _announceRestoreWhenEntered();
       } catch (e) {}
     }
     // G3 fix (Mechanism A) — an explicit blueprint-slot open is AUTHORITATIVE over any
@@ -13904,7 +13976,18 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         }
       } catch (_e) {}
     })();
-    restoreDraft();
+    /* F56 — THE CALL MOVED. It used to sit HERE, at parse time, and it NEVER RAN PAST ITS SECOND
+       LINE ON ANY LOAD, EVER. Measured with property setters on window:
+           clearDraftAndRefresh  assigned t=77ms   (this inline block, parse time)
+           DatumBlueprint        assigned t=174ms  (defer script)
+       restoreDraft's own guard `if (!window.DatumBlueprint || !DatumBlueprint._internal) return;`
+       therefore fired every time, 97ms before its dependency existed. The draft was WRITTEN
+       FAITHFULLY AND NEVER READ BACK, so a typed Profile came back EMPTY after a reload (F47).
+       ⛔ THE CALL NOW LIVES AT BOOT, AFTER seedFromBlueprint() — see the F56 block there. The
+       fresh / sketch guards stay INSIDE restoreDraft, so moving the CALL did not move the GUARD.
+       ⚠️ DO NOT RESTORE A PARSE-TIME CALL HERE. A function whose dependency arrives on a defer
+       script cannot be invoked while the document is still parsing, and the failure is SILENT:
+       no throw, no blank screen, just a feature that has never once worked. */
     document.addEventListener('input', saveDraft);
     document.addEventListener('change', saveDraft);
 
@@ -16203,6 +16286,30 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       _prev.tax  = parseInt(($('slider-tax')        || {value: 20}).value, 10);
 
       var _bpApplied = seedFromBlueprint();
+
+      /* ── F56 — THE WAKE. The session draft is restored HERE, not at parse time, because this runs
+         from init() at DOMContentLoaded and defer scripts execute BEFORE that event, so
+         DatumBlueprint is guaranteed present. MEASURED, not assumed: at this point
+         typeof restoreDraft === 'function' and typeof DatumBlueprint === 'object'.
+         ⛔ IT IS **NOT** GATED ON _bpApplied, AND THAT WAS MEASURED TOO. On a PLAIN RELOAD
+         DatumBlueprint.load() RETURNS THE SESSION DRAFT (observed: profile.primary_dob "04 / 1977"
+         after a reload), so seedFromBlueprint() reports success and `!_bpApplied` would have
+         skipped the restore on exactly the path this commit exists to fix — shipping a wake that
+         does nothing, which is F56's own failure mode a second time.
+         ⛔ THE EXCLUSION IS THE EXPLICIT BLUEPRINT-SLOT OPEN: ?id=&hydrate=blueprint means the user
+         asked for a NAMED saved blueprint, and a lingering session draft must not paint over it.
+         That path is therefore UNCHANGED by this commit — one path changes, not two.
+         (?fresh=1 and ?hydrate=sketch are already refused inside restoreDraft itself.)
+         ⚠️ IT COMPLAINS OUT LOUD IF UNREACHABLE. A silent no-op here is the entire bug being fixed,
+         so the one thing this must never do is fail quietly. */
+      try {
+        var _q56 = new URLSearchParams(location.search);
+        var _explicitSlotOpen = !!(_q56.get('id') && _q56.get('hydrate') === 'blueprint');
+        if (!_explicitSlotOpen) {
+          if (typeof restoreDraft === 'function') restoreDraft();
+          else console.error('[studio draft] restoreDraft unreachable at boot — the session draft was NOT restored.');
+        }
+      } catch (_e56) { console.error('[studio draft] the draft restore threw — the session draft was NOT restored.', _e56); }
       if (!_bpApplied) {
         /* ⛔ THE SYNCHRONOUS localStorage SHORTCUT IS GONE. It read the cached dossier and drove
          * the sliders — current age, retirement age, plan-through, portfolio, contributions, Datum
@@ -18807,7 +18914,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
   /* ── OUTSIDE-WINDOW DRAFT RESTORE OFFER (autosave Commit 2) ──────────────────────────────
    * Fires ONLY when load() parked a draft that is NEWER than the saved row but older than the
    * 14-day window. Inside the window nothing is asked — the draft hydrates silently and the
-   * existing "Restored from your last session" banner covers it.
+   * existing restore banner ("Picked up where you left off") covers it.
    *
    * SCOPE FENCE: this is the load()-time restore offer. It is a DIFFERENT SURFACE from the
    * _navDrain leave-the-page guard (different trigger, different copy, still authored-not-wired).
