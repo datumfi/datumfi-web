@@ -5167,13 +5167,41 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     // --- CO-ARCHITECT LOGIC ---
     const coToggle = document.getElementById('co-arch-toggle');
     const coArchFields = document.getElementById('co-arch-fields');
-    
-    coToggle.addEventListener('change', () => {
-      coArchFields.style.display = coToggle.checked ? 'block' : 'none';
+
+    /* F71 — THE REVEAL, SEPARATED FROM THE DESTRUCTION, SO IT CAN BE REPLAYED SAFELY.
+       Everything in here is DISPLAY ONLY and idempotent: three style.display writes and one text
+       swap. It deliberately calls nothing else in the page.
+       ⛔ WHY THE SPLIT, AND IT IS NOT TIDINESS. The listener below DELETES EVERY CO-ARCHITECT
+          ACCOUNT on its off-branch. The obvious repair for F71 was "fire the change event at
+          load" -- which would have replayed that deletion at a moment when the toggle had not yet
+          been restored, turning a display defect into silent data loss.
+          🔑 A HANDLER THAT BOTH REVEALS AND DESTROYS CANNOT BE REPLAYED. Before replaying
+             any event, ask what else that event does.
+       ⚠️ updateArchitectNames() IS DELIBERATELY NOT IN HERE. It calls updateSVGs() AND
+          renderInputs() (:5093) -- a full canvas repaint. Replaying that at load is a DIFFERENT
+          hazard (a receiver running before its preconditions), so the pure function stays pure and
+          the repaint stays on the user gesture. If a stale architect label ever shows up on a
+          restored entry, that is a separate finding and must not be fixed by widening this. */
+    function _applyCoArchVisibility() {
+      var on = !!coToggle.checked;
+      coArchFields.style.display = on ? 'block' : 'none';
       var _ssStrat = document.getElementById('ss-co-arch-strategy');
       var _ssEst   = document.getElementById('ss-co-arch-estimates');
-      if (_ssStrat) _ssStrat.style.display = coToggle.checked ? 'block' : 'none';
-      if (_ssEst)   _ssEst.style.display   = coToggle.checked ? 'block' : 'none';
+      if (_ssStrat) _ssStrat.style.display = on ? 'block' : 'none';
+      if (_ssEst)   _ssEst.style.display   = on ? 'block' : 'none';
+      // P8.2 -- relabel the Shape timeline header to make clear the Shape is primary-only
+      // when a Co-Architect is present. TEXT SWAP ONLY (both Have/Want faces); no derived
+      // values, no date/age conversion, no payload. Also fires on the seed path (which
+      // dispatches the 'change' below), so a seeded Co-Architect lands on the right label.
+      var _tlTxt = on ? '01 / PRIMARY TIMELINE' : '01 / YOUR TIMELINE';
+      ['timeline-header-have', 'timeline-header-want'].forEach(function (id) {
+        var h = document.getElementById(id); if (h) h.textContent = _tlTxt;
+      });
+    }
+    window._applyCoArchVisibility = _applyCoArchVisibility;   // gate seam
+
+    coToggle.addEventListener('change', () => {
+      _applyCoArchVisibility();
       if(!coToggle.checked) {
         let i = state.accounts.length;
         while (i--) {
@@ -5185,15 +5213,22 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       updateArchitectNames();
       updateSVGs();
       calculateUpkeepLoad();
-      // P8.2 — relabel the Shape timeline header to make clear the Shape is primary-only
-      // when a Co-Architect is present. TEXT SWAP ONLY (both Have/Want faces); no derived
-      // values, no date/age conversion, no payload. Also fires on the seed path (which
-      // dispatches this 'change'), so a seeded Co-Architect lands on the right label.
-      var _tlTxt = coToggle.checked ? '01 / PRIMARY TIMELINE' : '01 / YOUR TIMELINE';
-      ['timeline-header-have', 'timeline-header-want'].forEach(function (id) {
-        var h = document.getElementById(id); if (h) h.textContent = _tlTxt;
-      });
     });
+
+    /* F71 -- THE LOAD-TIME SYNC. `pageshow`, NOT DOMContentLoaded, AND THAT IS MEASURED.
+       Chromium restores form-control state from the session-history entry AFTER every parse-time
+       script has run, and it fires NO event doing it. MEASURED 2026-09-02 on a 20-line page with
+       zero Studio code: a bottom-of-body script read checked=false, and the checkbox was true
+       immediately afterwards. In the Studio the same probe read false at DOMContentLoaded in all
+       three navigation arms.
+       ⛔ SO A DOMContentLoaded HOOK WOULD RUN BEFORE THE STATE IT EXISTS TO OBSERVE. pageshow
+          fires after load, on every entry including a restored one.
+       ⚠️ ON A COLD LOAD THIS IS A NO-OP BY CONSTRUCTION: the markup ships
+          #co-arch-fields display:none and both timeline headers reading "01 / YOUR TIMELINE" --
+          exactly what the off-state writes. The change listener above is the only other writer of
+          either, so this cannot fight anything.
+       Gate: scripts/_gate_coarch_reveal_matches_toggle.js (L1 red on pre-fix bytes). */
+    window.addEventListener('pageshow', function () { _applyCoArchVisibility(); });
 
     // --- PLUMBING / UPKEEP LOGIC & CHARITY LOGIC ---
     let upkeepItems = [
