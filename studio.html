@@ -14705,6 +14705,70 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       // STU-011: Two Network rows = CORS OPTIONS preflight (expected browser behavior) + POST.
       // Reduced-motion path (below) and full-animation path are mutually exclusive — no double-fire.
       const revealBtn = document.querySelector('.action-btn');
+
+      /* F73 — THE RESET IS HOISTED OUT OF THE CLICK HANDLER SO SOMETHING OTHER THAN A CLICK CAN
+         REACH IT. It used to be declared INSIDE the handler and closed over four handler-local
+         consts, which meant the only code that could undo the overlay was code that had already
+         put it up. ⛔ THAT IS WHY THE TRAP HAD NO EXIT.
+         🔑 REUSE, NOT A SECOND RESET (L48). The retry button and both `if (!req)` bail-outs
+            still call this exact function; the recovery below is a THIRD caller, not a fork. The
+            four consts become id lookups — identical elements, since the consts were themselves
+            getElementById of these same ids. */
+      function resetOverlayState() {
+        var overlay = document.getElementById('cinematic-overlay');
+        if (!overlay) return;
+        overlay.classList.remove('active');
+        if (revealBtn) revealBtn.disabled = false;
+        var errorState = document.getElementById('c-error-state');
+        if (errorState) errorState.classList.remove('show');
+        var mainLayout = document.getElementById('c-main-layout');
+        if (mainLayout) mainLayout.style.display = '';
+        ['log-1','log-2','log-3','log-4','log-5','log-6','log-7'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) { el.classList.remove('show', 'pulse'); }
+        });
+        var log4 = document.getElementById('log-4');
+        if (log4) log4.textContent = '> RUNNING 10,000 FUTURES...';
+        var estate = document.getElementById('c-estate');
+        if (estate) estate.classList.remove('show', 'dim', 'shocked');
+        var estText = document.getElementById('c-estate-text');
+        if (estText) estText.style.opacity = '0';
+        var scanner = document.getElementById('c-scanner');
+        if (scanner) { scanner.classList.remove('scan'); scanner.style.opacity = ''; }
+        var shockwave = document.getElementById('c-shockwave');
+        if (shockwave) shockwave.classList.remove('fire');
+        ['cw-ceil','cw-datum','cw-floor'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.classList.remove('expand');
+        });
+      }
+      window._resetRevealOverlay = resetOverlayState;   // gate seam
+
+      /* F73 — THE RECOVERY. The back/forward cache restores this tab EXACTLY as it left — and it
+         left mid-reveal, with #cinematic-overlay still carrying `.active`. No script re-runs on a
+         bfcache restore, so nothing was ever going to take it down.
+         ⛔ THE OVERLAY IS position:fixed, 100vw x 100vh, z-index:99999, pointer-events:all WHEN
+            ACTIVE, AND HAS NO CLOSE BUTTON. A user restored behind it is in a locked room.
+         ⭐ MEASURED IN THE BROWSER THAT REPRODUCES IT, 2026-09-02 — the Captain ran
+            `document.getElementById('cinematic-overlay').className` on the frozen screen and it
+            returned 'active'. A FRESH PARSE CANNOT PRODUCE THAT CLASS: nothing sets it but the
+            reveal click, and `datum_range_revealed` is read only by range.html:779. So the state
+            was PRESERVED, not rebuilt. Removing the class freed the page.
+         ⚠️ THE `.active` PRECONDITION IS LOAD-BEARING, NOT DEFENSIVE PADDING. pageshow fires on
+            EVERY entry, so without it this would stomp overlay/button/log state on every normal
+            load. `_gate_reveal_overlay_recovers.js` R3 disables the button by hand with the overlay
+            INACTIVE and asserts it STAYS disabled — the arm that must not fire.
+         ⚠️ NOT GATED ON `event.persisted`. The condition we care about is "the overlay is up
+            with nothing driving it", which is observable directly; keying on the restore MECHANISM
+            would make this blind to any other way that state survives. Gate the STATE, not the
+            route that produced it. */
+      function _revealOverlayRecover() {
+        var ov = document.getElementById('cinematic-overlay');
+        if (!ov || !ov.classList.contains('active')) return;
+        resetOverlayState();
+      }
+      window.addEventListener('pageshow', _revealOverlayRecover);
+
       if (revealBtn) {
         revealBtn.addEventListener('click', async function() {
           // Block if total investable assets = $0
@@ -14763,31 +14827,6 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
               e.name = 'DatumComputeFailure';
               S.captureException(e, { tags: { datum_stage: stage }, extra: { detail: detail } });
             } catch (_) { /* telemetry must never break the reveal it is reporting on */ }
-          }
-
-          function resetOverlayState() {
-            overlay.classList.remove('active');
-            revealBtn.disabled = false;
-            errorState.classList.remove('show');
-            mainLayout.style.display = '';
-            ['log-1','log-2','log-3','log-4','log-5','log-6','log-7'].forEach(function(id) {
-              var el = document.getElementById(id);
-              if (el) { el.classList.remove('show', 'pulse'); }
-            });
-            var log4 = document.getElementById('log-4');
-            if (log4) log4.textContent = '> RUNNING 10,000 FUTURES...';
-            var estate = document.getElementById('c-estate');
-            if (estate) estate.classList.remove('show', 'dim', 'shocked');
-            var estText = document.getElementById('c-estate-text');
-            if (estText) estText.style.opacity = '0';
-            var scanner = document.getElementById('c-scanner');
-            if (scanner) { scanner.classList.remove('scan'); scanner.style.opacity = ''; }
-            var shockwave = document.getElementById('c-shockwave');
-            if (shockwave) shockwave.classList.remove('fire');
-            ['cw-ceil','cw-datum','cw-floor'].forEach(function(id) {
-              var el = document.getElementById(id);
-              if (el) el.classList.remove('expand');
-            });
           }
 
           if (retryBtn) retryBtn.onclick = resetOverlayState;

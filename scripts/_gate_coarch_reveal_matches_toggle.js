@@ -256,9 +256,22 @@ const shape = (o) => 'checked=' + o.checked + ' fields=' + o.fields + ' ssStrat=
   check('L4 toggle really was off (the arm is measuring what it claims)', a4.post.checked === false, 'checked=' + a4.post.checked);
 
   /* L5a — STRUCTURAL */
-  const syncLines = servedStudio.split('\n').filter((l) => /addEventListener\(\s*'pageshow'/.test(l));
+  /* ⛔ SCOPED TO ITS OWN SUBJECT, NOT TO THE FILE — AND THE FIRST VERSION WAS NOT.
+     It globbed EVERY addEventListener('pageshow') in studio.html and asserted exactly one. That is
+     a claim about the FILE, and this gate's subject is the CO-ARCHITECT sync. F73 added a second,
+     entirely legitimate pageshow listener (the reveal-overlay recovery) and this gate went RED over
+     a CORRECT change — caught by the suite, 2026-09-02, before either commit shipped.
+     🔑 AN EXISTENCE LEG MUST BE SCOPED TO ITS OWN SUBJECT. Asserting global uniqueness the codebase
+        never promised makes a gate a tripwire for other people's correct work.
+     ⚠️ THE FILTER MATCHES `coToggle` TOO, DELIBERATELY: --replay rewrites the body to
+        `coToggle.dispatchEvent(...)`, which removes the _applyCoArchVisibility mention. Without the
+        second alternative the mutation would vanish from this leg's population and the control
+        would go quiet instead of biting. A control that cannot see its own mutation is not one. */
+  const allPageshow = servedStudio.split('\n').filter((l) => /addEventListener\(\s*'pageshow'/.test(l));
+  const syncLines = allPageshow.filter((l) => /_applyCoArchVisibility|coToggle/.test(l));
   const syncBody = syncLines.join(' | ');
-  check('L5a exactly one pageshow sync is wired', syncLines.length === 1, syncLines.length + ' found');
+  console.log('L5a pageshow listeners in studio.html: ' + allPageshow.length + ' total, ' + syncLines.length + ' belonging to this subject (the file-wide count is CONTEXT, never an assertion)');
+  check('L5a exactly one co-architect pageshow sync is wired', syncLines.length === 1, syncLines.length + ' found of ' + allPageshow.length + ' pageshow listeners');
   check('L5a the sync CALLS the pure visibility function', /_applyCoArchVisibility\(\)/.test(syncBody), syncBody.trim().slice(0, 120));
   check('L5a the sync does NOT replay the handler (no dispatchEvent)', !/dispatchEvent/.test(syncBody), syncBody.trim().slice(0, 120));
 
