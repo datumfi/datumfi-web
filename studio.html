@@ -14160,6 +14160,46 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         return age;
       }
 
+      /* ⛔⛔ FINDING 67 — ONE DERIVATION, TWO CALLERS, SO THEY CANNOT DISAGREE ABOUT WHO LIVES
+         IN THE HOUSE. co_architect_age was derived ONLY inside buildMatrixRequest, so
+         /api/calculate — the call behind the Range — never received it. In the engine
+         `co_architect_age = None` MEANS SINGLE (engine/income.py:495): the single-filer healthcare
+         track, and a schema validator that NULLS ss_strategy_secondary (schemas.py:135).
+         ⛔ MEASURED ON THE REAL ENGINE, FOUR HOUSEHOLD SHAPES: a couple's sustainable spend came
+         back $26k-$41k/yr LOW — worst for the SMALLEST estate, +67% on bedrock. Direction stable
+         in all four. Meanwhile engine/tax.py has NO single bracket set at all, so the same run was
+         MARRIED for tax and SINGLE for spending — a household that exists in neither the tax code
+         nor life. This closes the half the client owns; the tax half is F65.
+         ⚠ THE SS-MATRIX CALL ALREADY SENT THIS. Two endpoints, one schema, two different families,
+         on one screen. That is why the derivation moves HERE rather than being copied a second time.
+         ⛔ IT RETURNS null RATHER THAN A GUESS. Toggle on but no readable DOB → we send nothing and
+         the engine models a single household. That is wrong, but it is the EXISTING wrong; inventing
+         an age would be a fabricated personal fact (L47) on the surface that decides someone's money.
+         Gating entry on a complete Profile is a DIFFERENT cause and is not folded in here. */
+      function _coArchitectFacts() {
+        var tog = document.getElementById('co-arch-toggle');
+        if (!tog || !tog.checked) return null;
+        var coDob = (document.getElementById('co-dob') || {}).value || '';
+        var coAge = parseAgeFromDob(coDob);
+        if (!coAge || !isFinite(coAge) || coAge <= 0) return null;
+        var out = { co_architect_age: coAge };
+        /* co_architect_retirement_age is accepted by the engine and NEITHER path has ever sent it —
+           not even the SS-Matrix call that validates the field it comes from. Derived the same way
+           the primary's retireAge is, so the two cannot drift. */
+        var coRet     = (document.getElementById('co-ret') || {}).value || '';
+        var coRetYear = parseInt((coRet.replace(/s/g, '').split('/')[1] || ''), 10);
+        if (coRetYear) {
+          var coRetAge = coRetYear - (new Date().getFullYear() - coAge);
+          if (coRetAge > 0) out.co_architect_retirement_age = coRetAge;
+        }
+        /* The engine's validator DISCARDS this unless co_architect_age is present, so it may only
+           be set alongside one. Same selector the SS-Matrix path reads. */
+        var _map = { '62': 'early_62', '67': 'full_67', '70': 'optimal_70' };
+        var _btn = document.querySelector('.ss-sec-btn.active strong');
+        out.ss_strategy_secondary = _map[((_btn && _btn.textContent) || '').trim()] || 'full_67';
+        return out;
+      }
+
       // SS override helper — reads monthly inputs, returns {state, dict}
       // state: 'full' | 'fra_only' | 'partial' | 'empty'
       // Inputs are annual — no ×12 conversion needed (engine is annual-native)
@@ -14281,6 +14321,11 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
 
         const body = { current_age: currentAge, retirement_age: retireAge, location: 'FL', datum_spend: datumSpend, market_outlook: outlookValue, ss_strategy_primary: ssStrategy, accounts, plan_end_age: planEndAge };
         if (customWeights) body.custom_weights = customWeights;
+        /* ⛔ FINDING 67 — tell the engine who actually lives here. Without these keys
+           `co_architect_age = None` makes the engine model a SINGLE household while still taxing it
+           as married. Nothing is sent when the co-architect is off or their DOB is unreadable. */
+        var _coFacts = _coArchitectFacts();
+        if (_coFacts) Object.assign(body, _coFacts);
         // SS overrides — _readSSOverride captures monthly inputs and returns annual (×12) dicts
         const priSS = _readSSOverride('ss-pri');
         if (priSS.dict) body.ss_primary_benefit_overrides = priSS.dict;
@@ -17378,21 +17423,16 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         if (_coDobError) { window._buildRequestError = _coDobError; window._buildRequestErrorField = 'Co-Architect DOB'; return null; }
         if (_coRetError) { window._buildRequestError = _coRetError; window._buildRequestErrorField = 'Co-Architect Target Retirement Date'; return null; }
 
-        var parts    = coDobVal.replace(/\s/g, '').split('/');
-        if (parts.length >= 2) {
-          var coYear  = parseInt(parts[1], 10);
-          var coMonth = parseInt(parts[0], 10);
-          if (coYear) {
-            var now    = new Date();
-            var coAge  = now.getFullYear() - coYear;
-            if (now.getMonth() + 1 < coMonth) coAge--;
-            base.co_architect_age = coAge;
-          }
-        }
-        // Read co-architect SS strategy from Income Timing Hall selector
-        var _ssSecMap   = { '62': 'early_62', '67': 'full_67', '70': 'optimal_70' };
-        var _ssSecBtn   = document.querySelector('.ss-sec-btn.active strong');
-        base.ss_strategy_secondary = _ssSecMap[(_ssSecBtn && _ssSecBtn.textContent || '').trim()] || 'full_67';
+        /* ⛔ FINDING 67 — THE FORK IS GONE. This block used to derive co_architect_age and the
+           secondary SS strategy ITSELF, which is precisely why /api/calculate never received them:
+           the knowledge lived inside the one caller nobody else went through. The VALIDATION above
+           stays here — it is the matrix path's own gate and it aborts the request — but the
+           DERIVATION is now _coArchitectFacts(), shared with buildStudioRequest, so the two
+           endpoints can never again describe different families from the same screen.
+           ⚠ base already carries these from buildStudioRequest; re-assigning AFTER the gate above
+           is deliberate, so a value that failed validation cannot survive into the matrix body. */
+        var _mcFacts = _coArchitectFacts();
+        if (_mcFacts) Object.assign(base, _mcFacts);
       }
 
       // current_ss_plan — tells the engine which cell gets the CURRENT PLAN badge
