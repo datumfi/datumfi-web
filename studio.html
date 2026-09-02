@@ -14981,7 +14981,22 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             announce('Datum locked. Your Range is ready.');
             if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: !!apiResult, reduced_motion: true });
             await new Promise(function(r) { setTimeout(r, 500); });
-            window._studioClearDraft(); window._studioBp = null; // G1 hub draft
+            /* F74 — THE DRAFT SURVIVES THE RANGE (reduced-motion path). Same removal as the
+               full-animation path below; the full account is in the note there. */
+            /* F74b — REVEALING IS A DEPARTURE THE USER JUST CHOSE; DO NOT ASK THEM TO CONFIRM IT.
+               ⛔ THIS LINE EXISTS BECAUSE F74 REMOVED THE CLEAR ABOVE IT, AND THE CLEAR WAS LOAD-BEARING
+                  IN A WAY NOTHING RECORDED. _navDrain runs _stuLeaveGuard first, and that guard blocks on
+                  DatumBlueprint.workState() reporting unsaved content. Clearing the draft happened to zero
+                  that state, so the reveal sailed through. With the draft surviving, the guard fires and
+                  the product's PRIMARY ACTION pops an 'are you sure you want to leave?' dialog.
+               🔑 NO READERS IS NOT NO PURPOSE — and the reader was three functions away, through a guard
+                  reading state the clear happened to reset. Checking that no GATE depended on it was not
+                  checking that no CODE PATH did. Caught by R4, which asserts the reveal still lands.
+               ⚖ REUSES THE EXISTING LATCH RATHER THAN INVENTING A BYPASS (L48). Its own comment names this
+                  case: 'THE HUMAN HAS ALREADY ANSWERED THIS DEPARTURE, SO LET IT THROUGH.' The latch is
+                  scoped to ONE departure and is cleared by the next real edit, so somebody who comes back
+                  from the Range and keeps working is still asked on their next exit. */
+            window._stuLeaveAnswered = true;   // F74b
             window._navDrain('/range.html');
             return;
           }
@@ -15103,7 +15118,35 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: !!apiResult });
 
           await new Promise(function(r) { setTimeout(r, 2000); });
-          window._studioClearDraft(); window._studioBp = null; // G1 hub draft
+          /* F74 — THE DRAFT SURVIVES THE RANGE. This line used to read
+               window._studioClearDraft(); window._studioBp = null;
+             ⛔ WHICH DESTROYED THE USER'S ESTATE ON THE WAY OUT. Rooms live in the draft, so
+                pressing Back from the Range returned a Studio with the PROFILE intact and the
+                ARCHITECTURE empty. The profile survives because those are form inputs and the
+                BROWSER caches them — a mechanism we do not own and cannot rely on.
+             🔑 HALF-RESTORED IS WORSE THAN EITHER EXTREME: it looks like it worked, so the user
+                hits Reveal and is refused for a reason they believe they already satisfied.
+             ⚖ Captain-ruled: "you shouldn't have to do everything all over again — perhaps you
+                wanted to change only 1 or 2 things." That IS the Range: look, adjust one input,
+                look again. A product that wipes the draft turns a dial into a form.
+             ⚠️ NO "already revealed" STATE WAS INVENTED — the draft simply survives. A mark would
+                be a new state with no surface to live on.
+             ⚠️ THE CLEAR STILL EXISTS AND IS STILL CORRECT ON ITS OTHER CALLERS: Start Fresh
+                (clearDraftAndRefresh) and the leave-prompt's discard. REVEALING IS NOT DISCARDING. */
+          /* F74b — REVEALING IS A DEPARTURE THE USER JUST CHOSE; DO NOT ASK THEM TO CONFIRM IT.
+             ⛔ THIS LINE EXISTS BECAUSE F74 REMOVED THE CLEAR ABOVE IT, AND THE CLEAR WAS LOAD-BEARING
+                IN A WAY NOTHING RECORDED. _navDrain runs _stuLeaveGuard first, and that guard blocks on
+                DatumBlueprint.workState() reporting unsaved content. Clearing the draft happened to zero
+                that state, so the reveal sailed through. With the draft surviving, the guard fires and
+                the product's PRIMARY ACTION pops an 'are you sure you want to leave?' dialog.
+             🔑 NO READERS IS NOT NO PURPOSE — and the reader was three functions away, through a guard
+                reading state the clear happened to reset. Checking that no GATE depended on it was not
+                checking that no CODE PATH did. Caught by R4, which asserts the reveal still lands.
+             ⚖ REUSES THE EXISTING LATCH RATHER THAN INVENTING A BYPASS (L48). Its own comment names this
+                case: 'THE HUMAN HAS ALREADY ANSWERED THIS DEPARTURE, SO LET IT THROUGH.' The latch is
+                scoped to ONE departure and is cleared by the next real edit, so somebody who comes back
+                from the Range and keeps working is still asked on their next exit. */
+          window._stuLeaveAnswered = true;   // F74b
           window._navDrain('/range.html');
         });
       }

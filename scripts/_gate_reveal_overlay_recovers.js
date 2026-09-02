@@ -240,6 +240,30 @@ async function seedForReveal(page) {
     try { await pg.waitForURL(/range\.html/, { timeout: 25000 }); reached = true; } catch (_e) {}
     console.log('R4  reveal -> ' + new URL(pg.url()).pathname);
     check('R4 a valid reveal still reaches range.html', reached, new URL(pg.url()).pathname);
+
+    /* R6 (F74) — THE WORK COMES HOME. Reveal your Range, press Back, and the estate you drafted
+       must still be there. It was not: the reveal called _studioClearDraft() immediately before
+       navigating, so the draft — which is where ROOMS live — was destroyed on the way out.
+       ⛔ AND THE FAILURE WAS HALF-INVISIBLE, WHICH IS WHY IT SURVIVED. The PROFILE came back,
+          because those are form inputs and the BROWSER caches them; the ROOMS did not, because
+          they are JS state and only our draft carries them. Two persistence mechanisms, one of
+          which we do not own.
+          🔑 HALF-RESTORED IS WORSE THAN EITHER EXTREME — it looks like it worked, so the user
+             hits Reveal and is refused for a reason they believe they already satisfied.
+       ⚖️ Captain-ruled: the draft simply survives. No "already revealed" state was invented. */
+    if (reached) {
+      await pg.goBack({ waitUntil: 'load' });
+      await pg.waitForTimeout(1800);
+      const home = await pg.evaluate(() => ({
+        rooms: (typeof state !== 'undefined' && state.accounts) ? state.accounts.length : 'no state',
+        funded: (typeof state !== 'undefined' && state.accounts) ? state.accounts.filter((a) => (a.value || 0) > 0).length : 0,
+        dob: (document.getElementById('pri-dob') || {}).value
+      }));
+      console.log('R6  after Back from the Range: ' + JSON.stringify(home));
+      check('R6 fixture precondition — the profile came home (so this leg is about ROOMS)', !!home.dob, 'pri-dob="' + home.dob + '"');
+      check('R6 THE WORK COMES HOME — the drafted estate survives a Back from the Range',
+        home.funded > 0, 'funded rooms after Back = ' + home.funded + ' (0 = the draft was destroyed on the way out)');
+    }
     await ctx.close();
   }
 

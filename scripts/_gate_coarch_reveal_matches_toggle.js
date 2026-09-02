@@ -26,9 +26,16 @@
  *     draft intact  + reload  -> revealed (restoreDraft dispatches the event: fine)
  *     draft intact  + back    -> revealed (same)
  *     draft CLEARED + back    -> HIDDEN, toggle ON, header reverted to "01 / YOUR TIMELINE"
- *   The Range reveal calls `_studioClearDraft()` immediately before navigating (studio.html:14803),
- *   so "generate a Range, press Back" is precisely and only the path that produces it. A reload
- *   test can never see this.
+ *   ⚠️ HISTORICAL, AND CORRECTED BY F74 (2026-09-02): the Range reveal USED TO call
+ *   `_studioClearDraft()` immediately before navigating, which is how a real user reached the
+ *   draft-absent state below. F74 REMOVED THAT — the draft now survives the Range, because
+ *   destroying it took the user’s rooms with it. THE LEG IS STILL VALID: a draft can be absent
+ *   on a first visit, after Start Fresh, or once it expires, and the browser restores form
+ *   state on every back-navigation regardless. ONLY THE MOTIVATING PATH CHANGED, NOT THE CLASS.
+ *   🔑 A COMMENT THAT NAMES A CODE PATH IS A DECLARATION, AND DECLARATIONS GO STALE WHEN THE
+ *      CODE MOVES. Left unedited, this would have described a route that no longer exists.
+ *   ⚠ AND THE FACTORIAL ABOVE IS STILL THE MEASUREMENT THAT FOUND IT — it is a record of what
+ *   was true on 2026-09-02 pre-F74, not a claim about how a user reaches this state today.
  *
  * ⛔ IT IS NOT COSMETIC. The same missed event hides `#ss-co-arch-estimates`, which CONTAINS
  *    ss-sec-62/67/70 — and studio.html:17501 refuses to run the SS Matrix while the toggle is
@@ -204,7 +211,7 @@ async function arm(browser, { withCo, clearDraft, nav }) {
   await fillProfile(page, withCo);
   const pre = await observe(page);
   if (clearDraft) {
-    /* Replicates studio.html:14803 — the two lines the Range reveal runs immediately before
+    /* Reproduces a draft-ABSENT entry. ⚠ This no longer mirrors the reveal path — F74 stopped it
        navigating. Scripted, not a click-through of the reveal (which would need a metered call). */
     await page.evaluate(() => { if (typeof window._studioClearDraft === 'function') { window._studioClearDraft(); window._studioBp = null; } });
   }
