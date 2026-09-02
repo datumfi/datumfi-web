@@ -52,6 +52,7 @@
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
+const { studioSource } = require('./_studio_source.cjs');   // the ONLY door to the program's source
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8583;
 const BASE = 'http://127.0.0.1:' + PORT;
@@ -71,9 +72,27 @@ function check(label, cond, detail) {
   results.push((ok ? 'PASS  ' : 'FAIL  ') + label + (detail !== undefined ? '   [' + detail + ']' : ''));
 }
 
-const STUDIO_SRC = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
-const FIX_PRESENT = STUDIO_SRC.includes(WIRE_LINE) && STUDIO_SRC.includes(GUARD_LINE);
-let served = STUDIO_SRC;
+/* ⛔ TWO SOURCES, TWO JOBS, AND CONFLATING THEM IS THE DEFECT _gate_studio_source EXISTS TO CATCH.
+   The first draft of this file did `fs.readFileSync(<the shell>)` on ONE line and used it for both
+   jobs. That is a census of the SHELL ALONE — and the shell is missing the five part files, so a
+   forked `resetOverlayState` living in one of them would be INVISIBLE to R5, whose entire job is to
+   prove there is only one.
+   ⭐⭐ IT PASSED FOUR SUITE RUNS BEFORE ANYONE NOTICED, AND THE REASON IS ITS OWN LAW: the census
+      reads `git ls-files`, this gate was UNTRACKED, and an untracked gate is invisible to the
+      population that would have caught it. Committing it is what made it visible.
+      🔑 GREEN WHILE INVISIBLE TO ITSELF IS NOT GREEN. (_gate_studio_source:119 wrote that down
+         after being bitten by it; I read it only after being bitten by it too.)
+   ⚠️ SPLITTING THE TOKENS ACROSS LINES WOULD SILENCE THE MATCHER WITHOUT FIXING ANYTHING. The
+      census leg genuinely needs the composed program, so it gets studioSource(). The SHELL read
+      below is a separate, honest job — a browser needs a servable HTML document, and studioSource()
+      is a concatenation, not a page. */
+const CENSUS_SRC = studioSource();                       // shell + the five parts — the PROGRAM
+const SHELL_FILE = path.join(ROOT, 'studio.html');       // the servable document, for HTTP only
+const SHELL_SRC = fs.readFileSync(SHELL_FILE, 'utf8');
+const FIX_PRESENT = CENSUS_SRC.includes(WIRE_LINE) && CENSUS_SRC.includes(GUARD_LINE);
+let served = SHELL_SRC;
+/* The controls must bite on BOTH views or a leg would read around its own mutation. */
+let STUDIO_SRC = CENSUS_SRC;
 if (DEFECT || UNGUARD) {
   if (!FIX_PRESENT) {
     console.log('CONTROL REFUSED — the fix is not present in studio.html; there is nothing to mutate.');
@@ -81,9 +100,16 @@ if (DEFECT || UNGUARD) {
     console.log('  guard line expected: ' + GUARD_LINE.trim());
     process.exit(1);
   }
-  served = DEFECT ? STUDIO_SRC.replace(WIRE_LINE, '      /* --defect: recovery unwired */')
-                  : STUDIO_SRC.replace(GUARD_LINE, '        if (!ov) return;');
-  if (served === STUDIO_SRC) { console.log('CONTROL REFUSED — mutation changed no bytes.'); process.exit(1); }
+  const mutate = (s) => DEFECT ? s.replace(WIRE_LINE, '      /* --defect: recovery unwired */')
+                               : s.replace(GUARD_LINE, '        if (!ov) return;');
+  served     = mutate(SHELL_SRC);    // what the browser gets
+  STUDIO_SRC = mutate(CENSUS_SRC);   // what the structural legs read
+  if (served === SHELL_SRC || STUDIO_SRC === CENSUS_SRC) {
+    console.log('CONTROL REFUSED — mutation changed no bytes in one of the two views.');
+    console.log('  shell changed : ' + (served !== SHELL_SRC));
+    console.log('  census changed: ' + (STUDIO_SRC !== CENSUS_SRC));
+    process.exit(1);
+  }
 }
 
 const FAKE = JSON.stringify({ tiers: { bedrock: 200000, foundation: 240000, keystone: 260000, capstone: 280000 },
@@ -151,8 +177,8 @@ async function seedForReveal(page) {
     }));
     console.log('R1  window._resetRevealOverlay=' + seen.reset + '  overlay present=' + seen.overlay);
     check('R1 the reset is published as window._resetRevealOverlay', seen.reset === 'function', seen.reset);
-    check('R1 the pageshow recovery is wired in source', served.includes(WIRE_LINE), served.includes(WIRE_LINE) ? 'found' : 'NOT FOUND');
-    check('R1 the recovery carries its .active precondition', served.includes(GUARD_LINE), served.includes(GUARD_LINE) ? 'found' : 'NOT FOUND');
+    check('R1 the pageshow recovery is wired in source', STUDIO_SRC.includes(WIRE_LINE), STUDIO_SRC.includes(WIRE_LINE) ? 'found' : 'NOT FOUND');
+    check('R1 the recovery carries its .active precondition', STUDIO_SRC.includes(GUARD_LINE), STUDIO_SRC.includes(GUARD_LINE) ? 'found' : 'NOT FOUND');
     await ctx.close();
   }
 
@@ -218,10 +244,10 @@ async function seedForReveal(page) {
   }
 
   /* R5 · THE HOIST DID NOT BREAK THE RETRY BUTTON (structural) */
-  check('R5 the retry button is still wired to the reset', /retryBtn\.onclick = resetOverlayState/.test(served), 'source read');
+  check('R5 the retry button is still wired to the reset', /retryBtn\.onclick = resetOverlayState/.test(STUDIO_SRC), 'source read');
   check('R5 exactly one resetOverlayState definition survives the hoist',
-    (served.match(/function resetOverlayState\(\)/g) || []).length === 1,
-    (served.match(/function resetOverlayState\(\)/g) || []).length + ' definitions');
+    (STUDIO_SRC.match(/function resetOverlayState\(\)/g) || []).length === 1,
+    (STUDIO_SRC.match(/function resetOverlayState\(\)/g) || []).length + ' definitions');
 
   await browser.close(); server.close();
   console.log('\n' + results.join('\n'));
