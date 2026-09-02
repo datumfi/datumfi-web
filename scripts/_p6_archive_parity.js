@@ -89,25 +89,46 @@ const check = (name, cond, detail) => { console.log((cond ? '  PASS  ' : '  FAIL
 let heldN = 0;
 const hold = (name, cond, detail) => { heldN++; console.log('  HELD  ' + (cond ? '(would pass) ' : '(would fail) ') + name + (detail != null ? ' (' + detail + ')' : '')); };
 
+/* ⛔ THE 1500ms BUDGET WAS COVERING A NETWORK FETCH, AND UNDER LOAD IT LOST.
+   Its own comment said what it was waiting for: "730ms scrub + LAZY CODEC LOAD + async remirror".
+   The scrub is a timer, but the codec is a lazily-loaded script — a FETCH — and the remirror cannot
+   run until it lands. Under --concbrowser=3, three browsers share one local server and that fetch
+   stretches past the remaining ~770ms. The codec never runs, `blueprint_z` is never written, and
+   the two legs that read it fail while every synchronous localStorage assertion beside them passes.
+   MEASURED 2026-09-02: FAIL zPresent + FAIL zHasSlot3, with "dropped slot2" PASSING — the signature
+   of the mirror being ABSENT rather than WRONG, because `!!(null && ...)` is false and `!false` is
+   true. ⚠️ THAT PASS IS A VACUOUS ONE, saved only by zPresent being asserted two lines above it.
+   🔑 THE CONDITION IS UNIFORM ACROSS ALL FOUR ERASE CALL SITES: every erase — purge or guard,
+      blueprint or sketch — RE-ENCODES THE CLERK MIRROR. So capture the mirror before, and wait for
+      it to change. That is the artefact the failing legs read, and it settles last.
+   ⚠️ THE TIMEOUT FALLS THROUGH DELIBERATELY. If the mirror never changes, the legs below report
+      it honestly — zPresent is the anti-vacuity partner and it is already there. An exception here
+      would replace a verdict we authored with a stack trace the runtime authored. */
 async function eraseBlueprint(page, slot) {
   // Slice-1 Blueprint.html is id-based (render-N): the Erase button carries data-purge-id="<bpId>",
   // not the old data-purge-target="<slot>". The gate seeds bp-<slot> into each slot, so slot N == bp-N.
+  const __mockclerk_meta_before = await page.evaluate(() => sessionStorage.getItem('__mockclerk_meta') || '');
   await page.evaluate((s) => {
     var b = document.querySelector('.erase-action[data-purge-id="bp-' + s + '"]');
     if (b) b.click();
   }, slot);
-  await page.waitForTimeout(120);
+  await page.waitForFunction(() => !!document.getElementById('action-confirm-erase'), null, { timeout: 6000 }).catch(() => {});
   await page.evaluate(() => { var c = document.getElementById('action-confirm-erase'); if (c) c.click(); });
-  await page.waitForTimeout(1500);   // 730ms scrub + lazy codec load + async remirror
+  await page.waitForFunction((b) => (sessionStorage.getItem('__mockclerk_meta') || '') !== b,
+    __mockclerk_meta_before, { timeout: 10000 }).catch(() => {});
 }
+/* Same repair, same reasoning as eraseBlueprint above — the sketch flow lazily loads the SAME
+   codec and re-encodes the SAME mirror (sketchbook_z rather than blueprint_z). */
 async function eraseSketch(page, slot) {
+  const __mockclerk_meta_before = await page.evaluate(() => sessionStorage.getItem('__mockclerk_meta') || '');
   await page.evaluate((s) => {
     var b = document.querySelector('.slot-erase-action[data-purge-target="' + s + '"]');
     if (b) b.click();
   }, slot);
-  await page.waitForTimeout(120);
+  await page.waitForFunction(() => !!document.getElementById('action-confirm-erase'), null, { timeout: 6000 }).catch(() => {});
   await page.evaluate(() => { var c = document.getElementById('action-confirm-erase'); if (c) c.click(); });
-  await page.waitForTimeout(1500);  // 750ms scrub + lazy codec load + async remirror
+  await page.waitForFunction((b) => (sessionStorage.getItem('__mockclerk_meta') || '') !== b,
+    __mockclerk_meta_before, { timeout: 10000 }).catch(() => {});
 }
 
 (async () => {
