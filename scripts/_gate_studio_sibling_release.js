@@ -145,11 +145,40 @@ const bannerUp = (p) => p.evaluate(() => !!document.getElementById('draft-notice
    * load() hydrates the incumbent and stamps `_seenAt`, which is exactly how a real returning tab
    * earns the right to write. */
   await A.evaluate(() => window.DatumBlueprint.load({}));
-  await A.waitForTimeout(150);
 
   /* A types work B has never seen. */
-  await A.evaluate((rooms) => window.DatumBlueprint._internal.writeSessionDraft({ accounts: rooms }), ROOMS('tabA-typed', 2));
-  await A.waitForTimeout(120);
+  /* ⛔ THIS USED TO BE `waitForTimeout(150)` THEN `waitForTimeout(120)`, AND THAT WAS THE FLAKE.
+     The comment 30 lines above already describes the exact failure: if load() has not settled, A is
+     STILL HELD, A's write is refused, B has nothing newer to collide with, and this gate aborts on
+     its own anti-vacuity check. A 270ms budget for that sequence is not a test, it is a WAGER — and
+     under --concbrowser=3 it lost, 2026-09-02.
+     🔑 WAIT ON THE EFFECT, NOT ON A CLOCK. The precondition every leg below needs is "A's work
+        reached storage". That is directly observable, so observe it.
+     ⚠️ DELIBERATELY NOT PINNED TO SOLO CONCURRENCY. The runner's own header: "PINNING IS A
+        WORKAROUND, NOT A FIX, AND IT MUST NOT BECOME PERMANENT AND UNEXAMINED." Pinning would HIDE
+        this flake rather than remove it — A GATE THAT ONLY PASSES ALONE HAS BEEN EXCUSED, NOT
+        REPAIRED. If it still flakes after this, pinning becomes a DECISION and gets written down as
+        one, with the measurement that earned it.
+     ⛔⛔ AND THE DECLARATION TOKEN IS DELIBERATELY NOT SPELLED OUT ANYWHERE IN THIS FILE.
+        _suite_baseline.mjs:245 classifies a gate by testing SOLO_RE against the WHOLE SOURCE,
+        COMMENTS INCLUDED. So a sentence saying "this gate is not pinned" WOULD PIN IT — silently —
+        and the reliable green that followed would be the pin doing the work rather than this fix.
+        MEASURED 2026-09-02: the first draft of this very comment made SOLO_RE.test() return true.
+        🔑 IN A FILE WHOSE COMMENTS ARE READ AS CONFIGURATION, PROSE IS CODE. Do not write the
+           token here — not even to say you are not using it. */
+  /* ⛔ THE WAIT MUST *CAUSE*, NOT MERELY OBSERVE — MEASURED THE HARD WAY, 2026-09-02.
+     The first version of this repair simply moved the wait AFTER the write and watched storage for
+     'tabA-typed'. It aborted on the very first run, ALONE, on an idle machine: if load() has not
+     settled the write is REFUSED, and a passive watcher then observes that refusal for the full 6s
+     and falls through with A's work still missing. Removing the sleep between load() and the write
+     made the exact failure MORE likely, not less.
+     🔑 A WAIT PLACED WHERE IT CAN ONLY OBSERVE CANNOT FIX A STEP THAT WAS REFUSED. Retry the
+        action until it takes — the same shape B's rejoin already uses below. */
+  await A.waitForFunction((rooms) => {
+    window.DatumBlueprint._internal.writeSessionDraft({ accounts: rooms });
+    var d = window.DatumBlueprint._internal.readSessionDraft();
+    return !!(d && JSON.stringify(d).indexOf('tabA-typed') !== -1);   // tabA-typed visible in storage
+  }, ROOMS('tabA-typed', 2), { timeout: 6000 }).catch(() => {});
 
   /* B's autosave fires without having seen it -> refusal -> banner. */
   await B.evaluate((rooms) => window.DatumBlueprint._internal.writeSessionDraft({ accounts: rooms }), ROOMS('tabB-stale', 1));
@@ -172,8 +201,16 @@ const bannerUp = (p) => p.evaluate(() => !!document.getElementById('draft-notice
   /* B comes back into agreement the way a real user does — it picks up the sibling's work — then
    * writes its own. That is the exact sequence the authored copy promises. */
   await B.evaluate(() => window.DatumBlueprint.load({}));
-  await B.waitForTimeout(150);
-  await B.evaluate((rooms) => window.DatumBlueprint._internal.writeSessionDraft({ accounts: rooms }), ROOMS('tabB-agreed', 2));
+  /* Same repair, same reason: if B's load() has not settled, B is still out of agreement and its
+     write is refused — the banner never clears and L3 fails for a FIXTURE reason. Retry the write
+     until it sticks rather than betting 150ms that it will.
+     ⚠️ A waitForFunction WITH A SIDE EFFECT is deliberate and is the point: the condition being
+        waited on IS "the write landed", and the only way to find out is to attempt it. */
+  await B.waitForFunction((rooms) => {
+    window.DatumBlueprint._internal.writeSessionDraft({ accounts: rooms });
+    var d = window.DatumBlueprint._internal.readSessionDraft();
+    return !!(d && JSON.stringify(d).indexOf('tabB-agreed') !== -1);
+  }, ROOMS('tabB-agreed', 2), { timeout: 6000 }).catch(() => {});
   await B.waitForFunction(() => !document.getElementById('draft-notice-sibling'), null, { timeout: 6000 }).catch(() => {});
 
   const released = await B.evaluate(() => (window.__rel || []).length);
