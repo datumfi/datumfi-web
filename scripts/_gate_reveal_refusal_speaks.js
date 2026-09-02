@@ -219,6 +219,35 @@ const spoken = (page) => page.evaluate(() => {
     await ctx.close();
   }
 
+  /* S8 — THE COLD STUDIO. ⛔ THE ONE STATE EVERY NEW USER IS GUARANTEED TO PASS THROUGH, AND THE
+     ONE STATE THIS GATE NEVER TESTED. S1/S2/S3 each arrange exactly ONE thing wrong; a Studio
+     opened for the first time has THREE wrong at once, and the refusal reported them ONE PER CLICK.
+     The Captain hit REVEAL four times: no account -> add one -> no DOB -> add one -> no retirement
+     date -> add one -> finally through.
+     🔑 A VALIDATOR THAT RETURNS ON FIRST FAILURE IS NOT REPORTING, IT IS RATIONING.
+     🔑 AND A FIXTURE SET OF SINGLE FAULTS CANNOT SEE A DEFECT THAT ONLY EXISTS WHEN FAULTS CO-OCCUR.
+        Enumerating the reasons is not enumerating their COMBINATIONS. Test the cold state first. */
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 1200 } });
+    await ctx.addInitScript(INIT); await blockNet(ctx);
+    const pg = await ctx.newPage(); await open(pg);
+    const cold = await pg.evaluate(() => ({
+      rooms: (state.accounts || []).length,
+      dob: (document.getElementById('pri-dob') || {}).value,
+      ret: (document.getElementById('target-ret') || {}).value
+    }));
+    check('S8 fixture is genuinely COLD — no rooms, no dates (else it tests a different state)',
+      cold.rooms === 0 && !cold.dob && !cold.ret, JSON.stringify(cold));
+    await pg.click('.action-btn'); await pg.waitForTimeout(1000);
+    const s = await spoken(pg);
+    console.log('S8 cold-Studio refusal: ' + JSON.stringify(s.text));
+    const saysAccount = /account/i.test(s.text);
+    const saysDate = /Date of Birth/i.test(s.text);
+    check('S8 the cold refusal names the missing ACCOUNT', saysAccount, s.text.slice(0, 120));
+    check('S8 THE COMBINATION — it names the missing DATE in the SAME refusal', saysDate,
+      'one click must not yield one reason: ' + s.text.slice(0, 120));
+  }
+
   /* S6 / S7 — structural, over the composed PROGRAM */
   const hostRefs = ['reveal-status', 'reveal-zero-error', 'c-weight-error']
     .filter((id) => CENSUS_SRC.indexOf("getElementById('" + id + "')") !== -1);

@@ -14293,10 +14293,16 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         });
       })();
 
+      /* F77 — ONE HOME FOR ONE AUTHORED SENTENCE. It is now read by the early collector and by
+         the assembly guard below; two string literals would be two copies of authored copy, which
+         is the divergence datum-footer.js exists to prevent. */
+      var WEIGHTS_MUST_SUM = 'Climate weights must sum to 100%';
+
       // STU-010 + STU-022: enum mapping, Group 4 filter, custom_weights for Custom Matrix
       function buildStudioRequest() {
         window._buildRequestError = null;
         window._buildRequestErrorField = null;
+        window._buildRequestErrors = [];
         const dobVal   = document.getElementById('pri-dob')?.value || '';
         const retVal   = document.getElementById('target-ret')?.value || '';
         const spendVal = document.getElementById('spend-input')?.value || '';
@@ -14314,8 +14320,35 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         const _retError = _validateDateField(retVal, 'ret', _dobError ? null : parseAgeFromDob(dobVal));
         if (_rw) { _rw.textContent = _retError || ''; _rw.style.display = _retError ? 'block' : 'none'; }
 
-        if (_dobError) { window._buildRequestError = _dobError; window._buildRequestErrorField = 'Date of Birth'; return null; }
-        if (_retError) { window._buildRequestError = _retError; window._buildRequestErrorField = 'Target Retirement Date'; return null; }
+        /* F77 — COLLECT EVERY REASON, NEVER JUST THE FIRST.
+           ⛔ THIS USED TO `return null` ON THE DOB AND AGAIN ON THE RETIREMENT DATE, so a caller
+              learned about exactly one fault per attempt. Both errors were ALREADY COMPUTED on the
+              lines above — the information existed and was thrown away.
+           ⛔ A COLD STUDIO HAS ALL THREE WRONG AT ONCE, and that is the one state every new user
+              is guaranteed to pass through. The Captain hit REVEAL four times: no account, then no
+              DOB, then no retirement date, then finally through.
+           🔑 A VALIDATOR THAT RETURNS ON FIRST FAILURE IS NOT REPORTING, IT IS RATIONING.
+           ⚠️ THE SINGULAR GLOBALS ARE PRESERVED EXACTLY. The SS Matrix reads
+              window._buildRequestError / ...Field at :17537 and must not change behaviour; they now
+              carry the FIRST reason, which is what they always carried. The array is ADDITIVE. */
+        var _errs = [];
+        if (_dobError) _errs.push({ field: 'Date of Birth', message: _dobError });
+        if (_retError) _errs.push({ field: 'Target Retirement Date', message: _retError });
+        /* The weights check is VALIDATED HERE, alongside the dates, so a cold Studio reports it in
+           the same breath. It reads only the DOM and depends on nothing above it. The payload the
+           weights BUILD is still assembled further down, where it is used. */
+        var _clA = document.querySelector('.climate-option.active');
+        if (((_clA && _clA.dataset && _clA.dataset.outlook) || '') === 'Custom Matrix') {
+          var _wv = Array.prototype.map.call(document.querySelectorAll('.c-weight'), function (el) { return parseFloat(el.value) || 0; });
+          var _wt = _wv.reduce(function (a, b) { return a + b; }, 0);
+          if (Math.abs(_wt - 100) > 1) _errs.push({ field: null, message: WEIGHTS_MUST_SUM });
+        }
+        window._buildRequestErrors = _errs;
+        if (_errs.length) {
+          window._buildRequestError = _errs[0].message;
+          window._buildRequestErrorField = _errs[0].field;
+          return null;
+        }
 
         // Read the SAME slider-datum/exactVal source as _scenarioFromInputs so the
         // engine request, HUD, and canvas always agree (spend-input is a mirror only).
@@ -14348,7 +14381,11 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                   no copy is authored here. Its element is gone; keeping both would put the same
                   authored sentence in two places, which is the divergence datum-footer.js exists
                   to prevent. */
-            window._buildRequestError = 'Climate weights must sum to 100%';
+            /* Defensive only — F77 validates this above, with the dates, so a cold Studio hears
+               about it in the same refusal. Kept as a guard on the assembly path rather than
+               deleted: this is the branch that would build weights nobody checked. */
+            window._buildRequestErrors = [{ field: null, message: WEIGHTS_MUST_SUM }];
+            window._buildRequestError = WEIGHTS_MUST_SUM;
             window._buildRequestErrorField = null;
             return null; // caller must halt — weights invalid
           }
@@ -14732,12 +14769,24 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
          ⚠️ NO TIMER, BY RULING. An error that erases itself is the same defect on a shorter
             clock: the user looks back and the reason is gone. It clears when the user ACTS. */
       var REVEAL_NO_ACCOUNT = 'Add at least one account with a balance to reveal your Range.';
+      /* F77 — EVERY REASON, ONE BOX, ONE CLICK. A single reason keeps its own title exactly as
+         before; several share the authored 'Input Error' heading and are listed. Joining authored
+         sentences with line breaks is PRESENTATION — no copy is written here. */
+      function _revealRefuse(errs) {
+        if (!errs || !errs.length) return;
+        var title = errs.length === 1 ? (errs[0].field || 'Input Error') : 'Input Error';
+        var body  = errs.map(function (e) { return e.message; }).join('<br>');
+        _revealPaint(title, body);
+      }
       function _revealStatus(err, field, fallbackTitle, fallbackBody) {
+        var title = err ? (field || 'Input Error') : fallbackTitle;
+        var body  = err || fallbackBody;
+        _revealPaint(title, body);
+      }
+      function _revealPaint(title, body) {
         var host = document.getElementById('reveal-status');
         if (!host) return;
         var build = window._datumStatusBox;
-        var title = err ? (field || 'Input Error') : fallbackTitle;
-        var body  = err || fallbackBody;
         host.innerHTML = build
           ? build('rgba(212,175,55,0.15)', 'var(--gold)', title, body)
           /* build() is declared later in the file and in a different scope; it is assigned at parse
@@ -14827,10 +14876,15 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           var totalInvestable = (state.accounts || [])
             .filter(function(a) { var b = getBaseType(a.baseId); var tc = b ? b.taxCode : ''; return tc !== 'physical' && tc !== 'other' && tc !== 'debt'; })
             .reduce(function(sum, a) { return sum + (a.value || 0); }, 0);
-          if (totalInvestable === 0) {
-            _revealStatus(null, null, 'Accounts required', REVEAL_NO_ACCOUNT);
-            return;
-          }
+          /* F77 — ONE PASS, EVERY REASON. The account check used to `return` here, so a cold
+             Studio never reached the date checks and the user was told one thing at a time.
+             buildStudioRequest() is called for its COLLECTION only; the request itself is rebuilt
+             on whichever path runs below. It is safe over an empty estate — it reads inputs. */
+          var _all = [];
+          if (totalInvestable === 0) _all.push({ field: 'Accounts required', message: REVEAL_NO_ACCOUNT });
+          try { buildStudioRequest(); } catch (_e) {}
+          _all = _all.concat(window._buildRequestErrors || []);
+          if (_all.length) { _revealRefuse(_all); return; }
           _revealClearStatus();
 
           if (window.dfTrack) dfTrack('studio_reveal_clicked');
