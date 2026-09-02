@@ -4064,7 +4064,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                   <span class="sum-counter valid" id="c-sum">100 / 100</span>
                   <button class="custom-save valid" id="c-save" type="button" onclick="closeCustomMatrix(event)">Confirm Matrix</button>
                 </div>
-                <div id="c-weight-error" style="display:none;font-family:var(--font-mono);font-size:10px;color:var(--danger);text-align:center;margin-top:6px;letter-spacing:0.05em;">Climate weights must sum to 100%</div>
+
               </div>
             </div>
 
@@ -4081,7 +4081,11 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       <div class="reveal-container">
         <div id="range-readiness-panel" style="margin-bottom:12px;"></div>
         <button class="action-btn" type="button">REVEAL YOUR RANGE</button>
-        <div id="reveal-zero-error" style="display:none;font-family:var(--font-mono);font-size:11px;color:rgba(226,75,74,0.8);text-align:center;padding:10px 0;text-transform:uppercase;letter-spacing:0.1em;">Add at least one account with a balance to reveal your Range.</div>
+        <!-- F72 — THE ONE PLACE THE REVEAL SPEAKS. Replaces #reveal-zero-error (a red line that
+             erased itself after 4s) and takes over from #c-weight-error too. aria-live so a refusal
+             is announced rather than merely drawn. Rendered by the SS Matrix's own statusBox
+             builder; the copy is unchanged and now lives beside its siblings in JS. -->
+        <div id="reveal-status" style="display:none;" aria-live="polite" aria-atomic="true"></div>
         <div class="reveal-tooltip">
           <strong>HOW YOUR PROJECTION IS CALCULATED</strong>
           The simulation engine relies on the exact coordinates you provide. Core structural metrics—Age, Retirement Horizon, Target Spend (Datum), Tax Rates, and heavily-weighted assets (401k, IRAs, Pensions)—directly calibrate the thousands of market scenarios in your projected Range. Liabilities map your Net Worth, but do not dictate the survival rate. Calibrate your inputs truthfully to generate a structurally sound projection.
@@ -13282,6 +13286,13 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       updateAnalysisText();
       spaceDropdown.classList.remove('open');
       if (window.refreshEstateGate) refreshEstateGate();   // §20: rooms now exist -> unlock the Estate toggle
+      /* F72 — ADDING A ROOM IS THE ACTION THE "Accounts required" REFUSAL ASKED FOR, SO IT MUST
+         RETIRE IT. The clear is otherwise bound to input+change, and a room added from the picker
+         fires NEITHER — so the user did exactly what the message said and the message stayed.
+         🔑 That is the original defect in miniature, and the gate’s S5 leg found it rather than
+            a fixture problem: a refusal that outlives its own condition is still a refusal that
+            does not speak truthfully. */
+      if (window._revealClearStatus) window._revealClearStatus();
       window._estateResolved = false;                       // Step 5: estate changed -> verdict preliminary again
       if (window.refreshDraftingState) refreshDraftingState();
       if (wasEmpty) {                                        // #3a one-time deepening note on first room (in S2)
@@ -14330,8 +14341,15 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           const vals = Array.from(cWeightEls).map(el => parseFloat(el.value) || 0);
           const total = vals.reduce((s, v) => s + v, 0);
           if (Math.abs(total - 100) > 1) {
-            const errEl = document.getElementById('c-weight-error');
-            if (errEl) { errEl.style.display = 'block'; setTimeout(() => errEl.style.display = 'none', 4000); }
+            /* F72 — ROUTED THROUGH THE SAME GLOBAL AS EVERY OTHER REFUSAL. This used to light its
+               own element on a 4s timer, so the Reveal button had THREE ways to refuse in TWO
+               voices, one of them silent. One failure, one voice, one channel.
+               ⚠️ THE SENTENCE IS THE ONE THAT ALREADY SHIPPED in #c-weight-error, moved verbatim —
+                  no copy is authored here. Its element is gone; keeping both would put the same
+                  authored sentence in two places, which is the divergence datum-footer.js exists
+                  to prevent. */
+            window._buildRequestError = 'Climate weights must sum to 100%';
+            window._buildRequestErrorField = null;
             return null; // caller must halt — weights invalid
           }
           // UI order: Historical→bootstrap, Parametric, Regime, CAPE (Engine Spec v1.7 §4)
@@ -14704,6 +14722,40 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
 
       // STU-011: Two Network rows = CORS OPTIONS preflight (expected browser behavior) + POST.
       // Reduced-motion path (below) and full-animation path are mutually exclusive — no double-fire.
+      /* F72 — THE REVEAL'S REFUSAL SURFACE. Three ways to refuse, one voice.
+         ⛔ THE REASON EXISTED THE WHOLE TIME AND NOBODY READ IT. buildStudioRequest() writes the
+            cause into window._buildRequestError (:14306) and the SS Matrix renders that exact global
+            at :17537 — title and all. The Reveal button did `resetOverlayState(); return;` and said
+            nothing, so the same failure had a voice on one screen and was mute on the other.
+         ⭐ THE TITLE MAPPING IS LIFTED VERBATIM FROM :17537 — the field name, falling back to the
+            authored 'Input Error'. NO COPY IS AUTHORED HERE; every string already shipped.
+         ⚠️ NO TIMER, BY RULING. An error that erases itself is the same defect on a shorter
+            clock: the user looks back and the reason is gone. It clears when the user ACTS. */
+      var REVEAL_NO_ACCOUNT = 'Add at least one account with a balance to reveal your Range.';
+      function _revealStatus(err, field, fallbackTitle, fallbackBody) {
+        var host = document.getElementById('reveal-status');
+        if (!host) return;
+        var build = window._datumStatusBox;
+        var title = err ? (field || 'Input Error') : fallbackTitle;
+        var body  = err || fallbackBody;
+        host.innerHTML = build
+          ? build('rgba(212,175,55,0.15)', 'var(--gold)', title, body)
+          /* build() is declared later in the file and in a different scope; it is assigned at parse
+             time so a click-time call always finds it. This branch is the honest degradation if that
+             ever stops being true — plain text beats silence, which was the whole defect. */
+          : '<div style="margin-top:14px;color:var(--gold);font-family:var(--font-serif);font-size:11px;">' + body + '</div>';
+        host.style.display = 'block';
+      }
+      function _revealClearStatus() {
+        var host = document.getElementById('reveal-status');
+        if (host) { host.innerHTML = ''; host.style.display = 'none'; }
+      }
+      window._revealClearStatus = _revealClearStatus;
+      /* CLEARED BY ACTION, NEVER BY A CLOCK. updateRangeReadiness is already bound to document
+         input+change, so any real edit retires the refusal; the next click re-earns it. */
+      document.addEventListener('input',  _revealClearStatus);
+      document.addEventListener('change', _revealClearStatus);
+
       const revealBtn = document.querySelector('.action-btn');
 
       /* F73 — THE RESET IS HOISTED OUT OF THE CLICK HANDLER SO SOMETHING OTHER THAN A CLICK CAN
@@ -14776,12 +14828,10 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             .filter(function(a) { var b = getBaseType(a.baseId); var tc = b ? b.taxCode : ''; return tc !== 'physical' && tc !== 'other' && tc !== 'debt'; })
             .reduce(function(sum, a) { return sum + (a.value || 0); }, 0);
           if (totalInvestable === 0) {
-            var errEl = document.getElementById('reveal-zero-error');
-            if (errEl) { errEl.style.display = 'block'; setTimeout(function(){errEl.style.display='none';}, 4000); }
+            _revealStatus(null, null, 'Accounts required', REVEAL_NO_ACCOUNT);
             return;
           }
-          var errEl = document.getElementById('reveal-zero-error');
-          if (errEl) errEl.style.display = 'none';
+          _revealClearStatus();
 
           if (window.dfTrack) dfTrack('studio_reveal_clicked');
 
@@ -14837,7 +14887,10 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             ['log-1','log-2','log-3','log-4','log-5','log-6','log-7'].forEach(showLog);
 
             const req = buildStudioRequest();
-            if (!req) { resetOverlayState(); return; } // STU-022: custom_weights validation failed
+            if (!req) { resetOverlayState();
+              _revealStatus(window._buildRequestError, window._buildRequestErrorField,
+                            'Input Error', 'Check your inputs and try again.');
+              return; }
             let apiResult = null, timedOut = false;
             try {
               apiResult = await Promise.race([
@@ -14904,7 +14957,10 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
 
           // Kick off API in parallel with Phase 1 theater
           const req = buildStudioRequest();
-          if (!req) { resetOverlayState(); return; } // STU-022: custom_weights validation failed
+          if (!req) { resetOverlayState();
+            _revealStatus(window._buildRequestError, window._buildRequestErrorField,
+                          'Input Error', 'Check your inputs and try again.');
+            return; }
           let apiResult = null, timedOut = false, apiSettled = false;
 
           fetch('/api/calculate', {
@@ -17446,11 +17502,21 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         + borderColor + ';border-radius:4px;">'
         + '<div style="font-family:var(--font-mono);font-size:10px;color:' + titleColor
         + ';text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">' + title + '</div>'
-        + '<div id="ss-map-poll-sub" style="font-family:var(--font-serif);font-size:11px;'
+        + '<div class="ss-map-poll-sub" style="font-family:var(--font-serif);font-size:11px;'
         + 'color:var(--muted);line-height:1.5;">' + body + '</div>'
         + (extraHtml || '')
         + '</div>';
     }
+
+    /* F72 — PUBLISHED SO A SECOND SURFACE CAN REUSE THE BUILDER (L48). ⛔ THE BUILDER, NEVER THE
+       INSTANCE: setStatus() writes into #ss-map-status, which lives in sec-income-layer
+       (UNCERTAINTY), while the Reveal button lives in sec-climate (MEASUREMENT). Calling setStatus
+       from the reveal path would render Measurement's refusal into a room the user is not standing
+       in. Parity means the same markup, not the same div.
+       ⚠️ The body div above carries a CLASS, not an id — two surfaces rendering one builder would
+          otherwise emit `id="ss-map-poll-sub"` twice. Nothing reads it today; a duplicate id with no
+          readers is a defect waiting for its first consumer, because ids promise uniqueness. */
+    window._datumStatusBox = statusBox;
 
     function setStatus(html) {
       var el = document.getElementById('ss-map-status');
