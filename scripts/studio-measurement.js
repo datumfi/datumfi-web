@@ -77,7 +77,7 @@
 
   /* The sixteen DATA slots. The seven authored COPY slots are NOT in this list and are never
      written by the empty state — they are the designer's voice and stand on their own. */
-  var DATA_SLOTS = ['mcRuns', 'mcClimate', 'mcSuccess', 'mcHorizon', 'mcFloorValue',
+  var DATA_SLOTS = ['mcClimate', 'mcSuccess', 'mcHorizon', 'mcFloorValue',
     'mcDatumValue', 'mcDatumSuccess', 'mcCeilingValue', 'mcAxisMin', 'mcAxisMax',
     'mcGuardrail', 'mcTerminal', 'mcFailure', 'mcModeCode', 'mcRangeWidth', 'mcMiniDatum'];
 
@@ -140,7 +140,6 @@
     var spend = activeDatum(s);
     var conf = successAtSpend(s, spend);
 
-    put('mcRuns', s.runs == null ? '' : s.runs);
     put('mcClimate', s.label || '');
     put('mcSuccess', pct(conf));
     put('mcDatumSuccess', pct(conf));

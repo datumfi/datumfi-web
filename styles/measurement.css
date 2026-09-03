@@ -1,11 +1,17 @@
 /* measurement.css — THE MEASUREMENT ROOM (PHASE V), PORTED FROM THE CAPTAIN'S MOCK.
  *
- * SOURCE: DATUMAE_Studio_v92_reattached.html — the Captain's own design, maintained separately in
- * BOTH colour modes. It is not a sketch of an intention; it IS the intention.
+ * SOURCE: Studio Mock.html — md5 4f6fc7d1448ad3a51a418d03c370a640, internal version markers to
+ * V100 (<style id="v100-data-drafting-crosshair">). The Captain's own design, maintained
+ * separately in BOTH colour modes. It is not a sketch of an intention; it IS the intention.
+ *   ⛔ A PORT SOURCE IS A DEPENDENCY WITH A VERSION, AND NOBODY WAS TRACKING ITS VERSION. This
+ *      file was first ported from v92 and was SIX REVISIONS STALE within a day (V93-V100 added 66
+ *      rule instances and CHANGED one). Record the mock's md5 AND its internal marker in every
+ *      port commit — "faithful to the mock" means nothing without saying WHICH mock.
+ *   ⚠️ v83/v89/v92_reattached.html NO LONGER EXIST ON DISK. Do not cite them as a source again.
  *   🔑 THE MOCK IS THE SPECIFICATION FOR THE SURFACE. THE LIVE FILE IS THE SPECIFICATION FOR THE
  *      BEHAVIOUR. Neither substitutes for the other.
  *
- * ⛔ THIS FILE IS A FAITHFUL PORT, NOT A REINTERPRETATION. Every rule below is v92's, in v92's
+ * ⛔ THIS FILE IS A FAITHFUL PORT, NOT A REINTERPRETATION. Every rule below is V100's, in V100's
  *    ORDER. Any difference from the mock is a DEFECT IN THE PORT, not a judgement call — the
  *    deviation list for this room is CLOSED AND COUNTED AT THREE, and none of them are CSS:
  *      1. the chart orientation (Floor low / Ceiling high) — Captain-ruled, lives in the JS
@@ -64,7 +70,24 @@
       🔑 FAITHFUL MEANS THE RENDERED SURFACE, NOT THE SOURCE TEXT. When a mock is accidentally
          correct, copying its source does not copy its result.
       ⚠️ A FINDING IN THE MOCK, HANDED BACK: seventeen sizes and weights are being thrown away there.
-         If a display face is intended, declaring it brings all seventeen alive AT ONCE. */
+         If a display face is intended, declaring it brings all seventeen alive AT ONCE.
+
+   4. THE INHERITED TEXT COLOUR — THE SAME DEFECT AS THE FONT TOKENS, ONE PROPERTY OVER.
+      .mc-overlay declares no `color` of its own; in the mock it INHERITS one, and studio.html's
+      chain supplies a different one. Measured on the rendered surface, both modes, at the panel
+      root: the mock resolves #f2f5f2 in dark and #16242d in light, while the port resolved
+      rgb(255,255,255) IN BOTH. 188 of 290 computed-style differences were this single cause,
+      propagating to every descendant that does not set its own colour, and to `border-top-color`
+      wherever a border falls back to currentColor.
+      ⛔ LIGHT MODE IS THE DANGEROUS HALF: white inherited text on a cream panel. The named text
+         elements each carry an explicit colour and were fine, which is exactly why this survived —
+         THE STYLED ELEMENTS HID IT, AND THE UNSTYLED ONES WERE THE ONES AT RISK.
+      🔑 A COMPARISON OF MATCHED SELECTORS CANNOT SEE AN INHERITED VALUE. The 30/30 that cleared
+         this panel at v92 compared declared rules; an inherited property has NO rule to match, so
+         it was never in the population. THE POPULATION WAS THE BLIND SPOT, NOT THE THRESHOLD.
+      ⚖️ SOURCED, NOT INVENTED (L47): #f2f5f2 is the mock's own `--white` and #16242d is its
+         `--text-main`. Declared here as literals for the same reason the font tokens are — the
+         mock scopes those names where this panel cannot reach them. */
 #canvas-wrapper { position: relative; }
 
 #mcOverlay {
@@ -72,10 +95,11 @@
   --mono:"DM Mono","Courier New",monospace;
   --sans:"DM Sans",Arial,sans-serif;
   font-family: var(--sans);
+  color: #f2f5f2;
 }
+body.light-mode #mcOverlay { color: #16242d; }
 
 /* ── EVERYTHING BELOW THIS LINE IS THE MOCK, IN ITS DOCUMENT ORDER. DO NOT REORDER. ── */
-
 .mc-convergence-swarm{position:absolute;inset:72px 22px 22px;display:grid;place-items:center;pointer-events:none;opacity:0;transition:opacity .18s ease;z-index:5}
 .mc-convergence-swarm.open{opacity:1}
 .mc-swarm-field{position:absolute;inset:0;border:1px solid rgba(121,222,199,.14);border-radius:18px;background:radial-gradient(circle at 50% 50%,rgba(121,222,199,.08),transparent 34%),linear-gradient(180deg,rgba(7,16,27,.18),rgba(7,16,27,.42));overflow:hidden}
@@ -423,7 +447,8 @@ body.light-mode .phase-visual-overlay[data-phase-visual-kind="endurance"] .mc-cl
 .mc-visual-face{display:none}
 .mc-visual-switch[data-view="curve"] .mc-visual-face.curve-view,
 .mc-visual-switch[data-view="distribution"] .mc-visual-face.distribution-view{display:block}
-.mc-visual-switch[data-view="distribution"]{min-height:400px}
+.mc-visual-switch[data-view="distribution"]{min-height:306px;transition:min-height .18s ease,transform .16s ease,opacity .16s ease}
+.mc-visual-switch[data-view="distribution"].dist-help-open{min-height:410px}
 .mc-visual-face .mc-section-label{margin-top:0}
 .mc-dist-histogram{position:relative;margin-top:16px;padding:22px 14px 26px;height:198px;border-radius:8px;border:1px solid rgba(122,192,255,.12);background:radial-gradient(circle at 50% 0%,rgba(122,192,255,.10),transparent 38%),linear-gradient(180deg,rgba(122,192,255,.025),rgba(255,255,255,0));overflow:visible}
 .mc-dist-histogram::before,.mc-dist-histogram::after{content:"";position:absolute;left:14px;right:14px;height:1px;background:rgba(255,255,255,.055)}
@@ -461,3 +486,132 @@ body.light-mode .mc-dist-help::before{border-color:rgba(54,111,142,.28);color:#3
 body.light-mode .mc-dist-help::after,body.light-mode .mc-dist-tooltip{background:rgba(255,254,249,.99);border-color:rgba(54,111,142,.22);color:#35535c;box-shadow:0 12px 28px rgba(35,57,64,.13),inset 0 1px 0 #fff}
 body.light-mode .mc-dist-tooltip strong{color:#274a55}
 body.light-mode .mc-dist-tooltip span{color:#5e777f}
+/* Climate pill echoes the selected temperature/model card. */
+.mc-climate-chip{--climate:#d5ad63;--climate-bg:rgba(213,173,99,.09);--climate-border:rgba(213,173,99,.36);border-color:var(--climate-border)!important;background:linear-gradient(180deg,var(--climate-bg),rgba(255,255,255,.015))!important}
+.mc-climate-chip strong{color:var(--climate)!important}
+.mc-climate-chip[data-climate="cooling"]{--climate:#8ecbff;--climate-bg:rgba(122,192,255,.10);--climate-border:rgba(122,192,255,.38)}
+.mc-climate-chip[data-climate="cautious"]{--climate:#9da8e6;--climate-bg:rgba(107,123,196,.11);--climate-border:rgba(107,123,196,.40)}
+.mc-climate-chip[data-climate="hot"]{--climate:#eaa04d;--climate-bg:rgba(229,142,38,.11);--climate-border:rgba(229,142,38,.40)}
+.mc-climate-chip[data-climate="custom"]{--climate:#bac4c9;--climate-bg:rgba(174,186,193,.09);--climate-border:rgba(174,186,193,.30)}
+body.light-mode .mc-climate-chip{--climate:#80631f;--climate-bg:rgba(201,168,76,.10);--climate-border:rgba(145,107,30,.28)}
+body.light-mode .mc-climate-chip[data-climate="cooling"]{--climate:#2f6d85;--climate-bg:rgba(77,168,218,.10);--climate-border:rgba(47,109,133,.26)}
+body.light-mode .mc-climate-chip[data-climate="cautious"]{--climate:#4f5e9d;--climate-bg:rgba(107,123,196,.10);--climate-border:rgba(79,94,157,.26)}
+body.light-mode .mc-climate-chip[data-climate="hot"]{--climate:#965915;--climate-bg:rgba(229,142,38,.11);--climate-border:rgba(150,89,21,.27)}
+body.light-mode .mc-climate-chip[data-climate="custom"]{--climate:#566970;--climate-bg:rgba(95,112,120,.08);--climate-border:rgba(95,112,120,.22)}
+/* Remove only the decorative six-pixel boxes in the top-right of Range cards. */
+.mc-range-card::after,.mc-chart::after,.mc-sidecar::after{display:none!important}
+/* Distribution stays compact until a bar asks for the explanatory panel. */
+.mc-chart.mc-dist-tooltip-active{overflow:visible}
+.mc-dist-tooltip{box-sizing:border-box;width:min(286px,calc(100% - 12px));max-width:calc(100% - 12px)}
+.mc-convergence-right{position:relative}
+.mc-convergence-status-top{position:absolute;left:16px;top:14px;z-index:4;width:auto;min-width:168px;padding:10px 13px;border:1px solid rgba(121,222,199,.18);box-shadow:0 8px 22px rgba(0,0,0,.16);pointer-events:none}
+.mc-convergence-badge{top:14px!important;right:16px!important;transform:scale(.94)!important;z-index:4;padding:11px 18px!important}
+.mc-convergence-badge.show{transform:scale(1)!important}
+.mc-convergence-footer{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+.mc-convergence-footer .mc-convergence-stat{min-height:78px;padding:13px 13px 11px}
+.mc-convergence-stat strong{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.mc-convergence-stat strong b{font:500 19px/1.05 var(--display);color:inherit}
+.mc-convergence-stat strong em{font:500 8px var(--mono);font-style:normal;letter-spacing:.11em;text-transform:uppercase;color:#7ddbc1}
+body.light-mode .mc-convergence-status-top{background:rgba(249,249,245,.94)!important;border-color:rgba(29,158,117,.20)!important;box-shadow:0 8px 20px rgba(35,57,64,.10)!important}
+body.light-mode .mc-convergence-stat strong em{color:#267b65}
+@media(max-width:980px){
+  .mc-convergence-footer{grid-template-columns:1fr 1fr!important}
+  .mc-convergence-status-top{left:10px;top:10px}
+  .mc-convergence-badge{right:10px!important;top:10px!important}
+}
+/* V95 — Measurement micro-polish + DATA plot-to-sketch progression. */
+/* Range-zone pills: retain the restrained drafting style, but let each zone carry its meaning. */
+.mc-stage-band .zone-conservative{fill:rgba(201,168,76,.11);stroke:rgba(201,168,76,.30);}
+.mc-stage-band .zone-decision{fill:rgba(93,202,165,.11);stroke:rgba(93,202,165,.29);}
+.mc-stage-band .zone-stretch{fill:rgba(226,75,74,.105);stroke:rgba(226,75,74,.28);}
+.mc-stage-band .zone-conservative-label{fill:#cfb568;}
+.mc-stage-band .zone-decision-label{fill:#77cdb5;}
+.mc-stage-band .zone-stretch-label{fill:#e67b77;}
+body.light-mode .mc-stage-band .zone-conservative{fill:rgba(201,168,76,.16);stroke:rgba(137,101,26,.30);}
+body.light-mode .mc-stage-band .zone-decision{fill:rgba(29,158,117,.13);stroke:rgba(29,123,95,.28);}
+body.light-mode .mc-stage-band .zone-stretch{fill:rgba(226,75,74,.12);stroke:rgba(174,64,63,.27);}
+body.light-mode .mc-stage-band .zone-conservative-label{fill:#80621f;font-weight:700;}
+body.light-mode .mc-stage-band .zone-decision-label{fill:#286b59;font-weight:700;}
+body.light-mode .mc-stage-band .zone-stretch-label{fill:#a74644;font-weight:700;}
+/* Datum dragger: explicit light/dark states prevent the marker from disappearing or
+   inheriting stale text contrast when the site theme is cycled. */
+body.light-mode .mc-curve-node.datum-node > line{
+  stroke:rgba(24,118,91,.66)!important;stroke-width:1.8!important;stroke-dasharray:4 4!important;
+}
+body.light-mode .mc-curve-node.datum-node .mc-datum-core{
+  fill:#f9fdf9!important;stroke:#1D9E75!important;stroke-width:3!important;
+  filter:drop-shadow(0 0 4px rgba(29,158,117,.20));
+}
+body.light-mode .mc-curve-node.datum-node .mc-curve-pill{
+  fill:rgba(249,255,251,.995)!important;stroke:rgba(29,123,95,.38)!important;
+}
+body.light-mode .mc-curve-node.datum-node .mc-curve-label{fill:#24574a!important;font-weight:750!important;}
+body.light-mode .mc-curve-node.datum-node .mc-curve-value{fill:#17654f!important;font-weight:750!important;}
+body:not(.light-mode) .mc-curve-node.datum-node > line{
+  stroke:rgba(121,222,199,.48)!important;stroke-width:1.6!important;stroke-dasharray:4 4!important;
+}
+body:not(.light-mode) .mc-curve-node.datum-node .mc-datum-core{
+  fill:#091b20!important;stroke:#79dec7!important;stroke-width:3!important;
+}
+body:not(.light-mode) .mc-curve-node.datum-node .mc-curve-pill{
+  fill:rgba(7,20,28,.98)!important;stroke:rgba(121,222,199,.32)!important;
+}
+body:not(.light-mode) .mc-curve-node.datum-node .mc-curve-label{fill:#dff5ee!important;}
+body:not(.light-mode) .mc-curve-node.datum-node .mc-curve-value{fill:#79dec7!important;}
+/* V96 — DATA plan configuration + foundation cue; durable Datum dragger contrast. */
+/* The draggable Datum marker uses one deliberate high-contrast treatment in both themes.
+   This avoids stale inherited light/dark SVG fills when site and paper modes are cycled. */
+#mcOverlay .mc-curve-node.datum-node > line{
+  stroke:#1D9E75!important;
+  stroke-width:2.35!important;
+  stroke-dasharray:5 4!important;
+  opacity:1!important;
+  filter:drop-shadow(0 0 2px rgba(29,158,117,.22));
+}
+#mcOverlay .mc-curve-node.datum-node .mc-datum-core{
+  fill:#fbfffc!important;
+  stroke:#1D9E75!important;
+  stroke-width:3.2!important;
+  filter:drop-shadow(0 0 5px rgba(29,158,117,.30));
+}
+#mcOverlay .mc-curve-node.datum-node .mc-curve-pill{
+  fill:#176b56!important;
+  stroke:#79dec7!important;
+  stroke-width:1.2!important;
+  filter:drop-shadow(0 5px 12px rgba(9,18,33,.18));
+}
+#mcOverlay .mc-curve-node.datum-node .mc-curve-label{fill:#f7fffb!important;font-weight:750!important;}
+#mcOverlay .mc-curve-node.datum-node .mc-curve-value{fill:#d8fff3!important;font-weight:750!important;}
+/* V97 — DATA opening refinement + first-room build. */
+/* Measurement Datum dragger: explicitly key contrast to the SITE theme, not the
+   paper theme. Light mode automatically turns the paper light, and switching the
+   site back to dark intentionally leaves that paper choice alone; these selectors
+   therefore prevent a stale light-style label from surviving a Light → Dark cycle. */
+body.light-mode #mcOverlay .mc-curve-node.datum-node > line{
+  stroke:#176a58!important;stroke-width:3!important;stroke-dasharray:6 4!important;opacity:1!important;
+  filter:drop-shadow(0 0 1px rgba(255,255,255,.96)) drop-shadow(0 0 2px rgba(23,106,88,.34))!important;
+}
+body.light-mode #mcOverlay .mc-curve-node.datum-node .mc-datum-core{
+  fill:#ffffff!important;stroke:#176a58!important;stroke-width:3.4!important;
+  filter:drop-shadow(0 1px 3px rgba(33,63,58,.22))!important;
+}
+body.light-mode #mcOverlay .mc-curve-node.datum-node .mc-curve-pill{
+  fill:#eef8f3!important;stroke:#176a58!important;stroke-width:1.15!important;
+  filter:drop-shadow(0 5px 10px rgba(35,57,64,.14))!important;
+}
+body.light-mode #mcOverlay .mc-curve-node.datum-node .mc-curve-label{fill:#26433c!important;font-weight:800!important;}
+body.light-mode #mcOverlay .mc-curve-node.datum-node .mc-curve-value{fill:#0f6752!important;font-weight:800!important;}
+body:not(.light-mode) #mcOverlay .mc-curve-node.datum-node > line{
+  stroke:#79dec7!important;stroke-width:2.6!important;stroke-dasharray:6 4!important;opacity:1!important;
+  filter:drop-shadow(0 0 4px rgba(121,222,199,.38))!important;
+}
+body:not(.light-mode) #mcOverlay .mc-curve-node.datum-node .mc-datum-core{
+  fill:#07151e!important;stroke:#79dec7!important;stroke-width:3.2!important;
+  filter:drop-shadow(0 0 6px rgba(121,222,199,.34))!important;
+}
+body:not(.light-mode) #mcOverlay .mc-curve-node.datum-node .mc-curve-pill{
+  fill:#0a1c26!important;stroke:rgba(121,222,199,.62)!important;stroke-width:1.15!important;
+  filter:drop-shadow(0 5px 12px rgba(0,0,0,.28))!important;
+}
+body:not(.light-mode) #mcOverlay .mc-curve-node.datum-node .mc-curve-label{fill:#f1faf7!important;font-weight:800!important;}
+body:not(.light-mode) #mcOverlay .mc-curve-node.datum-node .mc-curve-value{fill:#79dec7!important;font-weight:800!important;}
