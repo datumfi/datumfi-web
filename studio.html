@@ -37,6 +37,16 @@
 <link rel="stylesheet" href="/styles/tokens.css">
 <link rel="stylesheet" href="/styles/typography.css">
 <link rel="stylesheet" href="/styles/header.css">
+<!-- ⭐ THE MEASUREMENT ROOM (PHASE V). Ported from the Captain’s v89 mock; see the file header.
+     ⛔ POSITION IS DELIBERATE AND WAS MEASURED, NOT INFERRED. It carries only .mc-* selectors,
+        which studio.html does not otherwise define, so nothing here can be overridden by the
+        inline <style> blocks that follow. What DID need proving was SCOPE, not order: the mock
+        declares --serif/--mono/--sans globally while this shell scopes the same three names to
+        #studioOverlayWrap, so every font: rule would have resolved to NOTHING and the panel would
+        have rendered in the wrong typeface with no error. measurement.css declares them on
+        #mcOverlay itself. 🔑 A TOKEN THAT EXISTS IN BOTH FILES IS NOT A TOKEN THAT REACHES BOTH
+        SURFACES. -->
+<link rel="stylesheet" href="/styles/measurement.css">
 <style>
   :root {    --danger: #e24b4a;
     --cold: #64b4ff;
@@ -4796,7 +4806,168 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           <path d="M5 4.5h14v15H5z" class="paper-fill"></path>
         </svg>
       </button>
-    </div>
+    
+    <!-- MEASUREMENT (PHASE V) — faithful port of DATUMAE_Studio_v92_reattached.html.
+         ⛔ A CHILD OF #canvas-wrapper ON PURPOSE, matching the mock’s <section class="canvas">.
+            .mc-overlay positions itself against its nearest positioned ancestor; at body level it
+            measured the viewport and slid under the phase list.
+         Deviations CLOSED AND COUNTED AT THREE. 19 data slots ship EMPTY (the mock’s numbers are
+         demo fixtures); the 7 authored copy slots are verbatim.
+         ⛔ FULL ACCOUNT IN THE CACHED FILES: styles/measurement.css, scripts/studio-measurement.js.
+            studio.html is never cached — 🔑 EVEN DOCUMENTATION HAS A CHEAPER ADDRESS. -->
+<section class="mc-overlay" id="mcOverlay" aria-label="Monte Carlo measurement overlay" hidden>
+          <div class="mc-overlay-panel" id="mcOverlayPanel">
+            <div class="mc-head">
+              <div>
+                <div class="mc-kicker">Measurement · 10,000 futures</div>
+                <h3 class="mc-title">Projected Estate Capacity</h3>
+                                <div class="mc-chip-row">
+                  <span class="mc-chip">Runs <strong id="mcRuns"></strong></span>
+                  <span class="mc-chip">Climate <strong id="mcClimate"></strong></span>
+                  <span class="mc-chip">Datum success <strong id="mcSuccess"></strong></span>
+                  <span class="mc-chip">Horizon <strong id="mcHorizon"></strong></span>
+                </div>
+              </div>
+              <button class="mc-close" type="button" data-mc-close>Return to Estate</button>
+            </div>
+
+            <div class="mc-grid">
+              <article class="mc-range-card floor">
+                <span class="mc-card-kicker">Stress-tested lower edge</span>
+                <div class="mc-card-title">Floor</div>
+                <strong class="mc-card-value" id="mcFloorValue"></strong>
+                <span class="mc-card-period" id="mcFloorPeriod">Protected spending line</span>
+                <div class="mc-card-note" id="mcFloorNote">The lower edge of the Estate — the level that still holds under the harshest futures tested.</div>
+              </article>
+              <article class="mc-range-card datum emphasis">
+                <span class="mc-card-kicker">Your selected line</span>
+                <div class="mc-card-title">Datum</div>
+                <strong class="mc-card-value" id="mcDatumValue"></strong>
+                <span class="mc-card-period">Chosen spending target</span>
+                <div class="mc-datum-readout"><span>Confidence at this Datum</span><strong id="mcDatumSuccess"></strong></div>
+              </article>
+              <article class="mc-range-card ceiling">
+                <span class="mc-card-kicker">Upper edge of the tested range</span>
+                <div class="mc-card-title">Ceiling</div>
+                <strong class="mc-card-value" id="mcCeilingValue"></strong>
+                <span class="mc-card-period">Higher spending line</span>
+                <div class="mc-card-note" id="mcCeilingNote">The upper edge of the current range — more spending room, but less certainty than the Floor.</div>
+              </article>
+
+              <section class="mc-chart">
+                <div class="mc-chart-view-head">
+                  <div class="mc-chart-view-label">Range visualization</div>
+                  <button class="mc-view-toggle" type="button" data-mc-view-toggle aria-pressed="false" aria-label="Switch to distribution view"><span data-mc-view-toggle-label>Show distribution</span><span class="mc-view-toggle-icon">↻</span></button>
+                </div>
+                <div class="mc-visual-switch" id="mcVisualSwitch" data-view="curve">
+                  <div class="mc-visual-face curve-view">
+                    <div class="mc-section-label">Modeled relationship between spending and plan resilience</div>
+                    <div class="mc-chart-title">
+                      <strong>How plan confidence changes as spending moves</strong>
+                      <span id="mcSpreadCopy">Drag Datum to explore a different spending level.</span>
+                    </div>
+                    <div class="mc-curve-shell" id="mcCurveShell">
+                      <svg class="mc-curve-svg" id="mcCurveSvg" viewBox="0 0 620 240" preserveAspectRatio="none" aria-hidden="true">
+                        <defs>
+                          <linearGradient id="mcCurveStroke" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stop-color="rgba(201,168,76,.98)"/>
+                            <stop offset="28%" stop-color="rgba(169,187,109,.98)"/>
+                            <stop offset="50%" stop-color="rgba(93,202,165,.98)"/>
+                            <stop offset="72%" stop-color="rgba(199,132,112,.98)"/>
+                            <stop offset="100%" stop-color="rgba(226,75,74,.98)"/>
+                          </linearGradient>
+                          <linearGradient id="mcCurveFill" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stop-color="rgba(201,168,76,.42)"/>
+                            <stop offset="28%" stop-color="rgba(169,187,109,.34)"/>
+                            <stop offset="50%" stop-color="rgba(93,202,165,.36)"/>
+                            <stop offset="72%" stop-color="rgba(199,132,112,.32)"/>
+                            <stop offset="100%" stop-color="rgba(226,75,74,.38)"/>
+                          </linearGradient>
+                        </defs>
+                        <g class="mc-gridlines">
+                          <line x1="44" y1="34" x2="586" y2="34"></line>
+                          <line x1="44" y1="96" x2="586" y2="96"></line>
+                          <line x1="44" y1="158" x2="586" y2="158"></line>
+                          <line x1="44" y1="214" x2="586" y2="214"></line>
+                        </g>
+                        <g class="mc-stage-band" id="mcStageBand"></g>
+                        <path class="mc-curve-area" id="mcCurveArea"></path>
+                        <path class="mc-curve-line" id="mcCurveLine"></path>
+                        <g class="mc-curve-markers" id="mcCurveMarkers"></g>
+                      </svg>
+                      <div class="mc-curve-axis-left">
+                        <span>More stretch</span>
+                        <span>Decision zone</span>
+                        <span>More confidence</span>
+                      </div>
+                      <div class="mc-curve-axis-bottom">
+                        <span id="mcAxisMin"></span>
+                        <span>Your Datum</span>
+                        <span id="mcAxisMax"></span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mc-visual-face distribution-view">
+                    <div class="mc-section-label mc-dist-help" tabindex="0" data-help="Each blue bar groups modeled futures by the annual spending level they supported through the plan horizon. Taller bars mean more of the 10,000 futures landed in that neighborhood. Read the shape for where outcomes cluster and how widely they spread — not as a forecast of what you will spend.">Distribution of outcomes</div>
+                    <div class="mc-chart-title">
+                      <strong>Supported spending across 10,000 futures</strong>
+                      <span class="mc-dist-help" tabindex="0" id="mcDistSpread" data-help="The distance between your modeled Floor and Ceiling. It shows how far apart the more defensive and more stretched spending references are. A wider range means more separation between those planning choices — not more certainty or guaranteed spending."></span>
+                    </div>
+                    <div class="mc-dist-histogram" id="mcDistHistogram">
+                      <div class="mc-dist-markers" id="mcDistMarkers"></div>
+                      <div class="mc-dist-bars" id="mcDistBars"></div>
+                      <div class="mc-dist-axis"><span id="mcDistAxisMin"></span><span>Median</span><span id="mcDistAxisMax"></span></div>
+                      <div class="mc-dist-tooltip" id="mcDistTooltip" role="tooltip" aria-live="polite"></div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <aside class="mc-sidecar">
+                <div class="mc-section-label">Read the structure</div>
+                <div class="mc-metrics">
+                  <div class="mc-metric mc-helpable" tabindex="0" data-help="A lower spending reference for rougher markets. Consider it a level you could temporarily lean toward if the plan starts taking more pressure than expected.">
+                    <label>Downside guardrail</label>
+                    <strong id="mcGuardrail"></strong>
+                    <small id="mcGuardrailCopy">A more defensive spending line if conditions weaken.</small>
+                  </div>
+                  <div class="mc-metric mc-helpable" tabindex="0" data-help="The midpoint of modeled ending-estate values — not a promise. Use it to check whether your spending choice still leaves the cushion or legacy you want.">
+                    <label>Median terminal estate</label>
+                    <strong id="mcTerminal"></strong>
+                    <small id="mcTerminalCopy">Estimated estate value remaining at the end of the plan.</small>
+                  </div>
+                </div>
+                <div class="mc-mini-grid">
+                  <div class="mc-mini mc-helpable" tabindex="0" data-help="The share of modeled futures that did not last through the full horizon at this Datum. If it feels too high, revisit spending, timing, or the buffers in the Estate.">
+                    <span>Failure rate</span>
+                    <strong id="mcFailure"></strong>
+                  </div>
+                  <div class="mc-mini mc-helpable" tabindex="0" data-help="The market lens used for this run. Compare cooler, warmer, and historical settings to see how sensitive your range is to the assumptions underneath it.">
+                    <span>Climate mode</span>
+                    <strong id="mcModeCode"></strong>
+                  </div>
+                  <div class="mc-mini mc-helpable" tabindex="0" data-help="The distance between Floor and Ceiling. A wider span means more room between defensive and stretched spending choices — not more certainty.">
+                    <span>Range width</span>
+                    <strong id="mcRangeWidth"></strong>
+                  </div>
+                  <div class="mc-mini mc-helpable" tabindex="0" data-help="The spending level you are testing right now. Treat it as a decision point, then ask whether its modeled resilience matches your comfort and ability to adjust later.">
+                    <span>Chosen Datum</span>
+                    <strong id="mcMiniDatum"></strong>
+                  </div>
+                </div>
+              </aside>
+            </div>
+
+            <div class="mc-foot">
+              <div class="mc-foot-copy" id="mcFootCopy">Floor and Ceiling show the outer bounds. Drag Datum to test a different spending level and see how the plan confidence changes.</div>
+              <div class="mc-actions">
+                <button class="mc-action" type="button" data-mc-retest>Retest Futures</button>
+                <button class="mc-action primary" type="button" data-mc-close>Carry this range forward</button>
+              </div>
+            </div>
+          </div>
+        </section>
+  </div>
 
   </div>
 
@@ -19064,6 +19235,12 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
   <script src="/scripts/datum-d1.js" defer></script>
   <script src="/scripts/studio-blueprint.js" defer></script>
   <script src="/scripts/datum-leave-prompt.js" defer></script>
+  <!-- ⭐ THE MEASUREMENT ROOM’S BEHAVIOUR — a PART FILE, not shell code. studio.html is HTML and is
+       never cached (cf-cache-status: DYNAMIC), so every byte added to the shell is re-downloaded on
+       EVERY visit, while a .js file is fetched once and revalidated with a 304.
+       🔑 MOVING WORK OUT OF THE SHELL IS THE DIFFERENCE BETWEEN PAYING FOR IT ONCE AND PAYING FOR
+          IT FOREVER. Third room to land this way, after the Studio overlay and studio-landing.js. -->
+  <script src="/scripts/studio-measurement.js" defer></script>
   <script>
   // #310 Part 2 — hold an in-app navigation until DatumD1.drain() settles (flush any debounced autosave +
   // await in-flight non-keepalive writes) so a big save the user clicks away from is not abandoned mid-flight.
