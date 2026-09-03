@@ -91,11 +91,19 @@
 
   /* ⛔ THE EMPTY STATE IS A DISPLAY STATE, NOT AN ERROR. capacity_curve is Optional on the engine
      and absent on any rollback, so "no data" is a NORMAL condition this panel must render calmly.
-     ⚠️ It occupies mcFootCopy — an EXISTING authored copy slot the render already writes — rather
-        than a new element, so the port adds no markup v89 does not have. */
+     ⛔⛔ IT HAS NO SURFACE RIGHT NOW, AND THAT IS DELIBERATE. This used to write EMPTY_STATE into
+        mcFootCopy — but mcFootCopy held AUTHORED DESIGNER COPY, so the empty state DESTROYED a
+        sentence every time there was no data, while the comment above DATA_SLOTS claimed the
+        authored slots "are never written by the empty state". The code and the comment disagreed.
+        ⚖️ Captain-ruled 2026-09-03: that sentence is REMOVED (redundant — "Drag Datum" already
+        appears above the curve), so there is nothing left to overwrite and nothing to say here yet.
+     🔑 THE QUESTION FOR THE COPY PASS IS NOT ONLY WHICH STRING, IT IS WHICH ELEMENT. Two strings are
+        wanted — "the engine hasn't answered yet" (transient) and "this value doesn't exist for you"
+        (terminal) — and borrowing another slot's element is what caused this. Give it its own.
+     ⚠️ EMPTY_STATE and the emptyState() accessor are kept ON PURPOSE as the contract surface that
+        pass will fill. They currently have no writer; that is a stated gap, not an oversight. */
   function renderEmpty() {
     clearData();
-    put('mcFootCopy', EMPTY_STATE);
   }
 
   /* ⛔ THE ONLY GATE BETWEEN A BAD NUMBER AND THE SCREEN. A scenario is usable only if every
