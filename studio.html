@@ -17842,11 +17842,28 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         if (_mcFacts) Object.assign(base, _mcFacts);
       }
 
-      // current_ss_plan — tells the engine which cell gets the CURRENT PLAN badge
-      base.current_ss_plan = {
-        primary:   base.ss_strategy_primary   || 'full_67',
-        secondary: base.ss_strategy_secondary || 'optimal_70',
-      };
+      /* current_ss_plan — which matrix cell wears the CURRENT PLAN badge.
+         ⛔ NEVER MANUFACTURE ONE. This read `base.ss_strategy_primary || 'full_67'` and
+            `base.ss_strategy_secondary || 'optimal_70'` — TWO UNDECLARED DEFAULTS IN ONE
+            OBJECT LITERAL, AND NOT EVEN THE SAME DEFAULT. ss_strategy_secondary is set only
+            by _coArchitectFacts(), i.e. only when the co-architect toggle is on, so EVERY
+            SOLO USER RUNNING THE MATRIX was handed `..._x_optimal_70` and the product
+            pointed at a cell saying THAT IS YOUR PLAN — naming a claiming age for a spouse
+            who does not exist, that nobody chose and nobody was told about.
+         🔑 THE FAILURE MODE IS NOT A WRONG NUMBER IN A MODEL, IT IS THE PRODUCT ASSERTING A
+            FACT ABOUT THE USER'S LIFE THAT THE USER NEVER SUPPLIED. The badge names one cell
+            of a primary-by-secondary grid, so a key with one axis identifies nothing.
+            No strategy -> no current plan -> no badge.
+         ⚠ THE ENGINE HALF IS datum-fi main.py _current_plan_key(), which carried the
+            IDENTICAL expression with the IDENTICAL mismatched pair. Either side alone
+            re-manufactures whatever the other stops sending; they are one repair.
+         ⚠ The field has no other reader in this file, so omitting it is inert client-side. */
+      if (base.ss_strategy_primary && base.ss_strategy_secondary) {
+        base.current_ss_plan = {
+          primary:   base.ss_strategy_primary,
+          secondary: base.ss_strategy_secondary,
+        };
+      }
 
       base.matrix_depth = 'quick';
       return base;
