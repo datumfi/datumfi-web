@@ -14393,6 +14393,31 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           var _te = document.getElementById('eff-tax-rate');
           if (_optHas(_te, _rv)) _te.value = _rv;
         }
+
+        /* ⛔ 1.1.0 — THE RESTORE SIDE OF THE EIGHT. The capture side is studio-blueprint.js;
+           without both, a field that is written is still never read back.
+           ⚠️ GUARDED THE SAME WAY THE THREE ABOVE ARE: only restore a value that DIFFERS from the
+              schema default, because the Studio cannot tell "the user chose Florida" from "the
+              schema supplied Florida", and writing the second into a control the user never
+              touched answers a question they declined to answer. Salary and the co-rate default to
+              0, so truthiness is the same test.
+           🔑 SALARY IS THE ONE THAT MATTERS: lost, upkeep load, needs%, wants%, charity % of gross
+              and the 401k match narrative all recompute against ZERO and print a confident answer.
+              THE FIELD PERSISTING IS NOT THE FIX -- THE READERS BEING RIGHT IS THE FIX. */
+        var _money = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        if (prof.primary_salary)      { var _ps = document.getElementById('pri-salary'); if (_ps) _ps.value = _money(prof.primary_salary); }
+        if (prof.co_architect_salary) { var _cs = document.getElementById('co-salary');  if (_cs) _cs.value = _money(prof.co_architect_salary); }
+        if (prof.co_architect_plan_end_date) { var _cp = document.getElementById('co-plan-end'); if (_cp) _cp.value = prof.co_architect_plan_end_date; }
+        if (_tx.method    && _tx.method    !== _defTax.method)    { var _tm = document.getElementById('pri-tax-method');   if (_optHas(_tm, _tx.method))    _tm.value = _tx.method; }
+        if (_tx.co_method && _tx.co_method !== _defTax.co_method) { var _cm = document.getElementById('co-tax-method');    if (_optHas(_cm, _tx.co_method)) _cm.value = _tx.co_method; }
+        if (_tx.co_filing && _tx.co_filing !== _defTax.co_filing) { var _cf = document.getElementById('co-filing-status'); if (_optHas(_cf, _tx.co_filing)) _cf.value = _tx.co_filing; }
+        if (_tx.co_location && _tx.co_location !== _defTax.co_location) { var _cl = document.getElementById('co-location'); if (_optHas(_cl, _tx.co_location)) _cl.value = _tx.co_location; }
+        if (typeof _tx.co_working_year_effective_rate === 'number' && _tx.co_working_year_effective_rate > 0
+            && _tx.co_working_year_effective_rate !== _defTax.co_working_year_effective_rate) {
+          var _cb = document.getElementById('co-tax-bracket');
+          var _cbv = Math.round(_tx.co_working_year_effective_rate * 100) + '%';
+          if (_optHas(_cb, _cbv)) _cb.value = _cbv;
+        }
         /* ⛔ ANNOUNCE A RESTORE ONLY IF SOMETHING WAS ACTUALLY RESTORED. readSessionDraft() can
            hand back a NON-NULL but EMPTY draft, so `if (!bp) return;` is NOT the same test as
            "there was something to bring back".

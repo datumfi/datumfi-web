@@ -58,7 +58,16 @@ function check(label, cond, detail) {
 }
 
 /* DECLARED OPEN, BY NAME — no schema slot; ruled to their own commit. See L2's expiry condition. */
-const DECLARED_OPEN = ['pri-salary', 'co-salary'];
+/* ⛔ EMPTIED 2026-09-04, AND THE GATE ORDERED IT. L2 is an EXPIRY leg: it reds ON PURPOSE the
+   moment a declared-open field starts round-tripping, printing "NOW RESTORING: delete it from
+   DECLARED_OPEN". That is the gate refusing to let a known-broken list quietly outlive the breakage
+   it documents — A GREEN WHOSE PROOF HAS EXPIRED. This edit is the leg's own instruction, not a
+   contract being bent to match reality (§82.1522).
+   ⚠️ WHY THEY WERE OPEN AT ALL, AND IT WAS NOT WHAT THE LIST BELIEVED: salary was never persisted
+      by the product -- ZERO `.value =` writes anywhere -- so it survived reloads on BROWSER FORM
+      RESTORATION, and this gate's green was manufactured by Chromium. Blueprint schema 1.1.0 now
+      captures and restores both, so the list is empty and all 19 rostered controls are asserted. */
+const DECLARED_OPEN = [];
 /* The three tax controls, left UNANSWERED in the L3 arm. Named here only to decide which ARM they
    belong to — never to decide whether they are part of the population. */
 const TAX_CONTROLS = ['pri-location', 'eff-tax-rate', 'filing-status'];

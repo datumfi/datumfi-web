@@ -21,7 +21,7 @@
   'use strict';
 
   var SCHEMA  = 'DatumFIBlueprintV1';
-  var VERSION = '1.0.1';
+  var VERSION = '1.1.0';
 
   var SESSION_DRAFT_KEY = 'datumfi_blueprint_draft_v1';
 
@@ -92,7 +92,22 @@
         co_architect_retirement_date: '',
         plan_end_age:                 93,
         plan_end_date:                '',
-        co_architect_enabled:         false
+        co_architect_enabled:         false,
+        /* ⛔ ADDED 1.1.0 — FIELDS THE PRODUCT ALREADY CONSUMED BUT NEVER STORED. This is not a new
+           CATEGORY entering the contract; it is the contract catching up to what the Studio reads.
+           MEASURED: nothing anywhere wrote pri-salary or co-salary back -- zero `.value =`
+           assignments in studio.html or any shipped script. They survived a reload on BROWSER FORM
+           RESTORATION, so the persistence gate was green because CHROMIUM repopulated the field.
+           🔑 A GREEN THAT DEPENDS ON THE HOST ENVIRONMENT IS NOT A GREEN, IT IS A COINCIDENCE, and
+              IF THE PRODUCT DOES NOT WRITE IT, THE PRODUCT DOES NOT KEEP IT.
+           ⛔ AND SALARY IS NOT A PROFILE FIELD, IT IS AN INPUT TO THREE OTHER ROOMS: upkeep load
+              (moInc = (priSal + coSal)/12, then needs% and wants%), charity % of gross, and the
+              401k match narrative. Lost, they do not blank -- they recompute against ZERO through
+              the `moInc > 0` guard and print a confident answer in rooms the user never opened.
+              A FIELD'S BLAST RADIUS IS ITS READERS, NOT ITS ROOM. */
+        primary_salary:               0,
+        co_architect_salary:          0,
+        co_architect_plan_end_date:   ''
       },
       accounts: [],
       contributions_total: 0,
@@ -113,8 +128,18 @@
       // market/inflation radios. Defaults match Sketch's defaults (average / real).
       market_paradigm: 'average',
       inflation_mode:  'real',
+      /* ⚠️ 1.1.0 — the co-architect mirrors of three keys this object ALREADY held, plus the tax
+         METHOD the panel now asks for. Same kind of thing as `filing` / `location` /
+         `working_year_effective_rate`, which is why this is a completion rather than a new
+         category (§82.1594).
+         ⚠️ DECLARED, NOT IMPLIED: co_location is stored honestly and still reaches NOTHING --
+            buildStudioRequest sends location:'FL' as a literal and never reads bp.tax.location,
+            exactly as this file already records for pri-location. Storing it is not claiming it
+            is modelled; the panel says "Recorded, not yet modelled." beside it for that reason. */
       tax:     { filing: 'Married Filing Jointly', location: 'FL',
-                 working_year_effective_rate: 0.20 },
+                 working_year_effective_rate: 0.20,
+                 method: '', co_method: '', co_filing: '', co_location: '',
+                 co_working_year_effective_rate: 0 },
       upkeep:  { items: [], charity: [], upkeep_total: 0, charity_total: 0 },
       datum: {
         net_datum_v1:            100000,
@@ -1576,6 +1601,25 @@
        receiver was built, correct, and commented, waiting for a value nobody ever sent. Typed
        09 / 2062 came back 04 / 2062; the 04 is the DOB month. ONE WRITE CLOSES IT. */
     var planDate = mmYYYY(v('plan-end-age')); if (planDate) bp.profile.plan_end_date = planDate;
+
+    /* ⛔ 1.1.0 — EIGHT MORE CONTROLS READ BY NOTHING ON THE WAY OUT. Same defect as F64 above, one
+       panel later: the user fills them, the draft never holds them, a reload returns them blank.
+       F64 closed six of thirteen; these are the next eight, and they were invisible because the
+       BROWSER was repopulating them.
+       ⚠️ EVERY WRITE IS GUARDED ON A REAL VALUE, for the reason stated in F64's block: a capture
+          path that stores a value the user never gave LAUNDERS A DEFAULT INTO AN ANSWER, and after
+          one round-trip nothing can tell them apart. mmYYYY() is used on the date for the same
+          reason -- it returns '' for a half-typed date rather than storing half of one. */
+    var priSal = moneyToInt(v('pri-salary')); if (priSal) bp.profile.primary_salary = priSal;
+    var coSal  = moneyToInt(v('co-salary'));  if (coSal)  bp.profile.co_architect_salary = coSal;
+    var coPlan = mmYYYY(v('co-plan-end'));    if (coPlan) bp.profile.co_architect_plan_end_date = coPlan;
+
+    var taxMethod = v('pri-tax-method');   if (taxMethod) bp.tax.method = taxMethod;
+    var coMethod  = v('co-tax-method');    if (coMethod)  bp.tax.co_method = coMethod;
+    var coFiling  = v('co-filing-status'); if (coFiling)  bp.tax.co_filing = coFiling;
+    var coLoc     = v('co-location');      if (coLoc)     bp.tax.co_location = coLoc;
+    var coRate    = parseFloat(String(v('co-tax-bracket')).replace('%', ''));
+    if (!isNaN(coRate) && coRate > 0) bp.tax.co_working_year_effective_rate = coRate / 100;
 
     /* ⛔ THE TAX BLOCK — three controls whose slots ALREADY EXIST and are codec-carried, written
        until now ONLY by applyDossier (the Dossier), never from the Studio's own DOM. MEASURED: a
