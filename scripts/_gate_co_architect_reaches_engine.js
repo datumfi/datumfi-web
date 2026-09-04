@@ -109,14 +109,30 @@ const payload = (page) => page.evaluate(() => {
     + ' ss_strategy_secondary=' + JSON.stringify(solo.ss_strategy_secondary));
 
   /* ── L2 — THE ABSENCE LEG. Toggle ON, DOB still empty. Nothing may be invented.
-        ⛔ RUN BEFORE the DOB is filled: once a real age exists this state is unreachable. */
+        ⛔ RUN BEFORE the DOB is filled: once a real age exists this state is unreachable.
+        ⚖ REWRITTEN 2026-09-04 (F79). This asserted `built && co_architect_age === undefined`
+          — a body that simply LACKED the key. F79 changed the mechanism: the builder now
+          REFUSES outright, because returning a one-person body for a household the user told
+          us has two people SILENTLY DELETES A HUMAN BEING, and a single-person Range is a
+          number they will believe.
+        🔑 THE PROPERTY DID NOT CHANGE, THE MECHANISM DID. "No fabrication" is not weakened by
+          this rewrite, it is STRENGTHENED: there is no body at all, so there is nothing an
+          invented age could ride in on. The old form would now pass on a refusal only by
+          accident and fail on it by construction — so it is replaced, not relaxed. */
   await set(page, 'co-arch-toggle', true);
   await page.waitForTimeout(300);
   const noDob = await payload(page);
-  check('L2 NO FABRICATION: co-architect ON with an unreadable DOB sends no age — not a default, not a guess',
-    noDob.built && noDob.co_architect_age === undefined,
-    'co_architect_age=' + JSON.stringify(noDob.co_architect_age)
-    + '  (a plausible default here would be a fabricated personal fact)');
+  const noDobWhy = await page.evaluate(() =>
+    (window._buildRequestErrors || []).map((e) => ({ m: e.message, t: e.target || null })));
+  check('L2 NO FABRICATION: co-architect ON with an unreadable DOB REFUSES — no body, so no age can be invented',
+    noDob.built === false,
+    noDob.built
+      ? 'RETURNED A BODY; co_architect_age=' + JSON.stringify(noDob.co_architect_age)
+        + ' (a one-person body for a two-person household is the defect F79 removed)'
+      : 'refused (null)');
+  check('L2b and the refusal names the co-architect and carries its door',
+    noDobWhy.some((e) => /co-architect/i.test(e.m) && e.t === 'co-dob'),
+    JSON.stringify(noDobWhy));
 
   /* ── L1 — THE CLAIM. A readable co-architect reaches the engine. */
   await set(page, 'co-dob', '11 / 1976');

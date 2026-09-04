@@ -1,10 +1,13 @@
 'use strict';
 /* _p82_coarch_display_gate.js — P8.2 display-additivity gate + eyeson.
  *
- * Proves the Co-Architect display work is DISPLAY-ONLY (header text swap + static note,
- * NO age derivation):
- *   (1) window._buildStudioRequest() body is BYTE-IDENTICAL with the Co-Architect
- *       toggle OFF vs ON — no co-arch leakage into the engine body;
+ * Proves the Co-Architect display work is DISPLAY-ONLY FOR THE SHAPE AND THE HEADER.
+ * ⚖ NARROWED 2026-09-04. The original claim was display-only FULL STOP, including the engine
+ *   body. F67 struck that: co_architect_age reaches /api/calculate by design, and without it a
+ *   couple is modelled as one person. The claim now stops at the payload boundary, and the
+ *   boundary itself is asserted:
+ *   (1a) a READABLE co-architect REACHES the engine body (F67);
+ *   (1b) toggle ON with NO co-architect DOB REFUSES (F79) — never a silent one-person body;
  *   (2) window._scenarioFromInputs() (the Shape's input scenario) is BYTE-IDENTICAL
  *       OFF vs ON — the Shape math never sees the co-arch state;
  *   (3) the Shape timeline header relabels "01 / YOUR TIMELINE" -> "01 / PRIMARY
@@ -93,6 +96,18 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
   const on = await snap();
   const hdrOn = await hdr();
 
+  /* ⚖ THIRD SNAPSHOT ADDED 2026-09-04. The ON snapshot above has the toggle set and NO
+     co-architect DOB, so _coArchitectFacts() returns null at R14401 and the co-arch keys never
+     enter the body. THAT IS WHY THE OLD BYTE-IDENTICAL LEG STAYED GREEN FOR EIGHT COMMITS AFTER
+     F67 STRUCK ITS CONTRACT — the fixture walked through neither of the two null doors, so the
+     bodies matched BY ACCIDENT OF THE FIXTURE rather than by the property being true.
+     🔑 A FIXTURE THAT NEVER EXERCISES THE BRANCH MAKES THE ASSERTION DECORATIVE (82.1504). */
+  await page.fill('#co-dob', '11 / 1976');
+  await page.evaluate(() => { var e = document.getElementById('co-dob');
+    if (e) { e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); } });
+  await page.waitForTimeout(250);
+  const onReadable = await snap();
+
   const noteTxt = await page.evaluate(() => (document.getElementById('co-arch-note') || {}).textContent);
 
   // ── ON->OFF revert: untoggle and confirm the header reverts ─────────────
@@ -112,7 +127,23 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
   const NOTE = 'We see your Co-Architect. For now your Shape treats you as one household; per-person precision arrives as you draft your Estate.';
 
   // ── ASSERTIONS ────────────────────────────────────────────────────────
-  check('(1) buildStudioRequest body BYTE-IDENTICAL off vs on', off.body === on.body, off.body === on.body ? 'identical' : 'OFF=' + off.body + ' ON=' + on.body);
+  /* ⛔⛔ LEG (1) REWRITTEN 2026-09-04 — IT ASSERTED A CONTRACT THAT HAD BEEN STRUCK.
+     It read: the /api/calculate body is BYTE-IDENTICAL with the co-architect toggle OFF vs ON,
+     "no co-arch leakage into the engine body". That was true when P8.2 shipped and F67
+     DELIBERATELY OVERTURNED IT: _coArchitectFacts() (R14396-14418) is merged into the body at
+     R14588-14589, so co_architect_age REACHES THE ENGINE BY DESIGN. Without it the engine models
+     a couple as a single person for income and healthcare while taxing them as married.
+     ⛔ IT STAYED GREEN BECAUSE THE FIXTURE NEVER SUPPLIED A CO-ARCHITECT DOB. Nobody noticed for
+        eight commits, and the gate would have gone red the first time anyone typed one.
+     ⚖ DISPLAY-ONLY SURVIVES, NARROWED TO WHAT IS TRUE: the co-architect is display-only for the
+       SHAPE and the HEADER — legs (2), (2b), (3a), (3b), untouched. The PAYLOAD is where it stops
+       being display-only, so that boundary is now asserted rather than denied. */
+  check('(1a) THE BOUNDARY — a READABLE co-architect REACHES the engine body (F67); display-only ends at the payload',
+    onReadable.body !== off.body && /"co_architect_age"/.test(onReadable.body),
+    'OFF=' + String(off.body).slice(0, 90) + ' ... ON+DOB=' + String(onReadable.body).slice(0, 140));
+  check('(1b) toggle ON with NO co-architect DOB REFUSES (F79) — never a silent one-person body',
+    on.body === 'null',
+    'ON(no dob)=' + String(on.body).slice(0, 140));
   check('(2) _scenarioFromInputs (Shape) BYTE-IDENTICAL off vs on', off.shape === on.shape, off.shape === on.shape ? 'identical' : 'OFF=' + off.shape + ' ON=' + on.shape);
   check('(2b) HUD readout unchanged off vs on', off.hud === on.hud, 'OFF=' + off.hud + ' ON=' + on.hud);
   check('(3a) header OFF = "01 / YOUR TIMELINE" (have+want)', hdrOff.have === '01 / YOUR TIMELINE' && hdrOff.want === '01 / YOUR TIMELINE', JSON.stringify(hdrOff));
