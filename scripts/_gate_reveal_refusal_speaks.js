@@ -248,6 +248,179 @@ const spoken = (page) => page.evaluate(() => {
       'one click must not yield one reason: ' + s.text.slice(0, 120));
   }
 
+  /* ── F79 · S9 — THE HOUSEHOLD BECAME A PERSON, SILENTLY ─────────────────────────────────────
+     Toggle ON, DOB unreadable: _coArchitectFacts() returned null and buildStudioRequest did
+     `if (_coFacts) Object.assign(...)` with NO else — the SS Matrix refused loudly with a named
+     field while THE RANGE WAS COMPUTED FOR ONE PERSON and said nothing. F72's shape, third instance.
+     ⛔ THE INVARIANT IS THE RETURN VALUE, NOT THE MESSAGE. Pushing a reason and RETURNING NULL are
+        two different acts, and the old check sat SEVENTY LINES BELOW the abort gate — a reason
+        pushed there prints the sentence ABOVE a one-person ladder that contradicts it.
+        A VALIDATION THAT RUNS AFTER THE ABORT GATE IS NOT A VALIDATION, IT IS A CAPTION.
+     So the payload is measured, not the code path: call the builder and look at what it hands back. */
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 1200 } });
+    await ctx.addInitScript(INIT); await blockNet(ctx);
+    const pg = await ctx.newPage(); await open(pg);
+    const funded = await fundRoom(pg);
+    const fixture = await pg.evaluate(() => {
+      const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v;
+        e.dispatchEvent(new Event('input', { bubbles: true }));
+        e.dispatchEvent(new Event('change', { bubbles: true })); } };
+      set('pri-dob', '08 / 1982'); set('target-ret', '03 / 2035');
+      const tog = document.getElementById('co-arch-toggle');
+      if (tog) { tog.checked = true; tog.dispatchEvent(new Event('change', { bubbles: true })); }
+      /* ⚠ PRESENT BUT UNREADABLE, AND THE VALUE IS CHOSEN, NOT GUESSED. 'ab / cdef' was the first
+         attempt and THE FIELD'S MASK STRIPPED IT to '' — the leg silently became a duplicate of S9c,
+         testing "missing" while labelled "unreadable", and every assertion still passed. The fixture
+         guard below caught it. parseAgeFromDob returns null on `!year`, so a numeric 0000 survives
+         the mask and still cannot be read. */
+      set('co-dob', '08 / 0000');
+      return { toggle: !!(tog && tog.checked), coDob: (document.getElementById('co-dob')||{}).value };
+    });
+    check('S9 fixture: funded, primary dates valid, co-arch ON with a NON-EMPTY unreadable DOB',
+      funded > 0 && fixture.toggle && !!fixture.coDob, JSON.stringify(fixture) + ' funded=' + funded);
+
+    const built = await pg.evaluate(() => {
+      const body = window._buildStudioRequest();
+      return { returnedNull: body === null, keys: body ? Object.keys(body).length : 0,
+               hasCoArch: !!(body && body.co_architect_age),
+               errs: (window._buildRequestErrors || []).map((e) => ({ m: e.message, t: e.target })) };
+    });
+    console.log('S9 builder returned: ' + JSON.stringify(built));
+    check('S9 THE INVARIANT — the builder REFUSES; it does not hand back a one-person body',
+      built.returnedNull === true,
+      built.returnedNull ? 'null' : 'RETURNED A BODY with ' + built.keys + ' keys, co_arch=' + built.hasCoArch);
+    check('S9 it is the UNREADABLE branch, not the missing one',
+      built.errs.some((e) => /could not be read/.test(e.m)), JSON.stringify(built.errs));
+    check('S9 the reason carries the door target co-dob',
+      built.errs.some((e) => e.t === 'co-dob'), JSON.stringify(built.errs));
+    check('S9 THE TRAILING INSTRUCTION IS GONE — the link does that work, not the sentence',
+      !built.errs.some((e) => /Architect Profile/.test(e.m)), JSON.stringify(built.errs.map((e) => e.m)));
+
+    await pg.click('.action-btn'); await pg.waitForTimeout(900);
+    const s = await spoken(pg);
+    console.log('S9 on-screen: ' + JSON.stringify(s.text));
+    check('S9 the refusal is visible', s.visibleCount >= 1, s.ids || 'NOTHING VISIBLE');
+    check('S9 it states the authored sentence VERBATIM',
+      s.text.indexOf('cannot be built for both of you') !== -1, s.text.slice(0, 150));
+    check('S9 the Range did NOT navigate', s.url.indexOf('range') === -1, s.url);
+
+    /* S9d — THE DOOR ACTUALLY OPENS. Rendering a button is not the same as it working. */
+    const door = await pg.evaluate(() => {
+      const b = document.querySelector('#reveal-status [data-datum-target]');
+      if (!b) return { rendered: false };
+      b.click();
+      return { rendered: true, label: (b.textContent || '').trim(),
+               target: b.getAttribute('data-datum-target'),
+               focused: document.activeElement ? document.activeElement.id : null };
+    });
+    console.log('S9d door: ' + JSON.stringify(door));
+    check('S9d the door is rendered', door.rendered === true, JSON.stringify(door));
+    check('S9d its label is the invariant string', door.label === 'Take me there', String(door.label));
+    check('S9d clicking it FOCUSES the offending field', door.focused === 'co-dob', String(door.focused));
+
+    /* S9c — MISSING and UNREADABLE are different facts and the copy is honest about which. */
+    await pg.evaluate(() => { const e = document.getElementById('co-dob'); if (e) { e.value = '';
+      e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); } });
+    const empty = await pg.evaluate(() => { window._buildStudioRequest();
+      return (window._buildRequestErrors || []).map((e) => e.message); });
+    console.log('S9c empty-DOB reason: ' + JSON.stringify(empty));
+    check('S9c an EMPTY co-arch DOB says "missing", not "could not be read"',
+      empty.some((m) => /is missing/.test(m)) && !empty.some((m) => /could not be read/.test(m)),
+      JSON.stringify(empty));
+  }
+
+  /* ── F79 · S10 — THE FULL-SURFACE AUDIT ────────────────────────────────────────────────────
+     Every reason that exists today, arranged in isolation, and the question asked of each:
+     does it carry a target, does that target RESOLVE, is a door rendered, and does the door
+     actually move focus. The audit is part of F79, not a follow-up — a retrofit that covers
+     the reasons somebody happened to remember is a sample, not a sweep.
+     ⭐ A REASON THAT CANNOT NAME A TARGET IS ITSELF A FINDING and is reported, never forced. */
+  const audit = [];
+  async function auditReason(label, arrange) {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 1200 } });
+    await ctx.addInitScript(INIT); await blockNet(ctx);
+    const pg = await ctx.newPage(); await open(pg);
+    await arrange(pg);
+    await pg.click('.action-btn'); await pg.waitForTimeout(900);
+    const row = await pg.evaluate(() => {
+      const errs = (window._buildRequestErrors || []).map((e) => ({ m: e.message, t: e.target || null }));
+      const doors = Array.prototype.slice.call(document.querySelectorAll('#reveal-status [data-datum-target]'));
+      const first = doors[0] || null;
+      let focused = null, focusTag = null;
+      if (first) { first.click(); focused = document.activeElement ? document.activeElement.id : null;
+                   focusTag = document.activeElement ? document.activeElement.tagName : null; }
+      return { reasons: errs, doors: doors.length,
+               targets: doors.map((b) => b.getAttribute('data-datum-target')),
+               resolves: doors.map((b) => !!document.getElementById(b.getAttribute('data-datum-target'))),
+               /* ⚠ RESOLVES IS NOT REACHES. getElementById finds elements inside display:none
+                  ancestors, so a resolution-only audit scores an INERT door as a working one.
+                  offsetParent is null for anything in a hidden subtree. */
+               reachable: doors.map((b) => { const t = document.getElementById(b.getAttribute('data-datum-target'));
+                                            return !!(t && t.offsetParent !== null); }),
+               focused: focused, focusTag: focusTag };
+    });
+    await ctx.close();
+    audit.push({ label, ...row });
+    return row;
+  }
+
+  const setDates = (pg) => pg.evaluate(() => {
+    const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v;
+      e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); } };
+    set('pri-dob', '08 / 1982'); set('target-ret', '03 / 2035');
+  });
+
+  await auditReason('REVEAL_NO_ACCOUNT (cold Studio)', async () => {});
+  await auditReason('Date of Birth', async (pg) => { await fundRoom(pg); });
+  await auditReason('Co-Architect DOB', async (pg) => {
+    await fundRoom(pg); await setDates(pg);
+    await pg.evaluate(() => { const t = document.getElementById('co-arch-toggle');
+      if (t) { t.checked = true; t.dispatchEvent(new Event('change', { bubbles: true })); }
+      const e = document.getElementById('co-dob'); if (e) { e.value = '08 / 0000';
+        e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); } });
+  });
+  await auditReason('WEIGHTS_MUST_SUM', async (pg) => {
+    await fundRoom(pg);
+    await pg.evaluate(() => window._studioEnterRoom('data')); await pg.waitForTimeout(300);
+    await setDates(pg); await pg.waitForTimeout(600);
+    await pg.evaluate(() => window._studioEnterRoom('measurement')); await pg.waitForTimeout(400);
+    await pg.evaluate(() => {
+      const opt = Array.prototype.slice.call(document.querySelectorAll('.climate-option'))
+        .filter((o) => (o.dataset.outlook || '') === 'Custom Matrix')[0];
+      if (opt) opt.click();
+      document.querySelectorAll('.c-weight').forEach((el) => { el.value = '10';
+        el.dispatchEvent(new Event('input', { bubbles: true })); });
+    });
+  });
+
+  console.log('');
+  console.log('-- F79 AUDIT: reason -> target -> rendered --');
+  for (const r of audit) {
+    console.log('  ' + r.label.padEnd(34) + ' doors=' + r.doors
+      + '  targets=' + JSON.stringify(r.targets)
+      + '  resolves=' + JSON.stringify(r.resolves)
+      + '  reachable=' + JSON.stringify(r.reachable)
+      + '  focus->' + r.focused + ' <' + r.focusTag + '>');
+  }
+  const untargeted = audit.filter((r) => r.reasons.some((e) => !e.t));
+  console.log('  reasons with NO target: ' + (untargeted.length
+    ? untargeted.map((r) => r.label).join(', ') : 'none'));
+
+  check('S10 every audited reason renders at least one door',
+    audit.every((r) => r.doors >= 1), audit.map((r) => r.label + '=' + r.doors).join(' | '));
+  check('S10 every rendered door resolves to a live element',
+    audit.every((r) => r.resolves.every(Boolean)),
+    JSON.stringify(audit.map((r) => ({ l: r.label, r: r.resolves }))));
+  /* ⛔ THE LEG THAT CAUGHT THE INERT DOOR. Resolution passed on every row while focus came back
+     empty, because the target sat in a hidden phase. Assert that the door MOVES FOCUS. */
+  check('S10 every door MOVES FOCUS — rendering and resolving are not reaching',
+    audit.every((r) => !!r.focused),
+    JSON.stringify(audit.map((r) => ({ l: r.label, focus: r.focused, tag: r.focusTag }))));
+  check('S10 no reason carries a target that is absent from the document',
+    audit.every((r) => r.reasons.every((e) => !e.t || r.targets.indexOf(e.t) !== -1)),
+    JSON.stringify(audit.map((r) => ({ l: r.label, e: r.reasons.map((x) => x.t), d: r.targets }))));
+
   /* S6 / S7 — structural, over the composed PROGRAM */
   const hostRefs = ['reveal-status', 'reveal-zero-error', 'c-weight-error']
     .filter((id) => CENSUS_SRC.indexOf("getElementById('" + id + "')") !== -1);

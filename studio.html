@@ -14467,11 +14467,29 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
          the assembly guard below; two string literals would be two copies of authored copy, which
          is the divergence datum-footer.js exists to prevent. */
       var WEIGHTS_MUST_SUM = 'Climate weights must sum to 100%';
+      /* ⛔ THE CO-ARCHITECT REASON — AUTHORED, BANK-LOCKED, WIRED VERBATIM.
+         Co-architect toggle ON with a DOB we cannot read: _coArchitectFacts() returned null and
+         buildStudioRequest did `if (_coFacts) Object.assign(...)` with NO else — so the SS Matrix
+         refused loudly with a named field while THE RANGE WAS COMPUTED FOR ONE PERSON and said
+         nothing. F72's shape, third instance.
+         🔑 WORSE THAN A SUBSTITUTED DEFAULT. A default supplies a plausible value for a missing
+            choice; this SILENTLY DELETED A HUMAN BEING FROM THE HOUSEHOLD, and a single-person
+            Range is A NUMBER THE USER WILL BELIEVE because it looks exactly like a correct answer.
+         ⚠ TWO STRINGS: missing and unreadable are DIFFERENT FACTS and the copy says which.
+         ⚠ NO TRAILING INSTRUCTION. An earlier draft ended "Add it in the Architect Profile and run
+           this again." F79 deleted that clause: a sentence naming the room beside a door that opens
+           the room is THE SAME INSTRUCTION TWICE. THE SENTENCE EXPLAINS, THE LINK ACTS. */
+      var CO_ARCH_DOB_UNREADABLE = "Your co-architect's date of birth could not be read, so this plan cannot be built for both of you.";
+      var CO_ARCH_DOB_MISSING    = "Your co-architect's date of birth is missing, so this plan cannot be built for both of you.";
 
       // STU-010 + STU-022: enum mapping, Group 4 filter, custom_weights for Custom Matrix
       function buildStudioRequest() {
         window._buildRequestError = null;
         window._buildRequestErrorField = null;
+        /* ⚠ RESET WITH ITS SIBLINGS OR THE DOOR GOES STALE. Without this a target from a PREVIOUS
+           refusal survives into the next one and the link opens the wrong field — a door that
+           works, on the wrong room, which is worse than no door at all. */
+        window._buildRequestErrorTarget = null;
         window._buildRequestErrors = [];
         const dobVal   = document.getElementById('pri-dob')?.value || '';
         const retVal   = document.getElementById('target-ret')?.value || '';
@@ -14502,8 +14520,11 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
               window._buildRequestError / ...Field at :17537 and must not change behaviour; they now
               carry the FIRST reason, which is what they always carried. The array is ADDITIVE. */
         var _errs = [];
-        if (_dobError) _errs.push({ field: 'Date of Birth', message: _dobError });
-        if (_retError) _errs.push({ field: 'Target Retirement Date', message: _retError });
+        /* F79 — every reason carries the DOM id of the input that can resolve it. The key is
+           OPTIONAL: a reason without one renders exactly as it did before F79, so nothing
+           regresses and an untargetable reason is never forced into a target it does not have. */
+        if (_dobError) _errs.push({ field: 'Date of Birth', message: _dobError, target: 'pri-dob' });
+        if (_retError) _errs.push({ field: 'Target Retirement Date', message: _retError, target: 'target-ret' });
         /* The weights check is VALIDATED HERE, alongside the dates, so a cold Studio reports it in
            the same breath. It reads only the DOM and depends on nothing above it. The payload the
            weights BUILD is still assembled further down, where it is used. */
@@ -14511,12 +14532,31 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         if (((_clA && _clA.dataset && _clA.dataset.outlook) || '') === 'Custom Matrix') {
           var _wv = Array.prototype.map.call(document.querySelectorAll('.c-weight'), function (el) { return parseFloat(el.value) || 0; });
           var _wt = _wv.reduce(function (a, b) { return a + b; }, 0);
-          if (Math.abs(_wt - 100) > 1) _errs.push({ field: null, message: WEIGHTS_MUST_SUM });
+          /* ⚠ A LOCATION WITHOUT A FIELD. This fires on a SUM ACROSS FOUR .c-weight inputs, so no
+             single one is the offending input — the door lands on the GROUP. Diffuseness is a
+             spectrum, not a flag: a reason can have a place without having a field. */
+          if (Math.abs(_wt - 100) > 1) _errs.push({ field: null, message: WEIGHTS_MUST_SUM, target: 'custom-climate-box' });
+        }
+        /* ⛔ THE CO-ARCHITECT GATE LIVES HERE, WITH THE OTHER REASONS, AND THE PLACEMENT IS THE
+           FIX. The old check sat SEVENTY LINES BELOW, after the abort — so a reason pushed there
+           would have printed the authored sentence ABOVE a single-person ladder that contradicts it.
+           🔑 A VALIDATION THAT RUNS AFTER THE ABORT GATE IS NOT A VALIDATION, IT IS A CAPTION.
+           ⭐ A PEER of the date and weights reasons, so a cold Studio still reports every fault in
+              one breath — which is the whole reason F77 built the array. */
+        var _coTog = document.getElementById('co-arch-toggle');
+        if (_coTog && _coTog.checked && !_coArchitectFacts()) {
+          var _coDobRaw = ((document.getElementById('co-dob') || {}).value || '').trim();
+          _errs.push({ field: 'Co-Architect Date of Birth',
+                       message: _coDobRaw ? CO_ARCH_DOB_UNREADABLE : CO_ARCH_DOB_MISSING,
+                       target: 'co-dob' });
         }
         window._buildRequestErrors = _errs;
         if (_errs.length) {
           window._buildRequestError = _errs[0].message;
           window._buildRequestErrorField = _errs[0].field;
+          /* F79 — the SS Matrix renders from these singular globals, not from the array, so the
+             door has to travel with them or that surface keeps the address and loses the key. */
+          window._buildRequestErrorTarget = _errs[0].target || null;
           return null;
         }
 
@@ -14554,7 +14594,10 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             /* Defensive only — F77 validates this above, with the dates, so a cold Studio hears
                about it in the same refusal. Kept as a guard on the assembly path rather than
                deleted: this is the branch that would build weights nobody checked. */
-            window._buildRequestErrors = [{ field: null, message: WEIGHTS_MUST_SUM }];
+            /* ⛔ ONE REASON, TWO EMISSION SITES, AND BOTH GET THE DOOR OR NEITHER DOES. If only
+               the site above were targeted, the SAME refusal would open a door on one path and not
+               the other — the F72 asymmetry in miniature, inside the commit built to abolish it. */
+            window._buildRequestErrors = [{ field: null, message: WEIGHTS_MUST_SUM, target: 'custom-climate-box' }];
             window._buildRequestError = WEIGHTS_MUST_SUM;
             window._buildRequestErrorField = null;
             return null; // caller must halt — weights invalid
@@ -14567,7 +14610,12 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         }
 
         const activeSS   = document.querySelector('.ss-btn.active strong');
-        const ssStrategy = SS_AGE_MAP[activeSS?.textContent?.trim()] || 'optimal_70';
+        /* ⚠ A DEAD DEFAULT MUST STILL AGREE WITH ITS LIVE CONTROL. This read 'optimal_70' while
+           the markup at :3889 ships 67 / Full as the active button. Structurally unreachable
+           today — the handler removes-all-then-adds-one, so exactly one is always selected —
+           but the code held TWO answers and only one was on screen, and the day anything
+           clears .active it would move the user from 67 to 70 without a word. */
+        const ssStrategy = SS_AGE_MAP[activeSS?.textContent?.trim()] || 'full_67';
 
         // STU-010: filter Group 4, remap to engine enums, warn on unmapped future additions
         const accounts = state.accounts
@@ -14945,7 +14993,14 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       function _revealRefuse(errs) {
         if (!errs || !errs.length) return;
         var title = errs.length === 1 ? (errs[0].field || 'Input Error') : 'Input Error';
-        var body  = errs.map(function (e) { return e.message; }).join('<br>');
+        /* ⚠ A DOOR PER REASON, NOT ONE DOOR FOR THE BOX. A cold Studio reports three faults at once
+           (F77), and one shared link would have to pick which of the three it meant — so it would
+           either take the user to the wrong field or force them to guess. Each sentence carries its
+           own door; the label never varies, so three of them read as three doors, not three
+           instructions. Reasons with no target render exactly as before. */
+        var body  = errs.map(function (e) {
+          return e.message + _takeMeThereHtml(e.target);
+        }).join('<br>');
         _revealPaint(title, body);
       }
       function _revealStatus(err, field, fallbackTitle, fallbackBody) {
@@ -14953,6 +15008,82 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         var body  = err || fallbackBody;
         _revealPaint(title, body);
       }
+      /* ── F79 — A REFUSAL CARRIES A DOOR, NOT AN ADDRESS ──────────────────────────────────
+         ⛔ NAMING THE ROOM IS NOT THE SAME AS OPENING IT. F72 gave the Reveal refusal a voice and
+            F77 made it report every reason at once; both left the user to go FIND the field. The
+            Studio is a long document and "DOB is missing" does not say where.
+         ⛔ NO NAVIGATION LAYER, AND THAT IS A RULING NOT AN OMISSION. The live Studio has no
+            activity/router model at all — goToActivity, openActivity, showActivity, setActivity,
+            renderActivity, navigateTo, data-activity, currentActivity, ACTIVITIES: ZERO
+            OCCURRENCES. The room model is MOCK-SIDE. Building one to satisfy a copy fix would be a
+            rewrite wearing a repair. scrollIntoView is already in-house (setStatus uses it).
+         ⚠ THE DOOR ONLY REVEALS A WARN THAT ALREADY HAS TEXT. It never writes one — authoring a
+           message here would be inventing copy at click time. */
+      function _datumTakeMeThere(targetId) {
+        var el = targetId && document.getElementById(targetId);
+        if (!el) return false;
+        /* ⛔⛔ ENTER THE PHASE FIRST, OR THE DOOR IS INERT. MEASURED, NOT REASONED: the first
+           version scrolled and focused directly and document.activeElement came back EMPTY —
+           #co-dob lives in data-phase="data" while the Reveal button lives in "measurement", and
+           the CSS at :386-391 sets display:none on every section whose phase is not the current
+           room. YOU CANNOT FOCUS AN ELEMENT INSIDE A HIDDEN ANCESTOR. The button rendered, the
+           target resolved, and nothing happened — A DOOR THAT PROMISES AND DOES NOTHING IS WORSE
+           THAN AN ADDRESS.
+           ⚠ RESOLVES IS NOT REACHES. getElementById finds hidden elements, so an audit that only
+             checks resolution scores an inert door as a working one. Reachability is offsetParent.
+           ⭐ THIS IS NOT A NEW NAVIGATION LAYER. _studioEnterRoom() ships in
+             scripts/studio-landing.js (SACRED) and is already published on window; the gates have
+             driven it for months. The phase is read from the DOM — the nearest
+             .studio-section[data-phase] ancestor — so the room map keeps ONE home and this code
+             holds no copy of it to drift. */
+        var sect  = el.closest && el.closest('.studio-section[data-phase]');
+        var phase = sect && sect.getAttribute('data-phase');
+        if (phase && typeof window._studioEnterRoom === 'function') {
+          try { window._studioEnterRoom(phase); } catch (_e) {}
+        }
+        /* ⛔ A DOOR ONTO A CONTAINER IS A DIFFERENT MECHANISM, AND IT HAD TO BE MEASURED.
+           DIFFUSENESS IS A SPECTRUM, NOT A FLAG: WEIGHTS_MUST_SUM fires on a SUM ACROSS FOUR
+           inputs and REVEAL_NO_ACCOUNT's fix is to CREATE an account, so neither has an offending
+           FIELD — only a PLACE. Both target a <div>, and A DIV IS NOT FOCUSABLE: measured, the door
+           scrolled correctly and document.activeElement stayed on the BUTTON, so the user was moved
+           to the right place and left with their keyboard in the wrong one.
+           ⭐ tabindex="-1" is the correct HTML for a scroll destination — programmatically
+             focusable, NOT inserted into the tab order, so nothing about tabbing changes. Set here
+             rather than sprinkled through the markup so the door keeps one implementation. */
+        if (!/^(INPUT|SELECT|TEXTAREA|BUTTON|A)$/.test(el.tagName) && !el.hasAttribute('tabindex')) {
+          el.setAttribute('tabindex', '-1');
+        }
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        try { el.focus({ preventScroll: true }); } catch (_e) { try { el.focus(); } catch (_e2) {} }
+        var warn = document.getElementById(targetId + '-warn');
+        if (warn && (warn.textContent || '').trim()) warn.style.display = 'block';
+        return true;
+      }
+      window._datumTakeMeThere = _datumTakeMeThere;
+
+      /* ⭐ ONE STRING, EVERY TARGETED REFUSAL, NEVER VARIED BY FIELD. A link whose words change per
+         error becomes a sentence the user must READ before they can act, and removing the reading is
+         the entire point. It is the USER'S voice, which is why it reads as a door and not an order. */
+      var TAKE_ME_THERE = 'Take me there';
+      /* ⚠ RENDERED ONLY WHEN THE TARGET RESOLVES. A door onto an element that is not in the document
+         is worse than no door — it promises and does nothing. An unresolvable target renders exactly
+         as a reason with no target, which is exactly as this file behaved before F79. */
+      function _takeMeThereHtml(targetId) {
+        if (!targetId || !document.getElementById(targetId)) return '';
+        return '<button type="button" class="datum-door" data-datum-target="' + targetId + '" '
+          + 'style="margin-top:8px;background:transparent;border:1px solid var(--gold);'
+          + 'border-radius:3px;color:var(--gold);font-family:var(--font-mono);font-size:10px;'
+          + 'text-transform:uppercase;letter-spacing:0.1em;padding:5px 10px;cursor:pointer;">'
+          + TAKE_ME_THERE + '</button>';
+      }
+      window._datumTakeMeThereHtml = _takeMeThereHtml;
+      /* ⚠ DELEGATED, DELIBERATELY. Both surfaces paint with innerHTML, so a directly-bound handler
+         would die on the next repaint and the door would go dead with nothing on screen saying so. */
+      document.addEventListener('click', function (ev) {
+        var b = ev.target && ev.target.closest && ev.target.closest('[data-datum-target]');
+        if (b) { ev.preventDefault(); _datumTakeMeThere(b.getAttribute('data-datum-target')); }
+      });
+
       function _revealPaint(title, body) {
         var host = document.getElementById('reveal-status');
         if (!host) return;
@@ -15051,7 +15182,10 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
              buildStudioRequest() is called for its COLLECTION only; the request itself is rebuilt
              on whichever path runs below. It is safe over an empty estate — it reads inputs. */
           var _all = [];
-          if (totalInvestable === 0) _all.push({ field: 'Accounts required', message: REVEAL_NO_ACCOUNT });
+          /* ⚠ DIFFUSE BY NATURE — there is no input to fix, because the fix is to CREATE one. The
+             door opens the room where accounts are added rather than focusing a field that does not
+             exist yet. A reason that cannot name a field can still name a place. */
+          if (totalInvestable === 0) _all.push({ field: 'Accounts required', message: REVEAL_NO_ACCOUNT, target: 'sec-drafting' });
           try { buildStudioRequest(); } catch (_e) {}
           _all = _all.concat(window._buildRequestErrors || []);
           if (_all.length) { _revealRefuse(_all); return; }
@@ -17827,8 +17961,10 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         var _coRetError = _validateDateField(coRetVal, 'ret', _coDobError ? 43 : window.parseAgeFromDob(coDobVal), 'Co-Architect Target Retirement Date');
         if (_crw) { _crw.textContent = _coRetError || ''; _crw.style.display = _coRetError ? 'block' : 'none'; }
 
-        if (_coDobError) { window._buildRequestError = _coDobError; window._buildRequestErrorField = 'Co-Architect DOB'; return null; }
-        if (_coRetError) { window._buildRequestError = _coRetError; window._buildRequestErrorField = 'Co-Architect Target Retirement Date'; return null; }
+        /* F79 — this path sets the singular globals DIRECTLY, bypassing the array, so each gate
+           carries its own target or the Matrix keeps the address and loses the key. */
+        if (_coDobError) { window._buildRequestError = _coDobError; window._buildRequestErrorField = 'Co-Architect DOB'; window._buildRequestErrorTarget = 'co-dob'; return null; }
+        if (_coRetError) { window._buildRequestError = _coRetError; window._buildRequestErrorField = 'Co-Architect Target Retirement Date'; window._buildRequestErrorTarget = 'co-ret'; return null; }
 
         /* ⛔ FINDING 67 — THE FORK IS GONE. This block used to derive co_architect_age and the
            secondary SS strategy ITSELF, which is precisely why /api/calculate never received them:
@@ -17886,7 +18022,12 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           _reqErr ? 'var(--gold)'            : 'var(--danger)',
           _reqErr ? (_reqErrField || 'Input Error') : 'Cannot build map request',
           _reqErr || 'Check your inputs and try again.',
-          '<button onclick="startMatrixJob()" class="measure-btn" style="margin-top:10px;font-size:10px;padding:8px;">Try Again</button>'
+          /* F79 — THE SAME DOOR ON BOTH SURFACES. This slot already carried Try Again, so the
+             action row is in-house; the door goes FIRST because it resolves the refusal while Try
+             Again only re-attempts it. Renders nothing when there is no target, so an untargeted
+             refusal looks exactly as it did before F79. */
+          ((window._datumTakeMeThereHtml && window._datumTakeMeThereHtml(window._buildRequestErrorTarget)) || '')
+          + '<button onclick="startMatrixJob()" class="measure-btn" style="margin-top:10px;font-size:10px;padding:8px;">Try Again</button>'
         ));
         return;
       }
