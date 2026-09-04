@@ -1,0 +1,642 @@
+/* styles/profile.css — PHASE I · DATA: Plan Configuration + Architect Profile.
+   Generated from "Studio Mock.html" (md5 adc0da4ce2140db0988ac9fc978c778b, markers to V110)
+   in the mock's OWN DOCUMENT ORDER. Order is load-bearing: hoisting a rule changes WHEN it
+   applies, so a rule overridden in the port is overridden in the mock too.
+
+   ⚠️ THE PORT SOURCE HAS A VERSION AND IT MOVED. Memory pinned the canonical mock at
+   4f6fc7d1...; that file is now "Studio Mock OLD.html" and the live one is TEN REVISIONS
+   NEWER (V100 -> V110). "Faithful to the mock" is meaningless without naming WHICH mock, so
+   the md5 and the marker are recorded above and belong in every future port commit.
+
+   THE MOCK IS THE SPECIFICATION FOR THE SURFACE; THE LIVE FILE IS THE SPECIFICATION FOR THE
+   BEHAVIOUR. Structure, classes and copy port verbatim; THE IDS ARE THE LIVE ONES. An id is
+   plumbing the user never sees, and an id-for-id port would DELETE THE FIVE *-warn HOSTS that
+   F79's doors resolve by convention (targetId + '-warn') and that _validateDateField writes
+   into -- shipping the panel with every door dead, silently.
+
+   ⛔⛔ THE CASCADE HAZARD, MEASURED BEFORE A BYTE MOVED. The mock declares --serif / --mono /
+   --sans on :root. Live declares those same three names ONLY on
+   #studioOverlayWrap,#studioOverlayToast (studio.html:18664) -- and #sec-profile sits at line
+   3399, 1.2MB EARLIER in the document, so it CANNOT be a descendant. Every `font: var(--serif)`
+   rule below would have resolved to NOTHING and the panel would have rendered in the wrong
+   typeface WITH NO ERROR.
+   🔑 A TOKEN THAT EXISTS IN BOTH FILES IS NOT A TOKEN THAT REACHES BOTH SURFACES.
+   ⚠️ THREE MORE DID NOT EXIST IN LIVE AT ALL -- --phase-accent, --lm-gold, --lm-line: zero
+      declarations. Live HAS light mode (98 refs to body.light-mode) but implements it with
+      explicit colours rather than an --lm-* vocabulary.
+   All six are declared HERE, on the panel's own root, exactly as measurement.css declares its
+   three on #mcOverlay. They are NOT hoisted to :root -- studio.html:18664 records that moving
+   them "would break 39 reads for zero gain", and that judgement stands. --gold and --teal are
+   already on live :root and are NOT redeclared.
+
+   ⛔ THE SCOPE LEAK THAT ALMOST SHIPPED, AND THE RULE THAT CAUGHT IT. The first extractor kept
+   any rule whose selector MENTIONED a profile class. That pulled in shared light-mode lists --
+   `body.light-mode .workspace-card, .claim-panel, .compare-chip, .estate-card, .field,
+   .timing, .outlook, .route-row, .datum-builder, .estimate-card, .detail-select { ... }` --
+   and would have injected styling for 67 SELECTOR-INSTANCES targeting components across the
+   whole Studio, outside this arc. It also cut multi-line selector lists apart and produced
+   UNBALANCED BRACES (179 open / 185 close).
+   🔑 A SELECTOR LIST IS NOT A SELECTOR. The unit of relevance is the individual selector, and
+      the test is what it STYLES -- its rightmost compound -- never what it mentions. Those 137
+      foreign parts are stripped; the profile-subject parts of the same rules are kept.
+
+
+   ⛔⛔ AND THE FIRST CORRECTION WAS ITSELF TOO STRICT — CAUGHT BY A SCREENSHOT, NOT BY READING.
+   Rule two was "the rightmost compound must be a profile class". Right about selector LISTS,
+   WRONG about DESCENDANT selectors: `.plan-config-option strong{display:block}` has a bare
+   `strong` as its subject, so it was dropped -- and it is the rule that makes INDIVIDUAL and
+   "One architect. One trajectory." stack instead of running together on one line. The _eyeson
+   shot showed them inline; no source read would have.
+   🔑 A SUBJECT THAT IS A BARE ELEMENT IS STILL OURS IF ITS ANCESTOR IS. The test is now: a
+      profile class appears in the chain AND every other compound is a bare element, a pseudo,
+      or a known global qualifier -- never a FOREIGN CLASS, which is what the leak rule was
+      actually protecting against. Six rules recovered.
+   ⚠️ The stricter chain rule also dropped 8 rules qualified by `.sidebar`. They were DEAD:
+      `class="sidebar"` does not exist in live at all. An earlier check called it PRESENT by
+      searching for the bare string anywhere in the file -- a narrower instrument than the
+      question, for the third time in this arc.
+
+   ⚠️ RULES EXCLUDED, NAMED SO THE ABSENCE IS NOT READ AS AN OVERSIGHT. Six mock ancestors do
+   not exist in this scope: .readiness-strip .detail-input .draft-option .detail-description
+   .sketch-inputs-head .is-building-room. A rule whose ancestor is absent NEVER APPLIES, and A
+   CSS RULE THAT DOES NOT APPLY LOOKS IDENTICAL TO ONE NEVER WRITTEN -- so they are dropped
+   rather than shipped dead. Two are deliberate scope boundaries: .sketch-inputs-head is the
+   Retirement Baseline area (ruled OUT of this arc) and .is-building-room is the canvas
+   choreography (cause 3). They return with their causes.
+
+   ⚠️ EVERY CLASS BELOW IS NET-NEW TO LIVE. Measured: .workspace-card .workspace-kicker
+   .value-money .architect-* .plan-config-* .household-mode-* all score ZERO in studio.html and
+   ZERO in styles/*.css, so nothing here overrides existing paint. */
+
+/* ── TOKENS THE MOCK ASSUMES AND THIS SCOPE DOES NOT INHERIT ───────────────────────────────
+   ⛔⛔ SCOPED TO [data-profile-port], NOT TO #sec-profile — AND THE FIRST VERSION GOT THIS WRONG
+   IN A WAY ONLY A SCREENSHOT SHOWED. Tokens were declared on #sec-profile alone, so the PLAN
+   CONFIGURATION card — which lives in #sec-plan-config — inherited NONE of them. Every
+   `var(--sans)` and `var(--serif)` in that card resolved to nothing and it rendered in the wrong
+   typeface entirely, which is exactly the cascade hazard this block exists to prevent, committed
+   by the block itself.
+   🔑 A TOKEN DECLARED ON ONE OF TWO SIBLING SURFACES REACHES ONE OF THEM. The marker attribute
+      sits on BOTH studio-sections this port owns, so it also covers their HEADERS, which live
+      outside the section-content and would otherwise have been a third uncovered scope. */
+[data-profile-port]{
+  --serif:"Fraunces",Georgia,serif;
+  --mono:"DM Mono","Courier New",monospace;
+  --sans:"DM Sans",Arial,sans-serif;
+  --phase-accent:var(--teal);
+}
+body.light-mode [data-profile-port]{
+  --lm-gold:#9d7228;
+  --lm-line:rgba(24,38,48,.14);
+}
+
+/* ── PORTED RULES, IN THE MOCK'S DOCUMENT ORDER ────────────────────────────────────────── */
+.activity-head{width:100%;
+  min-height:58px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;
+  gap:10px;
+  padding:0;
+  border:0;background:transparent;color:inherit;text-align:left;}
+.activity-index{display:none}
+.activity-name{min-width:0;}
+.activity-name strong{display:block;
+  font:500 10.5px var(--mono);
+  letter-spacing:.10em;
+  text-transform:uppercase;
+  color:#eef2ef;}
+.activity-name small{display:block;margin-top:4px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font:400 8px var(--mono);
+  letter-spacing:.07em;text-transform:uppercase;
+  color:#8d9ca4;}
+.activity-toggle{width:24px;height:24px;
+  display:grid;place-items:center;
+  color:#7e9098;
+  border:1px solid rgba(142,160,168,.15);
+  font:400 15px var(--sans);
+  transition:.18s ease;}
+.activity-body{display:none;
+  padding:0 0 17px 0;}
+.workspace-card{border:1px solid rgba(142,160,168,.14);
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.008),transparent 22%),
+    rgba(8,18,29,.56);
+  padding:14px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.018);}
+.workspace-kicker{margin-bottom:11px;
+  font:500 8px var(--mono);
+  letter-spacing:.13em;text-transform:uppercase;
+  color:var(--phase-accent);}
+body.light-mode .activity-name strong{color:#223136}
+body.light-mode .activity-name small{color:#6a7a80}
+body.light-mode .activity-toggle{color:#6d7d82;
+  border-color:rgba(70,88,94,.18);}
+body.light-mode .workspace-card{border-color:rgba(70,88,94,.16);
+  background:rgba(255,255,255,.54);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.84);}
+body.light-mode .workspace-card{border-color:rgba(53,76,80,.14);
+  background:rgba(239,243,239,.78);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.58);}
+body.light-mode .activity-name strong{color:#172b31;}
+body.light-mode .activity-name small{color:#5c6e73;}
+body.light-mode .activity-name strong{color:#1b2b33}
+body.light-mode .activity-name small{color:#6b7780}
+body.light-mode .activity-name small{color:var(--text-soft);}
+body.light-mode .activity-name strong{color:var(--text-strong);}
+body.light-mode .activity-name strong{color:var(--text-strong) !important;}
+body.light-mode .workspace-card{border-color:rgba(34,57,70,.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.86),
+    inset 2px 0 0 rgba(34,57,70,.08);}
+body.light-mode .activity-name small{color:var(--lm-soft) !important;}
+body.light-mode .activity-name strong{color:var(--lm-ink) !important;}
+body.light-mode .activity-toggle{color:#6f828b !important;
+  border-color:rgba(24,38,48,.16) !important;
+  background:linear-gradient(180deg,#fff,#f5f2ed) !important;}
+body.light-mode .workspace-card{padding:16px !important;}
+body.light-mode .workspace-kicker{color:var(--lm-gold) !important;
+  margin-bottom:12px !important;}
+body.light-mode .activity-name strong{filter:none !important;}
+body.light-mode .activity-name small{color:#4f626c !important;}
+body.light-mode .activity-name strong,body.light-mode .workspace-card strong{color:#10232d !important;}
+body.light-mode .workspace-card:hover{border-color:rgba(16,32,42,.23) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.72),
+    0 12px 26px rgba(16,28,36,.05) !important;}
+body.light-mode .workspace-card{box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.86),
+    inset 0 0 0 1px rgba(20,34,44,.02),
+    0 10px 24px rgba(16,28,36,.038) !important;}
+body.light-mode .workspace-card:hover{box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92),
+    inset 0 0 0 1px rgba(20,34,44,.03),
+    0 14px 30px rgba(16,28,36,.055) !important;}
+.architect-profile-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  padding-bottom:12px;margin-bottom:13px;
+  border-bottom:1px solid rgba(142,160,168,.14);}
+.architect-profile-head .workspace-kicker{margin-bottom:4px}
+.architect-profile-sub{color:#8c9aa4;font:300 10.5px/1.45 var(--sans)}
+.architect-profile-badge{flex:0 0 auto;padding:5px 7px;
+  border:1px solid rgba(213,173,99,.25);
+  background:rgba(213,173,99,.04);
+  color:var(--gold);
+  font:500 7px var(--mono);letter-spacing:.12em;text-transform:uppercase;}
+.architect-section-title{margin:1px 0 11px;
+  font:300 italic 20px/1 var(--serif);
+  color:var(--gold);}
+.architect-field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+.architect-field{position:relative;min-width:0;
+  display:flex;flex-direction:column;gap:7px;}
+.architect-field.full{grid-column:1/-1}
+.architect-field label{color:#8f9ba2;
+  font:500 7.4px/1.35 var(--mono);
+  letter-spacing:.10em;text-transform:uppercase;}
+.architect-input,.architect-select{width:100%;height:44px;
+  border:1px solid rgba(142,160,168,.18);
+  outline:0;
+  background:rgba(7,17,29,.82);
+  color:#edf2ef;
+  padding:0 12px;
+  font:400 13px var(--mono);
+  letter-spacing:.01em;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.018);
+  transition:border-color .16s ease,background .16s ease,box-shadow .16s ease;}
+.architect-input.value-money{font:300 italic 19px var(--serif)}
+.architect-input:focus,.architect-select:focus{border-color:rgba(121,222,199,.34);
+  background:rgba(10,24,36,.92);
+  box-shadow:inset 0 0 0 1px rgba(121,222,199,.08);}
+.architect-select{appearance:none;-webkit-appearance:none;
+  padding-right:34px;
+  background-image:
+    linear-gradient(45deg,transparent 50%,#aab6ba 50%),
+    linear-gradient(135deg,#aab6ba 50%,transparent 50%);
+  background-position:calc(100% - 17px) 19px,calc(100% - 12px) 19px;
+  background-size:5px 5px,5px 5px;
+  background-repeat:no-repeat;}
+.architect-profile-note{margin-top:12px;color:#8d9ca4;font:300 10.5px/1.5 var(--sans);}
+body.light-mode .architect-profile-sub{color:#66777c}
+body.light-mode .architect-profile-badge{border-color:rgba(154,111,37,.25);background:rgba(154,111,37,.035);color:#8e651f}
+body.light-mode .architect-section-title{color:#9a6f25}
+body.light-mode .architect-field label{color:#65757a}
+body.light-mode .architect-input,body.light-mode .architect-select{border-color:rgba(52,73,78,.16);
+  background:rgba(255,255,255,.58);
+  color:#223136;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.88);}
+body.light-mode .architect-input:focus,body.light-mode .architect-select:focus{border-color:rgba(29,143,118,.28);background:rgba(255,255,255,.82)}
+body.light-mode .architect-select{background-image:
+    linear-gradient(45deg,transparent 50%,#66777c 50%),
+    linear-gradient(135deg,#66777c 50%,transparent 50%);
+  background-position:calc(100% - 17px) 19px,calc(100% - 12px) 19px;
+  background-size:5px 5px,5px 5px;
+  background-repeat:no-repeat;}
+body.light-mode .architect-profile-note{color:#68787d}
+@media(max-width:720px){
+  .architect-field-grid{grid-template-columns:1fr}
+  .architect-field.full{grid-column:auto}
+}
+.architect-profile-head{align-items:center;
+  padding-bottom:10px;
+  margin-bottom:12px;}
+.architect-profile-head .workspace-kicker{margin:0;
+  color:var(--teal);
+  font:500 8px var(--mono);
+  letter-spacing:.13em;
+  text-transform:uppercase;}
+.architect-profile-badge{padding:4px 6px;
+  border-color:rgba(142,160,168,.16);
+  background:rgba(255,255,255,.018);
+  color:#7f9099;
+  font:500 6.8px var(--mono);
+  letter-spacing:.12em;}
+.architect-section-title{margin:3px 0 10px;
+  text-align:right;
+  font:500 7.6px/1 var(--mono);
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:rgba(213,173,99,.72);}
+.architect-field-grid{gap:8px;}
+.architect-field{gap:6px;}
+.architect-field label{color:#8f9ba2;
+  font:500 7.4px/1.35 var(--mono);
+  letter-spacing:.105em;
+  text-transform:uppercase;}
+.architect-input,.architect-select{height:42px;
+  padding:0 10px;
+  border-color:rgba(142,160,168,.16);
+  background:rgba(4,12,21,.42);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.018);}
+.architect-input{color:#f2f5f2;
+  font:300 italic 18px/1 var(--serif);
+  letter-spacing:-.012em;}
+.architect-input.value-money{font:300 italic 18px/1 var(--serif);}
+.architect-select{color:#d9dfdd;
+  font:500 8px/1 var(--mono);
+  letter-spacing:.065em;
+  text-transform:uppercase;}
+.architect-input:focus,.architect-select:focus{border-color:rgba(121,222,199,.30);
+  background:rgba(121,222,199,.025);
+  box-shadow:inset 0 0 0 1px rgba(121,222,199,.08);}
+.architect-field-compact{grid-column:auto;max-width:none;}
+body.light-mode .architect-section-title{color:rgba(154,111,37,.78);}
+body.light-mode .architect-input,body.light-mode .architect-select{border-color:rgba(52,73,78,.16);
+  background:rgba(255,255,255,.56);
+  color:#223136;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.90);}
+body.light-mode .architect-select{color:#4f6268;}
+body.light-mode .architect-input:focus,body.light-mode .architect-select:focus{border-color:rgba(29,143,118,.28);
+  background:rgba(255,255,255,.78);
+  box-shadow:inset 0 0 0 1px rgba(29,143,118,.08);}
+.architect-field{gap:7px;}
+.architect-field label{color:#a6b1b7;
+  font:500 7.9px/1.35 var(--mono);
+  letter-spacing:.105em;}
+.architect-input,.architect-select{height:48px;
+  padding:0 12px;
+  border-color:rgba(121,222,199,.16);
+  background:linear-gradient(180deg,rgba(9,20,32,.88),rgba(6,15,25,.90));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 7px 16px rgba(0,0,0,.08);}
+.architect-input{color:#f2f5f2;
+  font:300 italic 19.5px/1 var(--serif);}
+.architect-input.value-money{font:300 italic 19.5px/1 var(--serif);}
+.architect-select{color:#e2e7e5;
+  font:500 10.4px/1 var(--mono);
+  letter-spacing:.06em;}
+.architect-input:hover,.architect-select:hover{border-color:rgba(121,222,199,.23);
+  background:linear-gradient(180deg,rgba(11,23,35,.92),rgba(7,17,28,.92));}
+.architect-input:focus,.architect-select:focus{border-color:rgba(121,222,199,.34);
+  background:linear-gradient(180deg,rgba(12,27,39,.94),rgba(7,18,29,.94));
+  box-shadow:inset 0 0 0 1px rgba(121,222,199,.08),0 0 18px rgba(121,222,199,.045);}
+.architect-profile-badge{color:#91a0a7;}
+body.light-mode .architect-input,body.light-mode .architect-select{border-color:rgba(42,78,104,.18);
+  background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(247,247,243,.84));
+  color:#223136;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.94),0 7px 16px rgba(24,38,42,.045);}
+body.light-mode .architect-select{color:#334a52;
+  font-size:10.4px;}
+body.light-mode .architect-input:hover,body.light-mode .architect-select:hover{border-color:rgba(29,143,118,.23);
+  background:linear-gradient(180deg,#ffffff,rgba(248,248,244,.94));}
+body.light-mode .architect-input:focus,body.light-mode .architect-select:focus{border-color:rgba(29,143,118,.30);
+  background:#fff;
+  box-shadow:inset 0 0 0 1px rgba(29,143,118,.07),0 0 16px rgba(29,143,118,.035);}
+body.light-mode .architect-section-title{color:#8f6824;}
+.household-mode-control{display:flex;
+  align-items:center;
+  gap:10px;
+  margin-left:auto;}
+.household-mode-button{appearance:none;
+  border:1px solid rgba(121,222,199,.18);
+  background:linear-gradient(180deg,rgba(10,23,36,.88),rgba(7,18,29,.9));
+  color:#d9e3e2;
+  min-width:132px;
+  height:34px;
+  padding:0 12px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 10px 20px rgba(0,0,0,.12);
+  transition:border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;}
+.household-mode-button:hover{border-color:rgba(121,222,199,.28);
+  background:linear-gradient(180deg,rgba(12,28,42,.92),rgba(8,20,32,.94));}
+.household-mode-state{font:600 8px/1 var(--mono);
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  white-space:nowrap;}
+.household-mode-button[aria-pressed="true"] .household-mode-state{color:var(--teal);
+  text-shadow:0 0 14px rgba(121,222,199,.15);}
+.household-mode-button[aria-pressed="false"] .household-mode-state{color:#cfd7d5;}
+body.light-mode .household-mode-button{border-color:rgba(42,78,104,.16);
+  background:linear-gradient(180deg,rgba(255,255,255,.86),rgba(245,243,238,.78));
+  color:#2d434a;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 8px 18px rgba(24,38,42,.05);}
+body.light-mode .household-mode-button:hover{border-color:rgba(42,78,104,.24);
+  background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(241,239,233,.86));}
+body.light-mode .household-mode-button[aria-pressed="true"] .household-mode-state{color:#15785f;
+  text-shadow:none;}
+body.light-mode .household-mode-button[aria-pressed="false"] .household-mode-state{color:#31474e;}
+@media(max-width:860px){
+  .architect-profile-head{flex-direction:column;
+    align-items:flex-start;
+    gap:10px;}
+  .household-mode-control{margin-left:0;}
+}
+.household-mode-button{min-width:148px;}
+.architect-profile-badge{display:none !important;}
+.architect-mode{display:none;}
+.architect-mode.open{display:block;}
+.architect-section-title-subtle{margin:6px 0 12px;
+  text-align:right;
+  font:600 8px/1 var(--mono);
+  letter-spacing:.17em;
+  text-transform:uppercase;
+  color:#b98c32;}
+.architect-field-grid-paired{grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px 12px;}
+.architect-field-identity{align-self:start;}
+.architect-column-kicker{margin:0 0 8px;
+  font:600 8px/1 var(--mono);
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  text-align:center;
+  color:#b98c32;}
+.architect-field-note{margin-top:8px;
+  font:400 11px/1.45 var(--sans);
+  color:rgba(177,192,198,.72);}
+body.light-mode .architect-field-note{color:rgba(77,99,108,.8);}
+body.light-mode .architect-section-title-subtle,body.light-mode .architect-column-kicker{color:#9a6f25;}
+@media(max-width:860px){
+  .architect-field-grid-paired{grid-template-columns:1fr;}
+  .architect-section-title-subtle{text-align:left;}
+}
+.architect-primary-centered{width:calc(50% - 6px);
+  text-align:center;
+  margin:6px 0 12px;}
+.architect-column-headers,.architect-row-label{grid-column:1 / -1;}
+.architect-column-headers{display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px 12px;
+  margin:2px 0 6px;}
+.architect-column-kicker{margin:0;
+  font:600 8px/1 var(--mono);
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  text-align:center;
+  color:#b98c32;}
+.architect-row-label{margin:4px 0 -2px;
+  font:600 8px/1 var(--mono);
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  text-align:center;
+  color:rgba(177,192,198,.84);}
+.architect-field-grid-paired .architect-field label,.architect-field-note{display:none !important;}
+body.light-mode .architect-column-kicker{color:#9a6f25;}
+body.light-mode .architect-row-label{color:rgba(77,99,108,.82);}
+@media(max-width:860px){
+  .architect-primary-centered{width:100%;}
+}
+.architect-complete-profile{grid-column:1 / -1;
+  position:relative;
+  min-height:58px;
+  margin-top:4px;
+  padding:11px 18px;
+  border:1px solid rgba(121,222,199,.24);
+  border-radius:0;
+  background:
+    linear-gradient(90deg,rgba(121,222,199,.045),transparent 42%),
+    linear-gradient(180deg,rgba(10,23,35,.88),rgba(6,16,27,.94));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 12px 24px rgba(0,0,0,.10);
+  color:#e6eceb;
+  cursor:pointer;
+  text-align:left;
+  overflow:hidden;
+  transition:border-color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease;}
+.architect-complete-profile:before{content:"";
+  position:absolute;
+  left:0; top:0; bottom:0;
+  width:2px;
+  background:var(--teal);
+  opacity:.72;}
+.architect-complete-profile:hover{transform:translateY(-1px);
+  border-color:rgba(121,222,199,.40);
+  background:
+    linear-gradient(90deg,rgba(121,222,199,.075),transparent 46%),
+    linear-gradient(180deg,rgba(12,28,41,.94),rgba(7,19,30,.96));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 15px 28px rgba(0,0,0,.13);}
+.architect-complete-title{display:block;
+  font:600 8.4px/1 var(--mono);
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:#dce8e6;}
+.architect-complete-sub{display:block;
+  margin-top:7px;
+  font:400 italic 13px/1 var(--serif);
+  letter-spacing:.02em;
+  color:#79dec7;}
+.architect-complete-profile-dual{grid-column:1 / -1; margin-top:6px;}
+.architect-complete-profile{display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;}
+.architect-complete-title,.architect-complete-sub{width:100%;text-align:center;}
+body.light-mode .architect-complete-profile{border-color:rgba(29,143,118,.24);
+  background:
+    linear-gradient(90deg,rgba(29,143,118,.045),transparent 44%),
+    linear-gradient(180deg,rgba(255,255,255,.92),rgba(247,244,237,.90));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.98),0 12px 24px rgba(24,38,42,.055);
+  color:#26373e;}
+body.light-mode .architect-complete-profile:before{background:#1d8f76;opacity:.68;}
+body.light-mode .architect-complete-profile:hover{border-color:rgba(29,143,118,.38);
+  background:
+    linear-gradient(90deg,rgba(29,143,118,.065),transparent 46%),
+    linear-gradient(180deg,#fff,rgba(247,244,237,.96));
+  box-shadow:inset 0 1px 0 #fff,0 15px 28px rgba(24,38,42,.075);}
+body.light-mode .architect-complete-title{color:#273a41;}
+body.light-mode .architect-complete-sub{color:#15785f;}
+@media(max-width:860px){
+  .architect-complete-profile{padding-left:16px;padding-right:16px;}
+}
+.plan-config-head{padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(142,160,168,.14);}
+.plan-config-head .workspace-kicker{margin-bottom:8px;color:var(--teal);}
+.plan-config-head h3{margin:0;font:300 italic 23px/1.08 var(--serif);color:#eef3f1;letter-spacing:-.012em;}
+.plan-config-head p{margin:9px 0 0;color:#93a3aa;font:300 11px/1.55 var(--sans);max-width:48ch;}
+.plan-config-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;}
+.plan-config-option{position:relative;min-height:112px;padding:14px 13px 13px;text-align:left;
+  border:1px solid rgba(142,160,168,.16);
+  background:linear-gradient(180deg,rgba(7,18,29,.66),rgba(5,14,23,.74));
+  color:#dbe3e1;box-shadow:inset 0 1px 0 rgba(255,255,255,.018);
+  transition:border-color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease;}
+.plan-config-option:hover{border-color:rgba(121,222,199,.28);background:linear-gradient(180deg,rgba(10,27,38,.76),rgba(6,19,28,.82));}
+.plan-config-option.active{border-color:rgba(121,222,199,.44);background:linear-gradient(180deg,rgba(121,222,199,.105),rgba(6,22,29,.78));box-shadow:inset 0 0 0 1px rgba(121,222,199,.055),0 9px 20px rgba(0,0,0,.08);}
+.plan-config-roman{display:block;margin-bottom:15px;color:#cba956;font:500 8px/1 var(--mono);letter-spacing:.17em;text-transform:uppercase;}
+.plan-config-option strong{display:block;color:#edf3f1;font:600 9px/1.2 var(--mono);letter-spacing:.15em;text-transform:uppercase;}
+.plan-config-option small{display:block;margin-top:8px;color:#8799a0;font:300 10.5px/1.42 var(--sans);}
+.plan-config-option.active strong{color:#83dfc8;}
+.plan-config-option.active small{color:#a9bbb9;}
+.plan-config-cta{width:100%;margin-top:11px;}
+.plan-config-cta:disabled{opacity:.42;cursor:not-allowed;filter:saturate(.55);}
+body.light-mode .plan-config-head{border-bottom-color:rgba(52,73,78,.14);}
+body.light-mode .plan-config-head h3{color:#294047;}
+body.light-mode .plan-config-head p{color:#61757b;}
+body.light-mode .plan-config-option{border-color:rgba(42,78,104,.16);background:linear-gradient(180deg,rgba(255,255,255,.88),rgba(245,246,242,.78));color:#31464d;box-shadow:inset 0 1px 0 rgba(255,255,255,.94),0 7px 16px rgba(24,38,42,.035);}
+body.light-mode .plan-config-option:hover{border-color:rgba(29,143,118,.24);background:linear-gradient(180deg,#fff,rgba(244,248,244,.91));}
+body.light-mode .plan-config-option.active{border-color:rgba(29,143,118,.34);background:linear-gradient(180deg,rgba(29,158,117,.09),rgba(255,255,255,.88));box-shadow:inset 0 0 0 1px rgba(29,143,118,.035),0 8px 18px rgba(35,57,64,.045);}
+body.light-mode .plan-config-roman{color:#8e681f;}
+body.light-mode .plan-config-option strong{color:#30464d;}
+body.light-mode .plan-config-option small{color:#64777d;}
+body.light-mode .plan-config-option.active strong{color:#176f5a;}
+body.light-mode .plan-config-option.active small{color:#526d67;}
+@media(max-width:720px){
+  .plan-config-options{grid-template-columns:1fr;}
+  .plan-config-option{min-height:92px;}
+}
+.plan-config-head p{margin:0;max-width:52ch;font-size:11.2px;line-height:1.58;}
+.plan-config-options{gap:11px;}
+.plan-config-option{min-height:122px;padding:22px 18px 18px;overflow:hidden;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 12px 24px rgba(0,0,0,.08);}
+.plan-config-option:before{content:"";position:absolute;left:18px;right:18px;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.42),transparent);}
+.plan-config-option strong{font-size:10px;letter-spacing:.16em;}
+.plan-config-option small{margin-top:11px;font-size:11px;line-height:1.48;max-width:24ch;}
+body.light-mode .plan-config-option{box-shadow:inset 0 1px 0 rgba(255,255,255,.96),0 10px 22px rgba(35,57,64,.05);}
+body.light-mode .plan-config-option:before{background:linear-gradient(90deg,transparent,rgba(155,111,37,.28),transparent);}
+@media(max-width:720px){
+  .plan-config-option{min-height:104px;padding:18px 15px 15px;}
+}
+
+/* ── SCAFFOLDING — AUTHORED HERE, NOT PORTED. ─────────────────────────────────────────────
+   ⛔ THESE RULES HAVE NO COUNTERPART IN THE MOCK, AND THAT IS WHY THEY ARE FENCED OFF.
+   The mock carries two separate mode blocks, each with its own label idiom: the solo block
+   puts a <label> above every field, the dual block puts a full-width .architect-row-label
+   above each pair. Keeping the LIVE IDS forced one grid serving both modes (an id can exist
+   once), so this DOM carries BOTH label forms on every row and exactly one is shown per mode.
+   🔑 MEASURED, NOT ASSUMED: the first _eyeson shot rendered BOTH — the mono row label and the
+      serif field label, stacked, on all eight rows. No source check would have shown that; the
+      classes are mine, so no ported rule could ever have covered them.
+   ⚠️ Remove either rule and the other mode breaks silently. */
+.architect-field-grid-solo-parity .architect-row-label{display:none;}
+.architect-field-grid-solo-parity .architect-field-co{display:none;}
+.architect-field-grid-solo-parity .architect-column-headers{grid-template-columns:1fr;}
+.architect-field-grid-paired .architect-solo-label{display:none;}
+.architect-name-inline{width:100%;min-width:0;}
+
+/* The name IS the column kicker (Captain-ruled) — so the input must be INVISIBLE AS AN INPUT and
+   inherit the kicker's type entirely. Live's .name-input was dropped from these two fields: it
+   carries the old Datum FI serif treatment and was overriding the mock's 8px mono kicker, which is
+   what the first _eyeson shot showed as large gold serif. SAME CLASS-CONFLICT AS .small-field —
+   live's COSMETIC classes fight the port while live's BEHAVIOURAL hooks must stay, and only
+   measurement tells them apart. */
+.architect-name-inline{
+  width:100%;min-width:0;display:block;
+  background:transparent;border:0;padding:0;margin:0;
+  font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;text-align:inherit;
+}
+.architect-name-inline:focus{outline:1px solid var(--phase-accent);outline-offset:2px;}
+
+/* The store, not a control. Visually gone, still in the DOM, still the single source of truth. */
+.architect-household-store{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;margin:-1px;}
+
+/* The last-survivor disclosure is the CTA's HOVER and exists only in dual. */
+.architect-complete-wrap{position:relative;grid-column:1 / -1;}
+.architect-lastsurvivor-note{display:none;}
+.architect-field-grid-paired .architect-complete-wrap:hover .architect-lastsurvivor-note,
+.architect-field-grid-paired .architect-complete-wrap:focus-within .architect-lastsurvivor-note{
+  display:block;position:absolute;left:0;right:0;bottom:calc(100% + 8px);z-index:40;
+  padding:12px 13px;border-radius:5px;
+  border:1px solid rgba(121,222,199,.28);
+  background:linear-gradient(180deg,rgba(8,24,33,.98),rgba(6,19,28,.98));
+  box-shadow:0 14px 30px rgba(0,0,0,.45);
+  font:300 10.5px/1.5 var(--sans);color:#c9d6d9;text-align:left;
+}
+body.light-mode .architect-field-grid-paired .architect-complete-wrap:hover .architect-lastsurvivor-note,
+body.light-mode .architect-field-grid-paired .architect-complete-wrap:focus-within .architect-lastsurvivor-note{
+  border-color:rgba(29,143,118,.26);
+  background:linear-gradient(180deg,#fff,rgba(244,248,244,.97));
+  color:#31464d;box-shadow:0 12px 26px rgba(16,28,36,.10);
+}
+
+/* The DIAMOND. ⛔ The base .activity-toggle rule ported fine; the ROTATE did not, because the mock
+   anchors it on `.activity.open .activity-toggle` and bare `.activity` is not one of this port's
+   classes — live's sections are not .activity articles. Re-anchored on this port's own scope.
+   🔑 THE X IS THE ROTATION, NOT THE CHARACTER: the mock's glyph is '+', and turning the box 45deg
+      is what makes it read as an x. Shipping an 'x' would have rendered a plus. */
+[data-profile-port] .activity-toggle{
+  transform:rotate(45deg);
+  color:var(--phase-accent);
+  border-color:color-mix(in srgb,var(--phase-accent) 38%,transparent);
+}
+[data-profile-port] .activity-head{
+  width:100%;min-height:58px;display:grid;grid-template-columns:1fr auto;
+  align-items:center;gap:10px;padding:0;border:0;background:transparent;
+  color:inherit;text-align:left;cursor:pointer;
+}
+
+/* ⛔ THE CTA LOST ITS PLACEMENT TO MY OWN WRAPPER. .architect-complete-profile carries
+   `grid-column:1 / -1` in the mock — it is a GRID ITEM, and it centres because the grid places it.
+   Wrapping it (to hang the hover disclosure off something positioned) put it inside a plain block,
+   so the span became meaningless and it stopped centring. The wrapper becomes a grid of its own so
+   the button spans and centres exactly as it did unwrapped.
+   🔑 A WRAPPER ADDED FOR ONE REASON CAN SILENTLY REMOVE A LAYOUT CONTRACT THE CHILD DEPENDED ON. */
+[data-profile-port] .architect-complete-wrap{
+  display:grid;grid-template-columns:1fr;grid-column:1 / -1;position:relative;
+}
+[data-profile-port] .architect-complete-wrap > .architect-complete-profile{
+  grid-column:1 / -1;width:100%;justify-self:stretch;text-align:center;
+}
+
+/* ⛔ "PRIMARY AR…". The name input was told `font:inherit`, which is only as good as what it
+   inherits — and something in live's cascade was winning. Stated EXPLICITLY against the kicker's
+   own type rather than relying on inheritance, with border-box so padding cannot widen it out of
+   a 137px column. */
+[data-profile-port] .architect-column-kicker .architect-name-inline{
+  box-sizing:border-box;width:100%;min-width:0;
+  font:600 8px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;text-align:center;
+  color:inherit;background:transparent;border:0;padding:0;margin:0;
+}
+
+/* ⛔ THE 42px. MEASURED, NOT GUESSED: mock card 362px / columns 159.5px against ours at 320px /
+   137px — on panels of the SAME width (mock sidebar 403, live drafting-panel 400). The whole
+   difference is inset: `.drafting-panel` pads 40px each side, the mock pads ~20px. That is why
+   "PRIMARY ARCHITECT" clipped to "PRIMARY AR" while the shorter "CO-ARCHITECT" fitted — a width
+   problem wearing a font problem's clothes, and no amount of type-pinning was ever going to fix it.
+   ⚠️ SCOPED, NOT FIXED AT SOURCE, AND DELIBERATELY. The real repair is `.drafting-panel`'s padding,
+      which would move EVERY section in the left panel — including rooms this arc has not ported and
+      cannot re-shoot. That is a room-shell cause, not this one. These two sections reclaim the
+      difference locally so they match the mock now; when the remaining sections port, this rule
+      should DIE and the panel padding should change once. */
+[data-profile-port]{margin-left:-20px;margin-right:-20px;}
+
+/* ⛔⛔ THE 74px, AND IT WAS MINE. The primary name read "PRIMARY ARCH" in DUAL and rendered in
+   full in SOLO — the mode difference was the whole clue and I measured solo four times before
+   measuring the failing one.
+   CAUSE: `.architect-primary-centered{width:calc(50% - 6px)}` is the mock's SOLO half-width
+   centred title. The mock's DUAL kicker does not carry it. Merging both modes onto one element
+   (forced by keeping the live ids) carried the class into dual, where 50% of a 159px column is
+   73.5px against 106px of text. THE HEADER WAS SPANNING CORRECTLY THE WHOLE TIME — 330px,
+   grid-column 1 / -1, two 159px tracks. The cell inside it was halving itself.
+   🔑 A CLASS THAT IS CORRECT IN ONE MODE IS NOT NEUTRAL IN THE OTHER. Merging two mock blocks
+      into one DOM merges their CLASS LISTS too, and a class only ever meant for one of them
+      becomes a silent defect in the other.
+   ⚠️ scrollWidth === clientWidth told me there was no overflow — measured in SOLO, where there
+      genuinely wasn't. AN INSTRUMENT POINTED AT THE HEALTHY CASE REPORTS HEALTH. */
+.architect-field-grid-solo-parity .architect-column-kicker{
+  width:calc(50% - 6px);text-align:center;margin:6px auto 12px;
+}

@@ -47,6 +47,7 @@
         #mcOverlay itself. 🔑 A TOKEN THAT EXISTS IN BOTH FILES IS NOT A TOKEN THAT REACHES BOTH
         SURFACES. -->
 <link rel="stylesheet" href="/styles/measurement.css">
+  <link rel="stylesheet" href="/styles/profile.css">
 <style>
   :root {    --danger: #e24b4a;
     --cold: #64b4ff;
@@ -3389,136 +3390,262 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
 
       <div class="swf-col-head have" aria-hidden="true">Shape You Have</div>
 
-      <div data-phase="data" class="studio-section">
-        <div class="section-header-wrapper">
-            <button class="section-tag" onclick="toggleSection('sec-profile', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>00 / Architect Profile</span> <span class="toggle-icon">−</span>
+            <!-- ══ PHASE I · DATA — PLAN CONFIGURATION ═════════════════════════════════════════════
+           NET-NEW SECTION. Ported from "Studio Mock.html" (md5 adc0da4ce2140db0988ac9fc978c778b,
+           markers to V110), structure/classes/copy verbatim.
+
+           ⭐ THE GATE IS THE MOCK'S, NOT OURS. R7464 ships the CTA with `disabled` already
+              present, so the "cannot proceed until a configuration is chosen" rule is authored
+              in the design rather than invented in the wire-up. Honour it; do not re-derive it.
+           ⚠️ INERT BY DESIGN IN THIS COMMIT. The two option buttons and the CTA carry their
+              markup and their disabled state; the choice does not yet drive the household mode
+              and Begin Blueprint does not yet lay the foundation. Wiring is its own cause, where
+              the behaviour can be proven rather than asserted. -->
+      <div data-phase="data" class="studio-section" data-profile-port>
+        <!-- The mock's activity head: a two-line name (strong over small) and a DIAMOND toggle.
+             Live's toggleSection/togglePin behaviour is unchanged - only the chrome is the mock's.
+             .activity-index is carried and hidden, exactly as the mock does, so there are NO
+             numbers on screen. -->
+        <div class="section-header-wrapper activity-head-wrap">
+            <button class="activity-head" type="button" onclick="toggleSection('sec-plan-config', this)">
+                <span class="activity-index">00</span>
+                <span class="activity-name"><strong>Plan Configuration</strong><small>Individual · joint · blueprint foundation</small></span>
+                <span class="activity-toggle toggle-icon">+</span>
             </button>
-            <button class="pin-btn" onclick="togglePin('sec-profile', this)" title="Pin section open">📌</button>
         </div>
-        <div id="sec-profile" class="section-content" style="display: block;">
-          
-          <!-- §28.2 — "Precision in. Precision out." RETIRED here, Captain-ruled 2026-08-15.
-               The .precision-motto RULE is left in the stylesheet: it is presentation, it costs
-               nothing, and removing a class the moment its last user goes is how a later re-use
-               silently loses its styling. THE COPY IS THE THING THAT WAS RETIRED, NOT THE RULE. -->
-
-          <div class="architect-box">
-            
-            <input type="text" id="primary-name" class="name-input" value="Primary Architect" maxlength="20">
-            
-            <div class="field-row">
+        <div id="sec-plan-config" class="section-content" style="display: block;">
+          <div class="workspace-card plan-config-card" data-plan-configuration>
+            <div class="plan-config-head">
               <div>
-                <div class="input-label">Date of Birth</div>
-                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="" placeholder="MM/YYYY" tabindex="11" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this); _updatePlanEndAge()" onblur="_validatePriDob(this)">
-                <div id="pri-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
-              </div>
-              <div>
-                <div class="input-label">Location (Tax Base)</div>
-                <!-- Dossier-exact US-states dropdown (Dossier.html #location, verbatim option list) -->
-                <select id="pri-location" class="small-field" tabindex="12" style="background: var(--bg-navy); color: white;">
-                   <option value="" selected>Select state</option><option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option>
-                </select>
+                <div class="workspace-kicker">Plan Configuration</div>
+                <p>A retirement architecture built for one stands on different ground than one drawn for two. Determine your plan&#39;s foundation before we start building.</p>
               </div>
             </div>
-            
-            <div class="field-row">
-              <div class="salary-container" style="position: relative;">
-                <div class="input-label">Gross Annual Salary</div>
-                <input type="text" class="small-field curr-format" id="pri-salary" value="" placeholder="$0" tabindex="13" oninput="updateSalaryTT('pri'); calculateUpkeepLoad(); updateAnalysisText();">
-                <div class="salary-tooltip" id="pri-salary-tt"></div>
-              </div>
-              <div>
-                <div class="input-label">Effective Tax Rate</div>
-                <!-- Dossier-exact dropdown (Dossier.html #taxRate, verbatim options) -->
-                <select id="eff-tax-rate" class="small-field" tabindex="14" style="background: var(--bg-navy); color: white;" onchange="updateAnalysisText()">
-                   <option value="" selected>Select tax rate</option>
-                   <option value="12%">12% bracket</option>
-                   <option value="22%">22% blended estimate</option>
-                   <option value="24%">24% bracket</option>
-                   <option value="32%">32% bracket</option>
-                   <option value="35%">35% bracket</option>
-                   <option value="37%">37% bracket</option>
-                </select>
-              </div>
+            <div class="plan-config-options" role="group" aria-label="Choose plan configuration">
+              <button class="plan-config-option" type="button" data-plan-choice="solo" aria-pressed="false">
+                <strong>INDIVIDUAL</strong>
+                <small>One architect. One trajectory.</small>
+              </button>
+              <button class="plan-config-option" type="button" data-plan-choice="dual" aria-pressed="false">
+                <strong>JOINT</strong>
+                <small>Two architects. One shared horizon.</small>
+              </button>
             </div>
-            <div class="field-row" style="grid-template-columns: 1fr;">
-              <div>
-                <div class="input-label">Filing Status</div>
-                <select id="filing-status" class="small-field" tabindex="15" style="background: var(--bg-navy); color: white;">
-                   <option value="" selected>Select filing status</option>
-                   <option>Single / Individual</option>
-                   <option>Married Filing Jointly</option>
-                   <option>Married Filing Separately</option>
-                   <option>Head of Household</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="field-row" style="margin-top: 15px;">
-              <div>
-                <div class="input-label">Target Retirement Date</div>
-                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="" placeholder="MM/YYYY" tabindex="16" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
-                <div id="ret-date-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;">Retirement age exceeds 100 — plan capped at age 120.</div>
-              </div>
-              <div>
-                <div class="input-label">Plan Through Date</div>
-                <input type="text" class="small-field" id="plan-end-age" value="" placeholder="MM/YYYY" tabindex="17" title="The date through which your retirement plan is modeled (the slider is the source of truth)." onfocus="this.select()" oninput="_fmtRetDate(this)" onblur="window._commitPlanEndDate && window._commitPlanEndDate(this)">
-                <div id="plan-end-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
-              </div>
-            </div>
-
-
-            <div class="toggle-row" style="margin-top: 25px; margin-bottom: 15px; padding-bottom: 0; border: none;">
-              <span class="toggle-label">Co-Architect / Spouse</span>
-              <label class="switch">
-                <input type="checkbox" id="co-arch-toggle">
-                <span class="slider"></span>
-              </label>
-            </div>
-            
-            <div id="co-arch-fields" style="display: none; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
-              <input type="text" id="co-name" class="name-input" value="Co-Architect" maxlength="20">
-              <div class="field-row">
-                <div>
-                  <div class="input-label">Co-Architect DOB</div>
-                  <input type="text" class="small-field" id="co-dob" value="" placeholder="MM/YYYY" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this)" onblur="_validateCoDob(this)">
-                  <div id="co-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
-                </div>
-              </div>
-
-              <div class="field-row">
-                <div class="salary-container" style="position: relative;">
-                  <div class="input-label">Co-Arch Salary</div>
-                  <input type="text" class="small-field curr-format" id="co-salary" value="" placeholder="$0" oninput="updateSalaryTT('co'); calculateUpkeepLoad(); updateAnalysisText();">
-                  <div class="salary-tooltip" id="co-salary-tt"></div>
-                </div>
-                <div>
-                  <div class="input-label">Target Retirement Date</div>
-                  <input type="text" class="small-field" id="co-ret" value="" placeholder="MM/YYYY" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this)" onblur="_validateCoRet(this)">
-                  <div id="co-ret-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
-                </div>
-              </div>
-
-              <!-- P8.2 — Co-Architect note (DISPLAY-ONLY, static copy). Pairs with the
-                   "01 / PRIMARY TIMELINE" header relabel in the Shape area to make clear
-                   the Shape treats the household as one (primary-only) for now. No derived
-                   values, no date/age conversion, no payload. -->
-              <div id="co-arch-note" style="font-family:var(--font-serif);font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px;">We see your Co-Architect. For now your Shape treats you as one household; per-person precision arrives as you draft your Estate.</div>
-            </div>
-
+            <button class="architect-complete-profile plan-config-cta" type="button" data-begin-blueprint disabled aria-label="Begin blueprint and lay the foundation">
+              <span class="architect-complete-title">Begin Blueprint</span>
+              <span class="architect-complete-sub">Lay the Foundation</span>
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- 00 / Sketch Inputs: Sketch-style sliders/radios that drive Shape Mode.
-           Seeded from Blueprint draft -> saved Sketch -> Dossier -> defaults.
-           Bidirectionally bound to Profile (pri-dob / target-ret / plan-end-age / eff-tax-rate)
-           on a last-touched-wins basis. -->
-      <div data-phase="data" class="studio-section">
+      <div data-phase="data" class="studio-section" data-profile-port>
+        <div class="section-header-wrapper activity-head-wrap">
+            <button class="activity-head" type="button" onclick="toggleSection('sec-profile', this)">
+                <span class="activity-index">01</span>
+                <span class="activity-name"><strong>Architect Profile</strong><small>Household · timeline · tax profile</small></span>
+                <span class="activity-toggle toggle-icon">+</span>
+            </button>
+        </div>
+        <div id="sec-profile" class="section-content" style="display: block;">
+<!-- ══ PHASE I · DATA — ARCHITECT PROFILE ═══════════════════════════════════════════════════
+     Ported from "Studio Mock.html" (md5 adc0da4ce2140db0988ac9fc978c778b, markers to V110).
+     THE MOCK IS THE SPECIFICATION FOR THE SURFACE; THE LIVE FILE IS THE SPECIFICATION FOR THE
+     BEHAVIOUR — so the classes, layout and copy are the mock's, and the IDS, HANDLERS, OPTION
+     LISTS, tabindex and *-warn HOSTS are live's.
+
+     ⛔ ONE GRID, NOT TWO MODE BLOCKS, AND THAT IS FORCED — NOT A PREFERENCE. The mock renders
+        every primary field TWICE (architect-dob in the solo block, dual-primary-dob in the dual
+        block) and that only works because the two copies carry DIFFERENT IDS. Keeping the live
+        ids means pri-dob can exist ONCE. Two blocks would leave the user typing into a field
+        nothing reads while buildStudioRequest read the hidden copy — the F79 defect exactly —
+        and syncing two copies is a SECOND STORE for one value, which is what the name-field
+        ruling forbade in the same breath. So: one set of inputs, and the SOLO/DUAL difference
+        is carried by a class on the grid. Pixels match the mock; the DOM cannot.
+     ⚠️ Each field therefore carries BOTH label forms: a per-field <label class="architect-solo-label">
+        (the mock's solo idiom) and a shared .architect-row-label (the mock's dual idiom). CSS
+        shows exactly one per mode. Removing either breaks the other mode silently.
+
+     ⛔ THE MOCK'S SELECTS ARE ILLUSTRATIVE, NOT EXHAUSTIVE. It offers five states and four tax
+        rates. Live carries the Dossier-exact 51-state list and six rates. A verbatim port of the
+        options would have DELETED 46 STATES — a data regression wearing a paint change.
+
+     ⭐ THE COLUMN HEADER IS THE NAME FIELD (Captain-ruled). The mock displays "Primary Architect"
+        / "Co-Architect" as styled kickers and simply never made them editable. THE ABSENCE OF AN
+        INPUT IS NOT THE ABSENCE OF A FIELD. They are click-to-edit here and write to the SAME
+        primary-name / co-name the Dossier and the estate wing labels already read — one cell,
+        three surfaces, NO second store (D13). -->
+          <div class="workspace-card architect-profile-card" data-architect-profile>
+            <div class="architect-profile-head">
+              <div><div class="workspace-kicker">Starting conditions</div></div>
+              <div class="household-mode-control">
+                <button class="household-mode-button" type="button" data-co-architect-toggle aria-pressed="false" aria-label="Household profile mode">
+                  <span class="household-mode-state" data-household-mode-label>Solo household</span>
+                </button>
+                <!-- ⚠️ THE CHECKBOX STAYS AND IS THE STORE. #co-arch-toggle has 17 readers in this
+                     file and 19 script/gate files, and F71's pageshow reveal keys on it. The mock's
+                     button is its SURFACE, not its replacement; the button writes here and fires
+                     'change' so every existing listener runs unchanged. -->
+                <!-- ⛔ THE OLD SWITCH IS GONE; THE CHECKBOX IS NOT. #co-arch-toggle is the STORE -
+                     17 readers here, 19 script/gate files, F71's pageshow reveal - so it stays in the
+                     DOM, visually hidden, and the mock's household button is its only surface. A
+                     hidden CONTROL whose state is shown by a visible button is not a hidden VALUE. -->
+                <input type="checkbox" id="co-arch-toggle" class="architect-household-store" tabindex="-1" aria-hidden="true">
+              </div>
+            </div>
+
+            <div class="architect-mode architect-mode-solo open" data-architect-mode>
+              <div class="architect-field-grid architect-field-grid-solo-parity" data-architect-grid>
+
+                <div class="architect-column-headers">
+                  <div class="architect-column-kicker">
+                    <input type="text" id="primary-name" class="architect-name-inline" value="Primary Architect" maxlength="20" aria-label="Primary architect name">
+                  </div>
+                  <div class="architect-column-kicker architect-field-co">
+                    <input type="text" id="co-name" class="architect-name-inline" value="Co-Architect" maxlength="20" aria-label="Co-architect name">
+                  </div>
+                </div>
+
+                <div class="architect-row-label">Date of birth</div>
+                <div class="architect-field">
+                  <label class="architect-solo-label" for="pri-dob">Date of birth</label>
+                  <input type="text" class="architect-input" id="pri-dob" data-field="current_age" value="" placeholder="MM/YYYY" tabindex="11" onfocus="this.select(); window._captureProfileGood &amp;&amp; window._captureProfileGood(this)" oninput="_fmtRetDate(this); _updatePlanEndAge()" onblur="_validatePriDob(this)">
+                  <div id="pri-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
+                </div>
+                <div class="architect-field architect-field-co">
+                  <label class="architect-solo-label" for="co-dob">Date of birth</label>
+                  <input type="text" class="architect-input" id="co-dob" value="" placeholder="MM/YYYY" onfocus="this.select(); window._captureProfileGood &amp;&amp; window._captureProfileGood(this)" oninput="_fmtRetDate(this)" onblur="_validateCoDob(this)">
+                  <div id="co-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
+                </div>
+
+                <div class="architect-row-label">Target retirement date</div>
+                <div class="architect-field">
+                  <label class="architect-solo-label" for="target-ret">Target retirement date</label>
+                  <input type="text" class="architect-input" id="target-ret" data-field="retirement_age" value="" placeholder="MM/YYYY" tabindex="16" onfocus="this.select(); window._captureProfileGood &amp;&amp; window._captureProfileGood(this)" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
+                  <div id="ret-date-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;">Retirement age exceeds 100 — plan capped at age 120.</div>
+                </div>
+                <div class="architect-field architect-field-co">
+                  <label class="architect-solo-label" for="co-ret">Target retirement date</label>
+                  <input type="text" class="architect-input" id="co-ret" value="" placeholder="MM/YYYY" onfocus="this.select(); window._captureProfileGood &amp;&amp; window._captureProfileGood(this)" oninput="_fmtRetDate(this)" onblur="_validateCoRet(this)">
+                  <div id="co-ret-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
+                </div>
+
+                <div class="architect-row-label">Plan through date</div>
+                <div class="architect-field">
+                  <label class="architect-solo-label" for="plan-end-age">Plan through date</label>
+                  <input type="text" class="architect-input" id="plan-end-age" value="" placeholder="MM/YYYY" tabindex="17" title="The date through which your retirement plan is modeled (the slider is the source of truth)." onfocus="this.select()" oninput="_fmtRetDate(this)" onblur="window._commitPlanEndDate &amp;&amp; window._commitPlanEndDate(this)">
+                  <div id="plan-end-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
+                </div>
+                <div class="architect-field architect-field-co">
+                  <label class="architect-solo-label" for="co-plan-end">Plan through date</label>
+                  <input type="text" class="architect-input" id="co-plan-end" value="" placeholder="MM/YYYY" onfocus="this.select()" oninput="_fmtRetDate(this)">
+                  <div id="co-plan-end-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
+                </div>
+
+
+                <div class="architect-row-label">Gross annual salary</div>
+                <div class="architect-field">
+                  <label class="architect-solo-label" for="pri-salary">Gross annual salary</label>
+                  <input type="text" class="architect-input curr-format value-money" id="pri-salary" value="" placeholder="$0" tabindex="13" oninput="updateSalaryTT('pri'); calculateUpkeepLoad(); updateAnalysisText();">
+                  <div class="salary-tooltip" id="pri-salary-tt"></div>
+                </div>
+                <div class="architect-field architect-field-co">
+                  <label class="architect-solo-label" for="co-salary">Gross annual salary</label>
+                  <input type="text" class="architect-input curr-format value-money" id="co-salary" value="" placeholder="$0" oninput="updateSalaryTT('co'); calculateUpkeepLoad(); updateAnalysisText();">
+                  <div class="salary-tooltip" id="co-salary-tt"></div>
+                </div>
+
+                <div class="architect-row-label">Tax rate method</div>
+                <div class="architect-field">
+                  <label class="architect-solo-label" for="pri-tax-method">Tax rate method</label>
+                  <select class="architect-select" id="pri-tax-method" tabindex="18"><option value="" selected>Select method</option><option>Blended estimate</option><option>Effective paid</option><option>Marginal bracket</option><option>Custom</option></select>
+                </div>
+                <div class="architect-field architect-field-co">
+                  <label class="architect-solo-label" for="co-tax-method">Tax rate method</label>
+                  <select class="architect-select" id="co-tax-method"><option value="" selected>Select method</option><option>Blended estimate</option><option>Effective paid</option><option>Marginal bracket</option><option>Custom</option></select>
+                </div>
+
+                <div class="architect-row-label">Tax bracket</div>
+                <div class="architect-field">
+                  <label class="architect-solo-label" for="eff-tax-rate">Tax bracket</label>
+                  <select class="architect-select" id="eff-tax-rate" tabindex="14" onchange="updateAnalysisText()"><option value="" selected>Select tax rate</option><option value="12%">12% bracket</option><option value="22%">22% blended estimate</option><option value="24%">24% bracket</option><option value="32%">32% bracket</option><option value="35%">35% bracket</option><option value="37%">37% bracket</option></select>
+                </div>
+                <div class="architect-field architect-field-co">
+                  <label class="architect-solo-label" for="co-tax-bracket">Tax bracket</label>
+                  <select class="architect-select" id="co-tax-bracket"><option value="" selected>Select tax rate</option><option value="12%">12% bracket</option><option value="22%">22% blended estimate</option><option value="24%">24% bracket</option><option value="32%">32% bracket</option><option value="35%">35% bracket</option><option value="37%">37% bracket</option></select>
+                </div>
+
+                <div class="architect-row-label">Location (tax base)</div>
+                <div class="architect-field">
+                  <label class="architect-solo-label" for="pri-location">Location (tax base)</label>
+                  <select class="architect-select" id="pri-location" tabindex="12"><option value="" selected>Select state</option><option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option></select>
+                </div>
+                <div class="architect-field architect-field-co">
+                  <label class="architect-solo-label" for="co-location">Location (tax base)</label>
+                  <select class="architect-select" id="co-location"><option value="" selected>Select state</option><option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option></select>
+                </div>
+
+                <!-- ⚖️ FILING STATUS IS APPENDED AS THE FINAL ROW AND THE MOCK DOES NOT HAVE IT.
+                     Captain-ruled: married-filing-separately is real, so a joint plan needs the
+                     question. Appended LAST, in the established row pattern, so solo and dual field
+                     order match and toggling the household does not reshuffle the form. NO NEW COPY —
+                     the label and every option are live's own. -->
+                <div class="architect-row-label">Filing status</div>
+                <div class="architect-field">
+                  <label class="architect-solo-label" for="filing-status">Filing status</label>
+                  <select class="architect-select" id="filing-status" tabindex="15"><option value="" selected>Select filing status</option><option>Single / Individual</option><option>Married Filing Jointly</option><option>Married Filing Separately</option><option>Head of Household</option></select>
+                </div>
+                <div class="architect-field architect-field-co">
+                  <label class="architect-solo-label" for="co-filing-status">Filing status</label>
+                  <select class="architect-select" id="co-filing-status"><option value="" selected>Select filing status</option><option>Single / Individual</option><option>Married Filing Jointly</option><option>Married Filing Separately</option><option>Head of Household</option></select>
+                </div>
+
+                <!-- ⚠️ AUTHORED, BANK-LOCKED, VERBATIM, AND IT IS A HOVER - NOT A PARAGRAPH IN THE
+                     FIELD FLOW. Captain-ruled: the sentence belongs ON the Complete Profile button,
+                     and ONLY when a second architect exists. It states a PLANNING HORIZON and
+                     refuses a FORECAST in the same breath, because the engine takes the LATER of two
+                     plan-end ages and models NO survivor transition.
+                     ⛔ IF THE ENGINE EVER STOPS TAKING max(), THIS SENTENCE IS WRONG AND MUST BE
+                        RE-AUTHORED - it is coupled to that line, not decoration beside it.
+                     ⚠️ Solo never renders it: there is no second plan-through age to disclose. -->
+                <div class="architect-complete-wrap full">
+                  <button class="architect-complete-profile full" type="button" aria-label="Complete profile and build Master Suite" aria-describedby="architect-lastsurvivor-note">
+                    <span class="architect-complete-title">Complete Profile</span>
+                    <span class="architect-complete-sub">Build Master Suite</span>
+                  </button>
+                  <div class="architect-lastsurvivor-note" id="architect-lastsurvivor-note" role="tooltip">Your Range runs to the later of your two plan-through ages. It is one household planning to a single horizon &mdash; not a forecast of who outlives whom, and not a survivor&#39;s plan. We don&#39;t model the year a household becomes one person: no change in spending, no change in tax filing, no change in Social Security. Those shifts are real, and this plan does not price them.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ⚠️ #co-arch-fields STAYS, AND IT STILL EARNS ITS NAME. It has SIX consumers -
+                 _applyCoArchVisibility (F71, which derefs it UNGUARDED and would throw if it were
+                 gone), F71's own gate, and four more gate files - and its gate asserts
+                 fields === 'block' EXACTLY. It can no longer wrap the input fields, because in the
+                 mock's paired grid those cells are INTERLEAVED with the row labels
+                 (label, primary, co, label, primary, co) and there is no contiguous run to wrap.
+                 So it holds the co-architect's remaining own content, and F71 toggles it exactly as
+                 it does today: no display value changes, no gate assertion moves.
+                 🔑 THE CO COLUMN IS DRIVEN BY THE GRID'S MODE CLASS INSTEAD - set in the same
+                    display-only, idempotent function, which is precisely what F71 says it is for.
+                 ⚠️ Its gate leg is now named slightly wider than what it guards ("the fields are
+                    revealed" when it watches the co-architect BLOCK). That is stale prose, it is
+                    real, and it is flagged rather than renamed here - renaming another gate's
+                    assertion is its own cause. -->
+            <div id="co-arch-fields" style="display:none;">
+              <!-- P8.2 — Co-Architect note (DISPLAY-ONLY, static copy). Kept verbatim; _p82's
+                   leg (3d) asserts this string and (3a)/(3b) the header relabel it pairs with. -->
+              <div id="co-arch-note" style="font-family:var(--font-serif);font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px;">We see your Co-Architect. For now your Shape treats you as one household; per-person precision arrives as you draft your Estate.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+<div data-phase="data" class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-sketch', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>01 / Sketch Inputs</span> <span class="toggle-icon">+</span>
+                <span>Sketch Inputs</span> <span class="toggle-icon">+</span>
             </button>
             <button class="pin-btn" onclick="togglePin('sec-sketch', this)" title="Pin section open">📌</button>
         </div>
@@ -5359,6 +5486,25 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     function _applyCoArchVisibility() {
       var on = !!coToggle.checked;
       coArchFields.style.display = on ? 'block' : 'none';
+      /* THE CO COLUMN. The paired grid interleaves its cells (label, primary, co, label, ...),
+         so there is no contiguous run for #co-arch-fields to wrap and the second column has to be
+         driven by a class instead. This is display-only and idempotent -- exactly what this
+         function already promises -- and it changes NO display VALUE, so F71's gate assertion
+         (fields === 'block') is untouched. */
+      var _agrid = document.querySelector('[data-architect-grid]');
+      if (_agrid) {
+        _agrid.classList.toggle('architect-field-grid-paired', on);
+        _agrid.classList.toggle('architect-field-grid-solo-parity', !on);
+      }
+      var _amode = document.querySelector('[data-architect-mode]');
+      if (_amode) {
+        _amode.classList.toggle('architect-mode-dual', on);
+        _amode.classList.toggle('architect-mode-solo', !on);
+      }
+      var _hlabel = document.querySelector('[data-household-mode-label]');
+      if (_hlabel) _hlabel.textContent = on ? 'Dual household' : 'Solo household';
+      var _hbtn = document.querySelector('[data-co-architect-toggle]');
+      if (_hbtn) _hbtn.setAttribute('aria-pressed', on ? 'true' : 'false');
       var _ssStrat = document.getElementById('ss-co-arch-strategy');
       var _ssEst   = document.getElementById('ss-co-arch-estimates');
       if (_ssStrat) _ssStrat.style.display = on ? 'block' : 'none';
@@ -5373,6 +5519,16 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       });
     }
     window._applyCoArchVisibility = _applyCoArchVisibility;   // gate seam
+
+    /* The mock's household button is the SURFACE of #co-arch-toggle, never its replacement.
+       It writes the checkbox and dispatches 'change', so every existing listener -- the reveal,
+       the account destruction on the off-branch, the seed path -- runs exactly as it does when
+       the switch itself is clicked. ONE STORE, TWO WAYS TO REACH IT. */
+    var _hbtnEl = document.querySelector('[data-co-architect-toggle]');
+    if (_hbtnEl) _hbtnEl.addEventListener('click', function () {
+      coToggle.checked = !coToggle.checked;
+      coToggle.dispatchEvent(new Event('change', { bubbles: true }));
+    });
 
     coToggle.addEventListener('change', () => {
       _applyCoArchVisibility();
