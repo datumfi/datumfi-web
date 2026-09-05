@@ -68,7 +68,28 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
 /* THE CONTRACT — a mirror of the product's own markup, never an independent opinion. If a section
    moves phase, the data-phase attribute moves and THIS TABLE must move with it, loudly. */
 const EXPECT = [
-  { id: 'data',         label: 'PHASE I — DATA',           secs: ['00 / Architect Profile', '01 / Sketch Inputs'], next: 'Next: ARCHITECTURE' },
+  /* ⚡ POST-RULING CONTRACT — PROMPT #827 (§82.1609/§82.1610). Reconciled to a RULING, not to a symptom.
+     THE RULING: the Captain struck the numeric index when he confirmed the mock hides .activity-index;
+     the cause-1 port renamed the DATA headers to .activity-head/.activity-name in consequence, and
+     styles/profile.css:101 ships `.activity-index{display:none}` — the numbers are CARRIED, not shown.
+
+       WAS  ['00 / Architect Profile', '01 / Sketch Inputs']
+       NOW  ['Plan Configuration', 'Architect Profile', 'Sketch Inputs']
+
+     ⛔ THE SELECTOR WAS FIXED FIRST AND THAT ORDER IS THE WHOLE POINT. Before the fix this leg
+     reported ["(unnamed)","(unnamed)","Sketch Inputs"] — it read `.section-tag span`, which the
+     ported headers do not have, so it was reporting sections THAT HAVE NAMES as nameless. Retuning
+     to that reading would have written a DEFECT into the expectation and called it a contract.
+     With the selector reading `.activity-name strong` first, every section resolves to a real name
+     and NONE is genuinely unnamed — so there was no product bug behind it.
+
+     🔑 WHAT THIS LEG STILL PROTECTS, undiminished by the edit: that PHASE I DATA shows EXACTLY
+     these three sections and no others — no leak from another phase, no section that vanished. It
+     is still a NAMED-SET assertion, never a count, so a section swapping identity with one from
+     another room still reds. The edit changed WHICH names are correct; it did not weaken WHETHER
+     names are checked. Plan Configuration is net-new from cause 1 — the set grew 2 → 3, and a gate
+     that had merely been loosened would have been free to shrink instead. */
+  { id: 'data',         label: 'PHASE I — DATA',           secs: ['Plan Configuration', 'Architect Profile', 'Sketch Inputs'], next: 'Next: ARCHITECTURE' },
   { id: 'architecture', label: 'PHASE II — ARCHITECTURE',  secs: ['02 / Estate Drafting — Accounts & Assets'],     next: 'Next: TENSION' },
   { id: 'tension',      label: 'PHASE III — TENSION',      secs: ['03 / Operating Upkeep — Living Expenses'], next: 'Next: UNCERTAINTY' },
   { id: 'uncertainty',  label: 'PHASE IV — UNCERTAINTY',   secs: ['05 / Income Timing — Social Security & Pensions'], next: 'Next: MEASUREMENT' },
@@ -83,8 +104,21 @@ const readAsset = (urlPath) => {
   return fs.readFileSync(f, 'utf8');
 };
 
+/* ⛔ --noboot POISONS TWO SITES, AND THE SECOND ONE IS WHY THIS CONTROL WAS DEAD.
+   MEASURED 2026-09-04: with only the boot line removed, this control returned PASS 7/7 GREEN.
+   `data-room` has FIVE writers in studio-landing.js — 448 and 455 stamp a specific room id, while
+   501 (_studioExitRoom) and 541 (_studioLandingBoot) BOTH stamp the literal 'landing'. The gate
+   walks into a room and back out, so 501 re-stamped what removing 541 had suppressed and the
+   landing looked correctly booted. A ONE-SITE POISON AGAINST A TWO-SITE PROPERTY IS NOT A CONTROL.
+   ⚠️ ITS ABORT GUARD PASSED THE WHOLE TIME AND PROVED THE WRONG THING: the anchor was present once
+   and the server genuinely served the mutated bytes, so the poison DID land. IT LANDED AND DID NOT
+   BITE — proving a poison landed never proves it is the only site producing the behaviour.
+   ⛔ ORDER IS LOAD-BEARING: NOBOOT_T CONTAINS NOBOOT2_T as a substring, so the boot line must be
+   replaced BEFORE the exit re-stamp is counted, or the uniqueness check reads 2 and aborts. */
 const NOBOOT_T = "  if (l && !l.getAttribute('data-room')) l.setAttribute('data-room', 'landing');";
 const NOBOOT_B = "  /* boot removed by --noboot */";
+const NOBOOT2_T = "  l.setAttribute('data-room', 'landing');";
+const NOBOOT2_B = "  /* exit re-stamp removed by --noboot */";
 const LEAK_T = '.studio-layout.view-s2:not([data-room]) .drafting-panel > .studio-section.s2-spotlight { display: block; }';
 const LEAK_B = '.studio-layout.view-s2 .drafting-panel > .studio-section.s2-spotlight { display: block; }';
 
@@ -112,6 +146,9 @@ if (NOBOOT) {
   const n = SERVE_LANDING.split(NOBOOT_T).length - 1;
   if (n !== 1) { console.log(`[phase_rooms] ABORT — --noboot anchor found ${n}x, expected 1. A red-first that did not land proves nothing.`); process.exit(2); }
   SERVE_LANDING = SERVE_LANDING.replace(NOBOOT_T, NOBOOT_B);
+  const n2 = SERVE_LANDING.split(NOBOOT2_T).length - 1;
+  if (n2 !== 1) { console.log(`[phase_rooms] ABORT — --noboot exit-restamp anchor found ${n2}x, expected 1. A red-first that did not land proves nothing.`); process.exit(2); }
+  SERVE_LANDING = SERVE_LANDING.replace(NOBOOT2_T, NOBOOT2_B);
 }
 
 const server = http.createServer((q, r) => {
@@ -181,7 +218,7 @@ const eqSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
 const _vis = eval(VF); return ({
     sections: (() => Array.from(document.querySelectorAll('.drafting-panel > .studio-section'))
       .filter(_vis)
-      .map((e) => { const t = e.querySelector('.section-tag span'); return t ? t.textContent.trim() : '(unnamed)'; }))(),
+      .map((e) => { const t = (e.querySelector('.activity-name strong') || e.querySelector('.section-tag span')); return t ? t.textContent.trim() : '(unnamed)'; }))(),
     landingHeaderShown: (() => { const f = document.querySelector('.s1-header'); return _vis(f); })(),
     phaseRows: document.querySelectorAll('#sl-movements-host .sl-phase').length,
   }); }, VIS_FN);
@@ -200,7 +237,7 @@ const _vis = eval(VF); return ({
       const _vis = eval(VF);
       const vis = Array.from(document.querySelectorAll('.drafting-panel > .studio-section'))
         .filter(_vis)
-        .map((e) => { const t = e.querySelector('.section-tag span'); return t ? t.textContent.trim() : '(unnamed)'; });
+        .map((e) => { const t = (e.querySelector('.activity-name strong') || e.querySelector('.section-tag span')); return t ? t.textContent.trim() : '(unnamed)'; });
       /* ⛔ COUNT THE HEADERS THE USER CAN ACTUALLY SEE. The Captain found the Architecture room
          rendering its phase header TWICE — the room's, then view-s2's legacy .s2-header underneath
          it — and THIS GATE WAS GREEN THROUGHOUT, because it asserted that the room label SAYS the
