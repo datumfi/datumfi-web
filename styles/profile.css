@@ -554,24 +554,6 @@ body.light-mode .plan-config-option:before{background:linear-gradient(90deg,tran
 /* The store, not a control. Visually gone, still in the DOM, still the single source of truth. */
 .architect-household-store{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;margin:-1px;}
 
-/* The last-survivor disclosure is the CTA's HOVER and exists only in dual. */
-.architect-complete-wrap{position:relative;grid-column:1 / -1;}
-.architect-lastsurvivor-note{display:none;}
-.architect-field-grid-paired .architect-complete-wrap:hover .architect-lastsurvivor-note,
-.architect-field-grid-paired .architect-complete-wrap:focus-within .architect-lastsurvivor-note{
-  display:block;position:absolute;left:0;right:0;bottom:calc(100% + 8px);z-index:40;
-  padding:12px 13px;border-radius:5px;
-  border:1px solid rgba(121,222,199,.28);
-  background:linear-gradient(180deg,rgba(8,24,33,.98),rgba(6,19,28,.98));
-  box-shadow:0 14px 30px rgba(0,0,0,.45);
-  font:300 10.5px/1.5 var(--sans);color:#c9d6d9;text-align:left;
-}
-body.light-mode .architect-field-grid-paired .architect-complete-wrap:hover .architect-lastsurvivor-note,
-body.light-mode .architect-field-grid-paired .architect-complete-wrap:focus-within .architect-lastsurvivor-note{
-  border-color:rgba(29,143,118,.26);
-  background:linear-gradient(180deg,#fff,rgba(244,248,244,.97));
-  color:#31464d;box-shadow:0 12px 26px rgba(16,28,36,.10);
-}
 
 /* The DIAMOND. ⛔ The base .activity-toggle rule ported fine; the ROTATE did not, because the mock
    anchors it on `.activity.open .activity-toggle` and bare `.activity` is not one of this port's
@@ -640,3 +622,38 @@ body.light-mode .architect-field-grid-paired .architect-complete-wrap:focus-with
 .architect-field-grid-solo-parity .architect-column-kicker{
   width:calc(50% - 6px);text-align:center;margin:6px auto 12px;
 }
+
+/* ── CAUSE 2 ─────────────────────────────────────────────────────────────────────────────── */
+
+/* A full-width note inside the grid. grid-column:1 / -1 is .architect-row-label's own idiom
+   (mock R5347), so this is the grid's mechanism rather than a new one. Used by the last-survivor
+   disclosure (dual only) and by the section line above the tax block (both modes). */
+[data-profile-port] .architect-span-note{
+  grid-column:1 / -1;margin:2px 0 6px;
+  font:300 10.5px/1.5 var(--sans);color:rgba(177,192,198,.72);
+}
+body.light-mode [data-profile-port] .architect-span-note{color:rgba(77,99,108,.8);}
+[data-profile-port] .architect-section-note{
+  margin-top:10px;padding-top:9px;border-top:1px solid rgba(142,160,168,.14);
+}
+body.light-mode [data-profile-port] .architect-section-note{border-top-color:rgba(52,73,78,.14);}
+
+/* "Recorded, not yet modelled." — the field-level marker on the five that reach nothing.
+   ⚠️ A DISTINCT CLASS ON PURPOSE. The mock kills .architect-field-note in the paired grid with
+      `display:none !important` (R5370). That was a deliberate density decision about the mock's
+      OWN notes; fighting it with another !important would be overruling a design choice rather
+      than working with it. This marker is short, it is required in BOTH modes by §82.1545, and it
+      must stay attached to its own field — so it gets its own name instead. */
+[data-profile-port] .architect-nm-note{
+  margin-top:6px;font:400 8px/1.35 var(--mono);letter-spacing:.06em;text-transform:uppercase;
+  color:rgba(177,192,198,.5);
+}
+body.light-mode [data-profile-port] .architect-nm-note{color:rgba(77,99,108,.62);}
+
+/* Prefilled, and SAYING SO WITHOUT WORDS. No copy is authored for "this was copied from the
+   primary", so the distinction is carried visually and structurally (data-prefilled), and the
+   treatment retires itself the moment the user changes the value. */
+[data-profile-port] [data-prefilled="true"]{
+  border-style:dashed;color:rgba(177,192,198,.78);
+}
+body.light-mode [data-profile-port] [data-prefilled="true"]{color:rgba(77,99,108,.85);}

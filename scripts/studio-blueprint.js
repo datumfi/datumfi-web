@@ -1614,11 +1614,28 @@
     var coSal  = moneyToInt(v('co-salary'));  if (coSal)  bp.profile.co_architect_salary = coSal;
     var coPlan = mmYYYY(v('co-plan-end'));    if (coPlan) bp.profile.co_architect_plan_end_date = coPlan;
 
-    var taxMethod = v('pri-tax-method');   if (taxMethod) bp.tax.method = taxMethod;
-    var coMethod  = v('co-tax-method');    if (coMethod)  bp.tax.co_method = coMethod;
-    var coFiling  = v('co-filing-status'); if (coFiling)  bp.tax.co_filing = coFiling;
-    var coLoc     = v('co-location');      if (coLoc)     bp.tax.co_location = coLoc;
-    var coRate    = parseFloat(String(v('co-tax-bracket')).replace('%', ''));
+    /* ⛔⛔ PROVENANCE GATE — THE THIRD LAW (§82.1616), AND IT ONLY EXISTS BECAUSE TWO SAFE
+       CHANGES MEET HERE. Cause 2 prefills the co-architect's four tax fields from the primary's,
+       only-if-empty, stamped data-prefilled and un-stamped the moment the user edits. That is a
+       fabrication-safe DISPLAY. This block is a fabrication-safe CAPTURE. Together, without the
+       guard below, they are neither: a value the user never gave would be stored as an answer,
+       and data-prefilled IS A DOM ATTRIBUTE THAT IS NEVER PERSISTED — so after ONE round-trip
+       nothing can tell it from a real one. A LIE WITH ITS LABEL REMOVED.
+       🔑 NEITHER CHANGE IS WRONG ALONE. The defect lives on the bridge between them, which is
+          why it appears in no diff of either.
+       ⚠️ THE COST IS AN UNDER-RESTORE AND IT IS NOT EVEN THAT: the prefill is only-if-empty and
+          re-runs on the next load, so a skipped prefill is re-offered rather than lost. IT CAN
+          UNDER-RESTORE; IT CAN NEVER FABRICATE. */
+    var _given = function (id) {
+      var el = (typeof document !== 'undefined') ? document.getElementById(id) : null;
+      if (!el || el.hasAttribute('data-prefilled')) return '';
+      return v(id);
+    };
+    var taxMethod = v('pri-tax-method');        if (taxMethod) bp.tax.method = taxMethod;
+    var coMethod  = _given('co-tax-method');    if (coMethod)  bp.tax.co_method = coMethod;
+    var coFiling  = _given('co-filing-status'); if (coFiling)  bp.tax.co_filing = coFiling;
+    var coLoc     = _given('co-location');      if (coLoc)     bp.tax.co_location = coLoc;
+    var coRate    = parseFloat(String(_given('co-tax-bracket')).replace('%', ''));
     if (!isNaN(coRate) && coRate > 0) bp.tax.co_working_year_effective_rate = coRate / 100;
 
     /* ⛔ THE TAX BLOCK — three controls whose slots ALREADY EXIST and are codec-carried, written
