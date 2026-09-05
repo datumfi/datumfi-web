@@ -178,7 +178,23 @@ async function fillProfile(page, withCo) {
   await page.fill('#pri-dob', '08/1982');
   await page.fill('#target-ret', '03/2035');
   if (withCo) {
-    await page.locator('label.switch:has(#co-arch-toggle) span.slider').click();
+    /* ⚡ POST-RULING SURFACE — PROMPT #827/#828 (§82.1609/§82.1610).
+       THE RULING: the Captain struck the old switches ("still the old toggles"); the cause-1 port
+       replaced this one with the mock's household button and kept #co-arch-toggle as a HIDDEN
+       STORE (studio.html:3482-3493 — 17 readers in that file, 19 script/gate files, and F71's
+       pageshow reveal all key on the checkbox).
+
+         WAS  label.switch:has(#co-arch-toggle) span.slider   <- markup no longer exists
+         NOW  button.household-mode-button[data-co-architect-toggle]
+
+       ⛔ THE GATE WAS A GATE FAULT, NOT A RED, AND THOSE ARE NOT THE SAME THING: it timed out for
+       30s waiting on a selector that cannot ever resolve, so it was reporting the ABSENCE OF ITS
+       OWN CONTROL as though it were a finding about the product. A gate that cannot run is not a
+       red — it is an instrument with nothing to say.
+       🔑 CLICKING THE VISIBLE SURFACE IS THE WHOLE ASSERTION AND IS PRESERVED EXACTLY. This gate
+       exists to prove the REVEAL follows a REAL user click, so setting .checked directly here
+       would prove the handler and not the feature. The surface changed identity; the claim did not. */
+    await page.locator('button.household-mode-button[data-co-architect-toggle]').click();
     await page.waitForTimeout(300);
     await page.fill('#co-dob', '05/1980');
     await page.fill('#co-ret', '05/2035');
