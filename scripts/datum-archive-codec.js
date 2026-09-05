@@ -125,7 +125,23 @@
     var pri = ss.pri_overrides_monthly || {}, sec = ss.sec_overrides_monthly || {};
     var cw = cl.custom_weights;
     return {
-      b: s.blueprint_id || 0, t: s.saved_at || 0,
+      /* ⛔⛔ THE BLUEPRINT'S SCHEMA VERSION, CARRIED — NOT STAMPED (2026-09-05). dBlueprint() used to
+         hard-code `version: '1.0.1'`, which was true when it was written and has been false since
+         1.1.0 shipped. That is NOT this codec's own format version: THAT ALREADY EXISTS as `VERSION`
+         at :42 — the blob's leading character and `v:` in the envelope, validated on decode at :224.
+         Two different things wearing one word.
+         ⛔ AND IT WAS NOT A LABELLING DEFECT. studio-blueprint.js:1381 gates a MIGRATION on
+            `draft.version !== VERSION` that rewrites net_datum_v1 120000 -> 100000 and
+            working_year_effective_rate 0.22 -> 0.20. A blueprint that permanently claims 1.0.1 reads
+            as stale, so a user who genuinely chose a 22% rate could have it silently rewritten to
+            20% — THE PRODUCT OVERWRITING AN ANSWER THE USER GAVE WITH ONE THEY DID NOT.
+         🔑 A STALE VERSION STAMP IS MORE DANGEROUS THAN AN ABSENT ONE: absence reads as unanswered,
+            a frozen stamp ACTIVELY ASSERTS A FALSEHOOD THAT MIGRATION LOGIC OBEYS.
+         ⚠️ HARD-CODING '1.1.0' WOULD HAVE BEEN THE SAME BUG AT A FRESHER VALUE. The value was never
+            the problem; the hard-code was. A pre-`sv` blob decodes to ABSENT, not to a plausible
+            version — we do not know what it held, and old blobs keep today's migrate-once behaviour
+            rather than gaining a fabricated stamp. */
+      b: s.blueprint_id || 0, t: s.saved_at || 0, sv: s.version || 0,
       /* APPENDED for schema 1.1.0 (slots 8-11) — append-only, per the convention documented at
          cSketch below. Slots 0-7 must never be reordered: an old blob is read positionally. */
       P: [p.primary_name || '', p.co_architect_name || '', p.primary_dob || '',
@@ -150,7 +166,7 @@
   function dBlueprint(c) {
     if (!c) return null;
     return {
-      schema: 'DatumFIBlueprintV1', blueprint_id: c.b || null, saved_at: c.t || null, version: '1.0.1',
+      schema: 'DatumFIBlueprintV1', blueprint_id: c.b || null, saved_at: c.t || null, version: _uS(c.sv),
       profile: {
         primary_name: c.P[0], co_architect_name: c.P[1], primary_dob: c.P[2],
         co_architect_dob: c.P[3], target_retirement_date: c.P[4],

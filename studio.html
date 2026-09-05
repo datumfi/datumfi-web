@@ -1600,6 +1600,12 @@
   .plumbing-summary-row { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; margin-bottom: 8px; color: var(--white); text-transform: uppercase;}
   .load-pct { color: var(--danger); font-weight: bold; font-size: 14px;}
   .load-pct.healthy { color: var(--teal-mid); }
+  /* §82.1677 — the THIRD state, and it exists because .load-pct is danger-red BY DEFAULT: dropping
+     .healthy alone would repaint a suppressed figure as an alarm, which is the opposite fabrication.
+     Unknown is muted — never healthy, never alarming. Declared after .healthy so equal specificity
+     resolves to this one when both are somehow present. */
+  .load-pct.unstated { color: var(--ink-soft); font-weight: normal; }
+  .upkeep-load-note { text-transform: none; justify-content: flex-start; font-size: 10px; line-height: 1.4; }
 
   /* Datum Input */
   .datum-group { margin-bottom: 20px; }
@@ -3955,7 +3961,21 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             </div>
             <div class="plumbing-summary-row" style="margin-bottom:0; align-items:center; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px; margin-top:8px;">
               <span>Expense-to-Income Ratio (Overhead vs. Income):</span>
-              <span id="upkeep-load-pct" class="load-pct">0%</span>
+              <!-- §82.1687 — the STATIC default is a claim too. It shipped as a danger-red "0%" for a
+                   figure nothing had computed yet, so the very first paint of a cold Studio asserted a
+                   ratio. It now ships in the SAME suppressed state the JS produces: em-dash, .unstated. -->
+              <span id="upkeep-load-pct" class="load-pct unstated">—</span>
+            </div>
+            <!-- §82.1664 — the adjacent explanation for a SUPPRESSED upkeep load. Hidden whenever the
+                 figure is real; shown only when we have not been told the income. It is a sibling of
+                 the badge rather than its content because the badge is a tight numeric slot.
+                 ⚠️ text-transform is reset ON PURPOSE: .plumbing-summary-row is uppercase (:1600) and
+                    this is a sentence, not a label — inherited it would SHOUT. justify-content too,
+                    since the parent row is space-between and this line has only one child.
+                 Copy is Architect-authored, verbatim; the second clause is deliberately identical to
+                 the cash-flow diagnostic's so it reads as the same product speaking. -->
+            <div class="plumbing-summary-row upkeep-load-note" id="upkeep-load-note" style="display:none;">
+              <span class="lg-muted">Add your income above and your upkeep load appears here. Until then, this figure would be a guess.</span>
             </div>
           </div>
 
@@ -4862,8 +4882,14 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           
           <div class="system-diagnostics" id="hud-diag">
              <div class="diag-row"><span class="v-lbl">System Velocity</span><span class="v-in" id="v-net-val" style="color:var(--white); font-weight:bold;">$0 / YR</span></div>
-             <div class="diag-row"><span class="v-lbl">Expense-to-Income Ratio</span><span class="v-in" id="hud-load-pct" style="color:var(--danger); font-weight:bold;">0%</span></div>
-             <div class="diag-row" id="charity-hud-row" style="display:none;"><span class="v-lbl">Philanthropic Yield</span><span class="v-in" id="hud-charity-val" style="color:var(--gold); font-weight:bold;">$0 (0%)</span></div>
+             <!-- ⚠️ THE HUD TWIN CARRIED ITS OWN RED, INDEPENDENT OF THE .load-pct RULES — a FOURTH
+                  presentation channel on one fabricated figure (the .healthy class, the .load-pct base
+                  red, this inline red, and the JS-written teal). The inline colour is REMOVED rather
+                  than swapped: the suppressing branch sets style.color = "" , so a bare default is the
+                  only value that renders IDENTICALLY to the suppressed state. Colour returns only when
+                  a real figure does. -->
+             <div class="diag-row"><span class="v-lbl">Expense-to-Income Ratio</span><span class="v-in" id="hud-load-pct" style="font-weight:bold;">—</span></div>
+             <div class="diag-row" id="charity-hud-row" style="display:none;"><span class="v-lbl">Philanthropic Yield</span><span class="v-in" id="hud-charity-val" style="color:var(--gold); font-weight:bold;">$0 — add your income for the % —</span></div>
              <div class="diag-row"><span class="v-lbl">Contributions</span><span class="v-in" id="c-mo" style="color:var(--teal-mid); font-weight:bold;">$0 / MO</span></div>
              <div class="diag-row"><span class="v-lbl">Compound Yield</span><span class="v-in" id="ie-mo" style="color:var(--teal-mid); font-weight:bold;">$0 / MO</span></div>
              <div class="diag-row"><span class="v-lbl">Interest Drag</span><span class="v-in" id="ip-mo" style="color:var(--danger); font-weight:bold;">$0 / MO</span></div>
@@ -5809,6 +5835,31 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       { key: 'aspirational',  label: 'Aspirational',          target: '' }
     ];
     function _enteredFreqLabel(f){ return ({ monthly:'/mo', quarterly:'/qtr', annual:'/yr' })[f] || '/mo'; }
+    /* ⛔⛔ ZERO IS AN ANSWER; ABSENCE IS NOT (§82.1664). Four surfaces used to derive a percentage
+     * from `(priSal + coSal) > 0 ? ... : 0`, which conflates "this household earns nothing" with
+     * "we have not been told what this household earns" — and then PRINTED the second one as a
+     * confident 0%. The worst of them added `.healthy` and painted the badge teal, so a user whose
+     * salary we never had was shown CONGRATULATIONS derived from data we do not have (§82.1676).
+     * This is the same predicate shape as `_taxStated` at the cash-flow diagnostic below, which is
+     * the in-repo exemplar for suppressing a section rather than a number — reused, not forked (L48).
+     * ⚠️ isFinite(parseFloat(...)) — NOT `> 0`. A user who genuinely types 0 HAS ANSWERED, and their
+     *    answer must be honoured rather than re-read as silence. Empty parses NaN and is silence.
+     * ⚠️ JOINT MODE NEEDS BOTH (§82.1679). A partial denominator is not randomly wrong, it is wrong
+     *    in the FLATTERING direction — it understates the share of income every expense consumes.
+     *    A number that errs toward reassurance is the most expensive kind, because it is the kind
+     *    nobody questions. Ruled: in joint mode the denominator is complete only when both salaries
+     *    are stated. The co-architect's salary is read ONLY when the toggle is on, exactly as every
+     *    other consumer of it does (§8.4b). */
+    function _salaryStated(){
+      var pri = document.getElementById('pri-salary');
+      if (!pri || !isFinite(parseFloat(String(pri.value || '').replace(/[^0-9.]/g, '')))) return false;
+      var coT = document.getElementById('co-arch-toggle');
+      if (coT && coT.checked) {
+        var co = document.getElementById('co-salary');
+        if (!co || !isFinite(parseFloat(String(co.value || '').replace(/[^0-9.]/g, '')))) return false;
+      }
+      return true;
+    }
     function _esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function _ledgerFlags(it){
       var f = [];
@@ -5848,8 +5899,18 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       var coSal = 0; var coT = document.getElementById('co-arch-toggle');
       if (coT && coT.checked) coSal = parseInt(((document.getElementById('co-salary') || {}).value || '').replace(/[^0-9.]/g, ''), 10) || 0;
       var moInc = (priSal + coSal) / 12;
-      var needsPct = moInc > 0 ? Math.round(essMo / moInc * 100) : 0;
-      var wantsPct = moInc > 0 ? Math.round(disMo / moInc * 100) : 0;
+      /* §82.1664 — the ratio row already contained its own cure. `Savings (target 20%)` prints an
+         em-dashed muted note while Needs and Wants fabricated 0% two spans to its left. Same host,
+         same class, same framing (L48) — with ONE authored difference: Savings is UNWIRED, these
+         two are UNKNOWN-INPUT. "Not built yet" and "we do not know your income" are different
+         promises. The `(target 50%)` / `(target 30%)` labels STAY: a target is a stated standard,
+         not a computed claim, and it remains true whether or not we know the income. */
+      var _salKnown = _salaryStated();
+      var needsPct = _salKnown && moInc > 0 ? Math.round(essMo / moInc * 100) : 0;
+      var wantsPct = _salKnown && moInc > 0 ? Math.round(disMo / moInc * 100) : 0;
+      var _ratioUnknown = '<em class="lg-muted">— add your income to see this —</em>';
+      var _needsCell = _salKnown ? (needsPct + '%') : _ratioUnknown;
+      var _wantsCell = _salKnown ? (wantsPct + '%') : _ratioUnknown;
       var period = PERIOD_SUFFIX[window._displayPeriod] || '/mo';
       var pds = ['weekly','biweekly','monthly','annual','daily'];
       var toggle = '<div class="ledger-period-toggle" role="group" aria-label="Display period">'
@@ -5868,8 +5929,8 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       body += _ledgerGroup('Giving', '', charityItems);   // ruling (iv): own group, distinct from Wants
       body += '</tbody><tfoot>'
         + '<tr class="lg-grand"><td colspan="2">Grand Total (canonical monthly)</td><td class="lg-disp">' + _fmtPeriod(monthlyTotal) + '</td><td colspan="2"></td></tr>'
-        + '<tr class="lg-ratio"><td colspan="5"><span class="lg-muted">Needs (target 50%)</span> ' + needsPct + '%'
-        + ' &nbsp;·&nbsp; <span class="lg-muted">Wants (target 30%)</span> ' + wantsPct + '%'
+        + '<tr class="lg-ratio"><td colspan="5"><span class="lg-muted">Needs (target 50%)</span> ' + _needsCell
+        + ' &nbsp;·&nbsp; <span class="lg-muted">Wants (target 30%)</span> ' + _wantsCell
         + ' &nbsp;·&nbsp; <span class="lg-muted">Savings (target 20%)</span> <em class="lg-muted">— pending accounts wiring (U4+) —</em></td></tr>'
         + '</tfoot></table>';
       var foot = '<div class="ledger-foot"><span class="lg-muted" style="font-family:var(--font-mono);font-size:10px;">Add or edit expenses in Split — they appear here instantly (inline editing comes with the Sheet overhaul).</span>'
@@ -6014,23 +6075,48 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         let monthlyGrossIncome = (priSal + coSal) / 12;
         let loadPct = 0;
         let charPct = 0;
-        if(monthlyGrossIncome > 0) {
+        const _salKnown = _salaryStated();
+        if(_salKnown && monthlyGrossIncome > 0) {
             loadPct = Math.round((totalUpkeep / monthlyGrossIncome) * 100);
             charPct = Math.round((totalCharity / monthlyGrossIncome) * 100);
         }
-        
+
         const pctEl = document.getElementById('upkeep-load-pct');
         const hudPctEl = document.getElementById('hud-load-pct');
-        
-        if(pctEl) pctEl.innerText = loadPct + '%';
-        if(hudPctEl) hudPctEl.innerText = loadPct + '%';
+        const noteEl = document.getElementById('upkeep-load-note');
+
+        /* ⛔ A SINGLE EM-DASH, AND THAT IS DELIBERATE: this badge is a tight numeric slot and a
+           sentence would wrap or truncate, which is worse than either. The explanation goes
+           ADJACENT (#upkeep-load-note), never inside. The HUD twin at :4865 is a compact
+           diagnostics rail and carries the em-dash ALONE for the same reason. */
+        if(pctEl) pctEl.innerText = _salKnown ? (loadPct + '%') : '—';
+        if(hudPctEl) hudPctEl.innerText = _salKnown ? (loadPct + '%') : '—';
+        if(noteEl) noteEl.style.display = _salKnown ? 'none' : '';
 
         if(pctEl) {
-            if(loadPct < 50) {
+            /* ⛔⛔ COLOUR IS A CLAIM, AND SO IS A CSS CLASS (§82.1677). Suppressing the number while
+               leaving its presentation channels lit is not suppression — it is the same claim in a
+               different medium. Until 2026-09-05 a destroyed salary fabricated loadPct = 0, which
+               is < 50, which ADDED `.healthy` and painted the HUD teal: not a wrong number, an
+               affirmative statement that the user is doing well, derived from data we do not have.
+               ⚠️ AND REMOVING `.healthy` IS NOT ENOUGH. `.load-pct` is var(--danger) BY DEFAULT
+                  (:1601) with `.healthy` as the override, so dropping the class alone would repaint
+                  the em-dash ALARM RED — the opposite fabrication. Unknown is MUTED: never healthy,
+                  never alarming. `.unstated` wins on specificity; the inline colour is CLEARED so
+                  the HUD twin inherits rather than keeping whichever colour it last held.
+               🔑 The suppression is complete only when the surface is indistinguishable from one
+                  that has never been evaluated. */
+            if(!_salKnown) {
+                pctEl.classList.remove('healthy');
+                pctEl.classList.add('unstated');
+                if(hudPctEl) hudPctEl.style.color = "";
+            } else if(loadPct < 50) {
+                pctEl.classList.remove('unstated');
                 pctEl.classList.add('healthy');
                 if(hudPctEl) hudPctEl.style.color = "var(--teal-mid)";
             } else {
                 pctEl.classList.remove('healthy');
+                pctEl.classList.remove('unstated');
                 if(hudPctEl) hudPctEl.style.color = "var(--danger)";
             }
         }
@@ -13413,10 +13499,21 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       let priSal = parseInt(document.getElementById('pri-salary').value.replace(/[^0-9.]/g, ''), 10) || 0;
       let coSal = document.getElementById('co-arch-toggle').checked ? (parseInt(document.getElementById('co-salary').value.replace(/[^0-9.]/g, ''), 10) || 0) : 0;
       let grossAnnual = priSal + coSal;
-      let charPct = grossAnnual > 0 ? Math.round((totalCharityAnnual / grossAnnual) * 100) : 0;
-      
+      /* ⚠️⚠️ SUPPRESS ONLY THE HALF WE DO NOT KNOW, AND READ THE ASYMMETRY — IT IS THE POINT.
+         This one string carries BOTH states §82.1664 distinguishes. The DOLLAR figure is not
+         fabricated: giving of $0/mo is a real answer from real data (no charity lines entered), and
+         removing a true figure is its own dishonesty. Only the PERCENTAGE is fabricated, because it
+         is charity ÷ an unknown gross. So the $ stays and the % goes.
+         ⛔ The row's own hidden-when-empty behaviour (#charity-hud-row) is UNTOUCHED — this branch
+            only governs what the row says when it is already shown. */
+      let _salKnownCh = _salaryStated();
+      let charPct = (_salKnownCh && grossAnnual > 0) ? Math.round((totalCharityAnnual / grossAnnual) * 100) : 0;
+
       let charHudVal = document.getElementById('hud-charity-val');
-      if(charHudVal) charHudVal.innerText = `$${Math.round(displayCharity).toLocaleString('en-US')} ${tfLabel} (${charPct}%)`;
+      if(charHudVal) {
+        let _charAmt = `$${Math.round(displayCharity).toLocaleString('en-US')} ${tfLabel}`;
+        charHudVal.innerText = _salKnownCh ? `${_charAmt} (${charPct}%)` : `${_charAmt} — add your income for the % —`;
+      }
 
       // S2.3 — estate SVG drawing extracted to scripts/datum-estate.js (WATCH-A). Pure render;
       // capital-authority (G5 below) + HUD writes (above) stay here. Closure severed via ctx.

@@ -1,0 +1,214 @@
+'use strict';
+/* SALARY-UNSTATED SUPPRESSION GATE (real page) — "we do not know" must not print as a number.
+ *
+ * ⛔ WHAT THIS EXISTS TO STOP. Four surfaces derived a percentage from `(priSal + coSal) > 0 ? ... : 0`,
+ * which conflates "this household earns nothing" with "we have not been told what it earns" and then
+ * prints the second one as a confident 0% — needs% and wants% in the Living Ledger, the Operating
+ * Upkeep load badge and its HUD twin, and charity-as-%-of-gross.
+ * ⛔⛔ AND THE LOAD BADGE DID WORSE THAN PRINT A WRONG NUMBER. loadPct fabricated as 0 is < 50, which
+ *     added `.healthy` and painted the HUD teal: AN AFFIRMATIVE STATEMENT THAT THE USER IS DOING WELL,
+ *     DERIVED FROM DATA WE DO NOT HAVE (§82.1676). Colour is a claim and so is a CSS class (§82.1677),
+ *     so the suppression is complete only when the surface is INDISTINGUISHABLE FROM ONE THAT HAS
+ *     NEVER BEEN EVALUATED — text, class AND inline colour.
+ *
+ * ⭐ THE POSITIVE ARMS ARE NOT DECORATION, THEY ARE THE PROOF. A gate that only checks "blank salary
+ *    suppresses" passes just as happily over code that suppresses ALWAYS. L3/L4 type a real salary and
+ *    require the real percentages BACK, so both verdicts are reachable in one run (§82.1662).
+ *
+ * ⚠️ ZERO IS AN ANSWER (§82.1664). L6 types a literal 0 and requires the predicate to treat it as
+ *    ANSWERED, not as silence. A guard written as `> 0` would pass every other leg in this file and
+ *    fail only this one — which is exactly why it is here.
+ *
+ * ⚠️ JOINT MODE NEEDS BOTH SALARIES (§82.1679). L5 fills the primary, enables the co-architect, leaves
+ *    the co-salary blank, and requires suppression ANYWAY: a partial denominator is not randomly
+ *    wrong, it is wrong in the flattering direction.
+ *
+ * MUTATIONS — both rewrite THE PRODUCT, served through page.route, not the harness:
+ *   --refab   strips the `_salKnown &&` terms so the surfaces fabricate 0% again. Expect L1/L2 RED
+ *             (and L5), L3/L4 GREEN — the fabrication returns, the real path is untouched.
+ *   --reteal  keeps the text suppression but restores the OLD colour branch, so an unknown load is
+ *             painted healthy/teal again. Expect ONLY L1c RED — the narrowest possible signature,
+ *             proving the colour channel is asserted SEPARATELY from the text.
+ *   Each anchor must match EXACTLY ONCE; a zero-match replace would run the unmutated page and
+ *   report a green that proves nothing (§82.1628).
+ *
+ * Serve repo root on :8001 (the suite runner binds it), then: node scripts/_gate_salary_unstated_suppressed.js
+ */
+const fs = require('fs');
+const path = require('path');
+const { chromium } = require('playwright');
+
+const REFAB = process.argv.includes('--refab');
+const RETEAL = process.argv.includes('--reteal');
+const ROOT = path.resolve(__dirname, '..');
+const URL = 'http://127.0.0.1:8001/studio.html';
+
+let pass = 0, fail = 0; const lines = [];
+const ok = (c, m) => { if (c) { pass++; lines.push('  PASS  ' + m); } else { fail++; lines.push('  FAIL  ' + m); } return c; };
+
+const NOTE = 'Add your income above and your upkeep load appears here.';
+const RATIO_NOTE = '— add your income to see this —';
+
+function mutate(src) {
+  const swaps = [];
+  if (REFAB) {
+    swaps.push([
+      'var needsPct = _salKnown && moInc > 0 ? Math.round(essMo / moInc * 100) : 0;',
+      'var needsPct = moInc > 0 ? Math.round(essMo / moInc * 100) : 0;']);
+    swaps.push([
+      'var _needsCell = _salKnown ? (needsPct + \'%\') : _ratioUnknown;',
+      'var _needsCell = needsPct + \'%\';']);
+    swaps.push([
+      'var _wantsCell = _salKnown ? (wantsPct + \'%\') : _ratioUnknown;',
+      'var _wantsCell = wantsPct + \'%\';']);
+    swaps.push([
+      'if(pctEl) pctEl.innerText = _salKnown ? (loadPct + \'%\') : \'—\';',
+      'if(pctEl) pctEl.innerText = loadPct + \'%\';']);
+    swaps.push([
+      'if(hudPctEl) hudPctEl.innerText = _salKnown ? (loadPct + \'%\') : \'—\';',
+      'if(hudPctEl) hudPctEl.innerText = loadPct + \'%\';']);
+    swaps.push([
+      'if(noteEl) noteEl.style.display = _salKnown ? \'none\' : \'\';',
+      'if(noteEl) noteEl.style.display = \'none\';']);
+    swaps.push([
+      'if(_salKnown && monthlyGrossIncome > 0) {',
+      'if(monthlyGrossIncome > 0) {']);
+  }
+  if (RETEAL) {
+    swaps.push([
+      '            if(!_salKnown) {\n                pctEl.classList.remove(\'healthy\');\n                pctEl.classList.add(\'unstated\');\n                if(hudPctEl) hudPctEl.style.color = "";\n            } else if(loadPct < 50) {',
+      '            if(loadPct < 50) {']);
+  }
+  for (const [from, to] of swaps) {
+    const n = src.split(from).length - 1;
+    if (n !== 1) {
+      console.log('⛔ MUTATION ANCHOR MATCHED ' + n + ' TIMES, EXPECTED EXACTLY 1 — the mutation did not '
+        + 'land, so any verdict below would be meaningless.\n    anchor: ' + from.slice(0, 80).replace(/\n/g, ' '));
+      process.exit(1);
+    }
+    src = src.split(from).join(to);
+  }
+  return src;
+}
+
+(async () => {
+  const browser = await chromium.launch();
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  const errs = []; page.on('pageerror', (e) => errs.push(e.message));
+
+  const MUTATING = REFAB || RETEAL;
+  if (MUTATING) {
+    const raw = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+    const body = mutate(raw);
+    await page.route('**/studio.html', (r) => r.fulfill({ status: 200, contentType: 'text/html', body }));
+  }
+
+  await page.goto(URL, { waitUntil: 'networkidle' });
+  await page.evaluate(() => { try { localStorage.clear(); sessionStorage.clear(); } catch (e) {} });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('#studio-layout', { timeout: 10000 });
+  await page.waitForTimeout(400);
+
+  /* Drive the PRODUCT'S OWN PATH: set .value then dispatch a real `input` event so studio.html's own
+     `oninput="... calculateUpkeepLoad(); updateAnalysisText();"` runs. Calling the functions directly
+     would prove the handler, not the feature (§ direct-call law). */
+  const setSalary = (id, v) => page.evaluate(([i, val]) => {
+    const el = document.getElementById(i);
+    el.value = val;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    if (window.renderLedger) window.renderLedger();
+  }, [id, v]);
+
+  const setCoArch = (on) => page.evaluate((flag) => {
+    const t = document.getElementById('co-arch-toggle');
+    if (!t) return false;
+    if (t.checked !== flag) { t.checked = flag; t.dispatchEvent(new Event('change', { bubbles: true })); }
+    if (window.calculateUpkeepLoad) window.calculateUpkeepLoad();
+    if (window.renderLedger) window.renderLedger();
+    return true;
+  }, on);
+
+  const read = () => page.evaluate(() => {
+    const pct = document.getElementById('upkeep-load-pct');
+    const hud = document.getElementById('hud-load-pct');
+    const note = document.getElementById('upkeep-load-note');
+    const led = document.getElementById('upkeep-ledger');
+    return {
+      pctText: pct ? pct.innerText.trim() : null,
+      pctClass: pct ? pct.className : null,
+      hudText: hud ? hud.innerText.trim() : null,
+      hudColor: hud ? (hud.style.color || '') : null,
+      /* ⚠️ NOT offsetParent. MEASURED 2026-09-05, and it cost a false pass in BOTH directions: the
+         Operating Upkeep room is a `studio-section` that is `display:none` until that room is opened,
+         so on a cold Studio offsetParent is null NO MATTER WHAT THIS CODE DOES. The suppressed arm
+         read "hidden" and FAILED honestly; the positive arm read "hidden" and PASSED VACUOUSLY —
+         the same wrong measurement, once visible and once invisible. What this gate owns is the
+         note's OWN display decision; which room is on screen belongs to the phase-room gates.
+         🔑 A leg that can only be satisfied by another feature's state is measuring that feature. */
+      noteOwnDisplay: note ? (note.style.display === 'none' ? 'none' : (getComputedStyle(note).display || '')) : null,
+      ledger: led ? led.innerText : '',
+      exists: { pct: !!pct, hud: !!hud, note: !!note, led: !!led,
+                pri: !!document.getElementById('pri-salary'), co: !!document.getElementById('co-salary') }
+    };
+  });
+
+  /* ── L0 EXISTENCE — a "does not print X" leg passes trivially when its subject is absent ── */
+  const e0 = (await read()).exists;
+  ok(e0.pct && e0.hud && e0.note && e0.led && e0.pri && e0.co,
+    'L0 EXISTENCE every subject is present — ' + JSON.stringify(e0));
+
+  /* ── L1/L2 SALARY BLANK -> suppressed on every channel ── */
+  await setSalary('pri-salary', '');
+  await page.evaluate(() => { if (window.calculateUpkeepLoad) window.calculateUpkeepLoad(); if (window.renderLedger) window.renderLedger(); });
+  const blank = await read();
+  ok(blank.pctText === '—', 'L1a blank salary -> load badge reads an em-dash, not a percentage (got ' + JSON.stringify(blank.pctText) + ')');
+  ok(blank.hudText === '—', 'L1b blank salary -> the HUD twin reads an em-dash too (got ' + JSON.stringify(blank.hudText) + ')');
+  ok(/\bunstated\b/.test(blank.pctClass || '') && !/\bhealthy\b/.test(blank.pctClass || '') && blank.hudColor === '',
+    'L1c COLOUR IS A CLAIM — unknown is muted: .unstated present, .healthy absent, inline colour cleared '
+    + '(class=' + JSON.stringify(blank.pctClass) + ' hudColor=' + JSON.stringify(blank.hudColor) + ') [BITE reteal]');
+  ok(blank.noteOwnDisplay !== 'none', 'L1d the adjacent explanation is SHOWN (its own display) while the figure is suppressed — got ' + JSON.stringify(blank.noteOwnDisplay));
+  ok(blank.ledger.indexOf(RATIO_NOTE) >= 0, 'L2a blank salary -> the ledger ratio row carries the authored note');
+  ok(!/Needs \(target 50%\)\s*0%/.test(blank.ledger) && !/Wants \(target 30%\)\s*0%/.test(blank.ledger),
+    'L2b blank salary -> Needs/Wants do NOT print a fabricated 0%');
+
+  /* ── L3/L4 POSITIVE ARM — a real salary must bring the real figures BACK ──
+     Without this, code that suppresses unconditionally would pass every leg above. */
+  await setSalary('pri-salary', '120000');
+  const filled = await read();
+  ok(/^\d+%$/.test(filled.pctText || ''), 'L3a a stated salary restores a real percentage on the badge (got ' + JSON.stringify(filled.pctText) + ')');
+  ok(filled.noteOwnDisplay === 'none', 'L3b the adjacent explanation is HIDDEN once the figure is real — got ' + JSON.stringify(filled.noteOwnDisplay));
+  ok(!/\bunstated\b/.test(filled.pctClass || ''), 'L3c .unstated is removed once the figure is real (class=' + JSON.stringify(filled.pctClass) + ')');
+  ok(filled.ledger.indexOf(RATIO_NOTE) < 0 && /Needs \(target 50%\)\s*\d+%/.test(filled.ledger),
+    'L4 a stated salary restores real Needs/Wants percentages in the ledger');
+
+  /* ── L5 JOINT MODE — the denominator is complete only when BOTH salaries are stated ── */
+  await setCoArch(true);
+  await setSalary('co-salary', '');
+  await page.evaluate(() => { if (window.calculateUpkeepLoad) window.calculateUpkeepLoad(); if (window.renderLedger) window.renderLedger(); });
+  const joint = await read();
+  ok(joint.pctText === '—' && joint.ledger.indexOf(RATIO_NOTE) >= 0,
+    'L5 JOINT with the co-architect salary blank -> still suppressed, because a partial denominator '
+    + 'errs toward reassurance (got ' + JSON.stringify(joint.pctText) + ')');
+
+  /* ── L6 ZERO IS AN ANSWER — a typed 0 is a statement, not silence ── */
+  await setCoArch(false);
+  await setSalary('pri-salary', '0');
+  const zero = await read();
+  ok(zero.pctText !== '—' && zero.noteOwnDisplay === 'none',
+    'L6 a typed 0 is treated as ANSWERED, not as silence — the suppression lifts (got '
+    + JSON.stringify(zero.pctText) + ') [a `> 0` guard fails ONLY here]');
+
+  ok(errs.length === 0, 'L7 no page errors — ' + JSON.stringify(errs.slice(0, 2)));
+
+  await browser.close();
+  console.log('');
+  console.log('SALARY-UNSTATED SUPPRESSION' + (REFAB ? '   [--refab]' : '') + (RETEAL ? '   [--reteal]' : ''));
+  console.log('');
+  lines.forEach((l) => console.log(l));
+  console.log('');
+  console.log('  ' + (fail === 0 ? 'GREEN' : 'RED') + '   pass ' + pass + ' / fail ' + fail);
+  console.log('OVERALL: ' + (fail === 0 ? 'GREEN' : 'RED'));
+  console.log('');
+  process.exit(fail === 0 ? 0 : 1);
+})().catch((e) => { console.log('⛔ GATE THREW: ' + e.message); console.log('OVERALL: RED'); process.exit(1); });

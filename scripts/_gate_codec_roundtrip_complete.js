@@ -63,6 +63,7 @@ const Module = require('module');
 
 const REGAP = process.argv.includes('--regap');
 const DEFAULTED = process.argv.includes('--defaulted');
+const RESTAMP = process.argv.includes('--restamp');
 const CODEC_PATH = path.join(__dirname, 'datum-archive-codec.js');
 
 let pass = 0, fail = 0;
@@ -74,11 +75,16 @@ const ok = (c, m) => { if (c) { pass++; lines.push('  PASS  ' + m); } else { fai
  * safe, and nothing distinguishes "deliberately not carried" from "forgotten". Every entry needs a
  * reason a reader can disagree with. L2 asserts each path really exists, so this list cannot rot
  * quietly into a hole. */
-const EXCLUDE = {
-  'version': 'dBlueprint() stamps the CODEC\'s own format version on decode; it is not user data. '
-           + '⚠️ IT CURRENTLY STAMPS "1.0.1" WHILE THE LIVE SCHEMA IS 1.1.0, so a restored blueprint '
-           + 'reports a version it is not. Raised for a ruling; excluded here rather than silently passed.'
-};
+/* ⭐ EMPTY, AND THAT IS THE STRONGEST STATE IT CAN BE IN: it asserts that NOTHING is deliberately
+ * uncarried. It held one entry until 2026-09-05 — `version`, which dBlueprint() hard-coded to
+ * '1.0.1' — and the honest remedy turned out to be CARRYING the value rather than excusing it, so
+ * the entry dissolved instead of being justified.
+ * ⛔ DO NOT DELETE THIS OBJECT BECAUSE IT IS EMPTY. The mechanism is the instrument: L2 reads it and
+ *    forces the NEXT omission to be DECLARED rather than merely absent. An empty exclusion list is a
+ *    load-bearing assertion, not dead code — deleting it would remove the only thing standing
+ *    between "deliberately not carried" and "forgotten", which is the distinction the append-only
+ *    convention cannot make on its own. */
+const EXCLUDE = {};
 
 /* ── the codec under test, optionally regapped ───────────────────────────────────────────────── */
 function loadCodec(forceRegap) {
@@ -91,6 +97,7 @@ function loadCodec(forceRegap) {
   if (regap) {
     /* post-fix text -> pre-fix text. Each must match EXACTLY ONCE. */
     const swaps = [
+      ['b: s.blueprint_id || 0, t: s.saved_at || 0, sv: s.version || 0,', 'b: s.blueprint_id || 0, t: s.saved_at || 0,'],
       ["T: [tx.filing || 0, tx.location || 0, tx.working_year_effective_rate || 0,\n          tx.method || 0, tx.co_method || 0, tx.co_filing || 0, tx.co_location || 0,\n          tx.co_working_year_effective_rate || 0],",
        "T: [tx.filing || 0, tx.location || 0, tx.working_year_effective_rate || 0],"],
       ["tax: { filing: c.T[0], location: c.T[1], working_year_effective_rate: c.T[2],\n             method: _uS(c.T[3]), co_method: _uS(c.T[4]), co_filing: _uS(c.T[5]),\n             co_location: _uS(c.T[6]), co_working_year_effective_rate: _uN(c.T[7]) },",
@@ -115,6 +122,20 @@ function loadCodec(forceRegap) {
    * the naive defaulting form a reasonable person would reach for, so a pre-1.1.0 blob decodes to a
    * manufactured '' / 0 instead of ABSENT. Must red EXACTLY L5b. Without this, L5b is an unearned
    * pass over a constraint that is only ever satisfied and never tested. */
+  /* --restamp: the pre-2026-09-05 hard-code, written out. dBlueprint() stamps '1.0.1' instead of
+   * carrying the stored version, so a current blueprint reads as stale and re-enters the migration
+   * that rewrites the user's tax rate. Must red EXACTLY L6a + L6b, leaving L6c green — the control
+   * that proves the predicate was not simply unable to fire. */
+  if (RESTAMP) {
+    const a = 'saved_at: c.t || null, version: _uS(c.sv),';
+    const b = "saved_at: c.t || null, version: '1.0.1',";
+    const n = src.split(a).length - 1;
+    if (n !== 1) {
+      console.log('⛔ --restamp ANCHOR MATCHED ' + n + ' TIMES, EXPECTED EXACTLY 1.');
+      process.exit(1);
+    }
+    src = src.split(a).join(b);
+  }
   if (DEFAULTED) {
     const a = "  function _uN(v) { return v === undefined ? undefined : v; }\n"
             + "  function _uS(v) { return v === undefined ? undefined : (v === 0 ? '' : v); }";
@@ -202,9 +223,15 @@ const CONTROL = ['profile.primary_name', 'profile.co_architect_dob', 'profile.pl
     + (unsentinelled.length ? ' — unsentinelled: ' + unsentinelled.join(', ') : ''));
 
   // ── L2 EXCLUSIONS ──
+  /* ⚠️ VACUOUS WHILE THE LIST IS EMPTY, AND IT SAYS SO RATHER THAN BANKING THE PASS. A predicate over
+     an empty set is true; with zero exclusions this leg proves nothing about the codec and is here to
+     bite the day somebody adds an entry. The COUNT is printed so the difference between "checked 3
+     exclusions" and "checked none" is visible in the log instead of inferred from a green. */
+  const exCount = Object.keys(EXCLUDE).length;
   const stale = Object.keys(EXCLUDE).filter((q) => all.indexOf(q) < 0);
   ok(stale.length === 0,
-    'L2 every excluded path exists in the fixture (a stale exclusion is a silent hole)'
+    'L2 every excluded path exists in the fixture — ' + exCount + ' exclusion(s)'
+    + (exCount === 0 ? ' [VACUOUS: nothing is deliberately uncarried, so this leg asserts nothing today]' : '')
     + (stale.length ? ' — stale: ' + stale.join(', ') : ''));
 
   // ── round trip, through the codec's real public entry points ──
@@ -254,6 +281,55 @@ const CONTROL = ['profile.primary_name', 'profile.co_architect_dob', 'profile.pl
     ok(oldCtlLost.length === 0, 'L5c CONTROL — a pre-1.1.0 blob still restores its own keys intact'
       + (oldCtlLost.length ? ' — lost: ' + oldCtlLost.join(', ') : ''));
   }
+
+  /* ── L6 THE MIGRATION RE-TRIGGER — A DATA-REWRITE DEFECT DESERVES AN INSTRUMENT ───────────────
+   * dBlueprint() used to hard-code `version: '1.0.1'`. studio-blueprint.js:1381 gates a MIGRATION on
+   * `draft.version !== VERSION` which rewrites net_datum_v1 120000 -> 100000 and
+   * working_year_effective_rate 0.22 -> 0.20. So a codec-restored blueprint read as STALE and could
+   * silently overwrite a rate the user actually chose.
+   * ⭐ THE PREDICATE IS READ FROM THE PRODUCT, NOT RETYPED. `BP.VERSION` is the same constant
+   *    studio-blueprint.js compares against, so this leg cannot drift from the code it guards — a
+   *    literal '1.1.0' here would go stale exactly the way the hard-code it replaces did. */
+  const MIGRATES = (v) => v !== BP.VERSION;
+  ok(get(got, 'version') === get(slim, 'version'),
+    'L6a the blueprint\'s OWN schema version survives the codec (want ' + JSON.stringify(get(slim, 'version'))
+    + ', got ' + JSON.stringify(get(got, 'version')) + ') [BITE restamp]');
+  const current = JSON.parse(JSON.stringify(slim));
+  current.version = BP.VERSION;
+  const curBack = RealCodec.decodeBlueprintArchive(
+    RealCodec.encodeBlueprintArchive({ slot1: current, slot2: null, slot3: null, slot4: null })).slot1;
+  ok(!MIGRATES(curBack.version),
+    'L6b a CURRENT-version blueprint does NOT re-enter the 1.0.1 migration after a codec round trip '
+    + '(version=' + JSON.stringify(curBack.version) + ' vs product VERSION=' + JSON.stringify(BP.VERSION) + ') [BITE restamp]');
+  /* CONTROL: the leg above must not pass because MIGRATES() can never be true. A pre-`sv` blob has
+   * no version to carry, decodes ABSENT, and MUST still migrate — old behaviour preserved, and proof
+   * that this predicate has both outcomes in one run. */
+  const oldVer = oldSlot ? oldSlot.version : null;
+  ok(MIGRATES(oldVer),
+    'L6c CONTROL — a pre-1.1.0 blob carries no version, decodes ABSENT and STILL migrates '
+    + '(version=' + JSON.stringify(oldVer) + '); the predicate has both outcomes in this run');
+
+  /* ── L7 THE BUDGET'S FIXTURE MUST NOT GO STALE ────────────────────────────────────────────────
+   * The Clerk worst-case budget (blueprint_z < 6000, total <= 8192, shared margin >= 2048) is
+   * asserted in _archive_codec_parity.js against its 65-room fixture — and THAT FIXTURE IS THE
+   * HAND-WRITTEN MIRROR this gate exists because of. If a future schema field is carried by the
+   * codec but never added there, the measured worst case UNDERSTATES the real one and the margin
+   * leg passes over a budget that has actually shrunk. The byte assertion inherits the mirrored
+   * fixture's blindness.
+   * ⇒ This leg does not re-measure the budget; it asserts the budget's fixture still MENTIONS every
+   *   key the live schema mirrors, so the number over there stays trustworthy.
+   * ⚠️ HONEST ABOUT WHAT IT IS: a TEXT tripwire, not a structural assertion — it greps the parity
+   *    gate's source for each key name, so a name appearing only in a comment would satisfy it. It
+   *    is here to catch the FORGOTTEN field, which is the failure that actually happened, not to
+   *    prove the fixture is well-formed. */
+  const parityPath = path.join(__dirname, '_archive_codec_parity.js');
+  const paritySrc = fs.readFileSync(parityPath, 'utf8');
+  const mirrored = leaves(slim, '', []).map((q) => q.split('.').pop());
+  const absent = [...new Set(mirrored)].filter((k) => paritySrc.indexOf(k) < 0);
+  ok(absent.length === 0,
+    'L7 the Clerk-budget fixture in _archive_codec_parity.js still mentions every mirrored key, so its '
+    + 'worst-case margin is measured over the CURRENT schema'
+    + (absent.length ? ' — MISSING: ' + absent.join(', ') : ''));
 
   report();
 
