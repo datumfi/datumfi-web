@@ -133,10 +133,36 @@
          `working_year_effective_rate`, which is why this is a completion rather than a new
          category (§82.1594).
          ⚠️ DECLARED, NOT IMPLIED: co_location is stored honestly and still reaches NOTHING --
-            buildStudioRequest sends location:'FL' as a literal and never reads bp.tax.location,
-            exactly as this file already records for pri-location. Storing it is not claiming it
-            is modelled; the panel says "Recorded, not yet modelled." beside it for that reason. */
-      tax:     { filing: 'Married Filing Jointly', location: 'FL',
+            the engine's CalculateRequest declares no `location` field at all, and buildStudioRequest
+            no longer sends one (the `location:'FL'` literal was deleted 2026-09-05; the comment that
+            used to describe it here outlived the code it described). Storing it is not claiming it
+            is modelled; the panel says "Recorded, not yet modelled." beside it for that reason.
+
+         ⛔⛔ `filing` AND `location` DEFAULT TO EMPTY, AND THAT IS LOAD-BEARING — NOT TIDINESS.
+            The draft restore (studio.html) treats a stored value as a real answer ONLY IF IT
+            DIFFERS FROM THE DEFAULT IT READS FROM THIS OBJECT. So any value that is BOTH a default
+            here AND selectable in its own <select> is an answer the user can never keep: they pick
+            it, we capture it, and the restore drops it because it matched our guess.
+            🔑 MEASURED, NOT ARGUED: `filing` defaulted to 'Married Filing Jointly' — a real option
+               in #filing-status — so choosing it survived capture and vanished on reload, while
+               'Head of Household' survived. THAT CONTRAST WAS THE BUG (the Captain's own household).
+            ⭐ AND THE SEVERITY INVERTS: a default is our best guess at the likeliest answer, so this
+               failed on EXACTLY THE USERS WE GUESSED RIGHT ABOUT. Better defaults, more harm.
+            ⚠️ `location` was never firing only because the schema said 'FL' while the select emits
+               'Florida'. AN ENCODING ACCIDENT IS NOT A GUARD. A tidy-minded "normalise the state
+               encoding" commit would have armed a data-loss defect while reading as a no-op.
+            ⛔ EMPTY IS THE CORRECT DEFAULT AND IT CANNOT FABRICATE: captureDOM writes these keys
+               ONLY when the user actually answered (`if (_fil) ... = _fil`), so '' is never a stored
+               answer, and the restore's `if (_tx.filing && ...)` short-circuits on it. The guard
+               still refuses to write into a select the user never opened — L47 intact, both ways.
+            ⛔ `working_year_effective_rate` DELIBERATELY KEEPS ITS 0.20 AND MUST NOT BE "MADE
+               CONSISTENT" WITH THESE TWO. Unlike them it IS read (studio.html seeds the tax slider
+               from it, and that slider reaches out.taxMult, i.e. the Shape). Emptying it would move
+               money. It escapes the collision on its own terms: no 20% option exists in
+               #eff-tax-rate, and scripts/_gate_answer_survives_reload.js sweeps every option of
+               every profile tax select against every default, so the day one is added it goes red.
+         ⚠️ ANY NEW KEY HERE MUST DEFAULT TO '' / 0 UNLESS SOMETHING READS IT — see that gate. */
+      tax:     { filing: '', location: '',
                  working_year_effective_rate: 0.20,
                  method: '', co_method: '', co_filing: '', co_location: '',
                  co_working_year_effective_rate: 0 },

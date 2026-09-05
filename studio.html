@@ -14545,23 +14545,49 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         if (prof.plan_end_date) { var _pe = document.getElementById('plan-end-age'); if (_pe) _pe.value = prof.plan_end_date; }
 
         /* ⛔⛔ THE TAX SELECTS FAIL TOWARD BLANK, AND THAT IS THE WHOLE DESIGN OF THIS BLOCK.
-           newBlueprint() ships tax defaults FL / Married Filing Jointly / 0.20. captureDOM only
-           overwrites them when the user actually answered, so a user who left Location EMPTY still
-           has 'FL' sitting in the draft — and an UNGUARDED restore would write Florida into a select
-           they never touched, turning today's honest blank into an on-screen fabrication. That would
-           be WORSE than the bug being fixed.
+           captureDOM writes these keys ONLY when the user actually answered, so an UNGUARDED restore
+           would write a SCHEMA DEFAULT into a select the user never opened — turning an honest blank
+           into an on-screen fabrication about where somebody lives, on the screen that decides their
+           tax burden. That would be WORSE than the bug it was fixing.
            🔑 SO A STORED VALUE IS TREATED AS AN ANSWER ONLY IF IT DIFFERS FROM THE SCHEMA DEFAULT.
-           This is the same test the _spend guard above uses against el.defaultValue, and the same one
-           the v1.0.1 migration uses at studio-blueprint.js:1354 (=== 0.22 -> reset). Precedent twice.
-           ⚠ THE COST, STATED: a user who genuinely IS in Florida, genuinely files MFJ, or genuinely
-           picked 20% does not get that one field restored — it returns blank, which is exactly
-           today's behaviour and therefore not a regression. IT CAN UNDER-RESTORE; IT CAN NEVER
-           FABRICATE. A blank is honest, 'Florida' is a lie, and L47 settles which way to fail.
+           Same test the _spend guard above uses against el.defaultValue, and the same one the v1.0.1
+           migration uses in studio-blueprint.js (working_year_effective_rate === 0.22 -> reset).
+           Precedent twice. ⚠ NAMED, NOT NUMBERED — a line reference here goes stale silently.
            ⛔ THE DEFAULTS ARE READ FROM THE LIVE SCHEMA, NEVER PINNED AS LITERALS HERE — a copy of
            'FL' in this file would silently stop matching the day the schema changed, and the guard
-           would fail OPEN into the fabrication it exists to prevent.
-           🔑 THE REAL FIX IS A PROVENANCE FLAG (the Studio cannot tell 'the user told me' from 'I
-           supplied this'); until that exists this is the honest approximation, not the answer. */
+           would fail OPEN into the fabrication it exists to prevent. THAT INDIRECTION IS ALSO WHAT
+           LET THE FIX BELOW LAND WITHOUT TOUCHING THIS BLOCK AT ALL.
+
+           ── ⭐ THE COST THIS BLOCK USED TO CARRY IS PAID (2026-09-05). READ THIS BEFORE ACTING ON
+              THE PARAGRAPH ABOVE. ────────────────────────────────────────────────────────────────
+           ~~"a user who genuinely IS in Florida, genuinely files MFJ, or genuinely picked 20% does
+           not get that one field restored"~~ and ~~"THE REAL FIX IS A PROVENANCE FLAG ... until that
+           exists this is the honest approximation, not the answer."~~ STRUCK, NOT DELETED, so nobody
+           re-derives them. BOTH WERE TRUE WHEN WRITTEN. The first was a MEASURED data-loss defect —
+           picking 'Married Filing Jointly' survived capture and vanished on reload while 'Head of
+           Household' survived — and the second PRESCRIBED A CURE BIGGER THAN THE DISEASE.
+           🔑 THE REMEDY WAS NOT A PROVENANCE FLAG. IT WAS AN EMPTY DEFAULT. `filing` and `location`
+              now default to '' in newBlueprint(), joining the five sibling tax keys that always did.
+              '' can never BE a stored answer (captureDOM's `if (_fil)` guard), so it cannot collide
+              with one, and `if (_tx.filing && ...)` below short-circuits on it. THE GUARD IS
+              UNCHANGED AND STILL LOAD-BEARING: it can still under-restore, it still can never
+              fabricate, and L47 still settles which way to fail. ⛔ DO NOT DELETE IT.
+           ⚠ `working_year_effective_rate` IS DELIBERATELY STILL 0.20 AND MUST NOT BE "MADE
+              CONSISTENT" WITH THE OTHER TWO. Unlike them it IS read — it seeds the tax slider, and
+              that slider reaches out.taxMult, i.e. the Shape's ceiling, floor and datum. EMPTYING IT
+              MOVES MONEY. It avoids the collision on its own terms (no 20% option exists in
+              #eff-tax-rate) and is protected by measurement instead:
+              scripts/_gate_answer_survives_reload.js sweeps EVERY option of EVERY profile tax select
+              against EVERY live schema default, so the day a 20% option is added it goes red.
+           ⚠ AND LOCATION WAS NEVER SAFE, ONLY LUCKY: it escaped solely because the schema said 'FL'
+              while the select emits 'Florida'. A tidy-minded "normalise the state encoding" commit
+              would have ARMED a data-loss defect on every Floridian while reading as a no-op.
+              A DEFECT PREVENTED BY A COINCIDENCE IS NOT PREVENTED, IT IS PENDING. Now defused at the
+              source: there is no default left to collide with.
+           ⛔ THE PROVENANCE PRIMITIVE IS RE-SCOPED, NOT DISCHARGED. It is no longer owed HERE — it is
+              owed by the PREFILL path, which copies the primary's answers into the co-architect's
+              fields and cannot re-copy safely without reading its own `data-prefilled` stamp to tell
+              "we supplied this" from "they answered this". Restore is fixed; the copy is not. */
         var _tx = bp.tax || {};
         var _defTax = {};
         try { _defTax = (window.DatumBlueprint && typeof DatumBlueprint['new'] === 'function') ? (DatumBlueprint['new']().tax || {}) : {}; } catch (_e) { _defTax = {}; }
