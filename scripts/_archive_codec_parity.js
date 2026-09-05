@@ -72,7 +72,20 @@ function slimBlueprint(seed, n) {
       primary_dob: '0' + ((seed % 9) + 1) + ' / 197' + (seed % 9), co_architect_dob: '1' + (seed % 2) + ' / 197' + ((seed + 2) % 9),
       target_retirement_date: '0' + ((seed % 9) + 1) + ' / 203' + (seed % 9),
       co_architect_retirement_date: '1' + (seed % 2) + ' / 204' + (seed % 9),
-      plan_end_age: 90 + seed % 16, co_architect_enabled: (seed % 2 === 0) },
+      plan_end_age: 90 + seed % 16, co_architect_enabled: (seed % 2 === 0),
+      /* ⛔ SCHEMA 1.1.0 (2026-09-05, cause 6). These four and the five tax keys below were ADDED to
+       * the blueprint by 8a59e13 and the codec dropped every one of them silently. THIS GATE STAYED
+       * GREEN THROUGHOUT, because slimBlueprint() is a HAND-WRITTEN MIRROR of the codec's shape: a
+       * fixture authored to match its subject can only test the keys somebody remembered to add.
+       * That is the whole reason _gate_codec_roundtrip_complete.js now DERIVES its fixture from
+       * DatumBlueprint['new']() instead. Adding them here STRENGTHENS this gate — nine more keys
+       * asserted lossless — and nothing previously asserted is relaxed.
+       * ⚠️ WHEN THE SCHEMA GROWS AGAIN, THIS BLOCK WILL BE STALE AND SILENT ABOUT IT. The derived
+       *    gate is the one that will tell you. Do not treat this list as the contract. */
+      plan_end_date: '0' + ((seed % 9) + 1) + ' / 206' + (seed % 9),
+      primary_salary: 120000 + seed * 1117,
+      co_architect_salary: 90000 + seed * 913,
+      co_architect_plan_end_date: '1' + (seed % 2) + ' / 207' + (seed % 9) },
     accounts: accts, contributions_total: Math.round(Math.abs(rnd(seed)) * 180000),
     portfolio_total: Math.round(Math.abs(rnd(seed * 2)) * 8000000),
     ss: { strategy_primary: ['early_62','full_67','optimal_70'][seed % 3], strategy_secondary: ['early_62','full_67','optimal_70'][(seed + 1) % 3],
@@ -81,7 +94,13 @@ function slimBlueprint(seed, n) {
     income: { pension_primary_annual: Math.round(Math.abs(rnd(seed * 3)) * 60000), pension_secondary_annual: Math.round(Math.abs(rnd(seed * 4)) * 40000) },
     climate: { outlook: ['valuations_matter','history_repeats','cautious','optimistic','custom'][seed % 5],
       custom_weights: (seed % 5 === 4) ? { bootstrap: 0.3, parametric: 0.2, regime: 0.25, cape: 0.25 } : null },
-    tax: { filing: ['Married Filing Jointly','Single','Head of Household'][seed % 3], location: ['CA','NY','FL','TX'][seed % 4], working_year_effective_rate: 0.18 + (seed % 20) / 100 },
+    tax: { filing: ['Married Filing Jointly','Single','Head of Household'][seed % 3], location: ['CA','NY','FL','TX'][seed % 4], working_year_effective_rate: 0.18 + (seed % 20) / 100,
+      /* schema 1.1.0 — see the note in `profile` above. */
+      method: ['bracket','effective','estimated'][seed % 3],
+      co_method: ['effective','bracket','estimated'][seed % 3],
+      co_filing: ['Married Filing Jointly','Single','Head of Household'][(seed + 1) % 3],
+      co_location: ['TX','FL','NY','CA'][seed % 4],
+      co_working_year_effective_rate: 0.16 + (seed % 17) / 100 },
     upkeep: { upkeep_total: Math.round(Math.abs(rnd(seed * 5)) * 90000), charity_total: Math.round(Math.abs(rnd(seed * 6)) * 30000) },
     datum: { net_datum_v1: 120000 + seed * 1234, gross_funding_need: 160000 + seed * 1500, derived_from: (seed % 2) ? 'detailed' : 'quick' }
   };

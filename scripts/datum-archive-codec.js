@@ -104,6 +104,20 @@
     if (r[13]) o.volOverride = r[13];
     return o;
   }
+  /* ⛔ ABSENT IS NOT ZERO, AND IT IS NOT A DEFAULT (§82.1668). A blob written before schema 1.1.0
+   * has SHORTER positional arrays, so an appended slot reads `undefined`. That blob genuinely does
+   * not contain the user's salary — and the honest restoration of a value we never stored is
+   * NOTHING. Decoding it to `0` or `''` would manufacture an answer nobody gave and make it
+   * indistinguishable from one they did, which is the §82.1625 mechanism exactly.
+   *   _uN — appended NUMBER slot: missing => undefined (absent), else the number.
+   *   _uS — appended STRING slot: missing => undefined (absent). A present slot holding the
+   *         encoder's `0` is the compression token for "empty", so it restores to '' — that is
+   *         what the store actually held, not a guess.
+   * ⚠️ Slots 0-N of every array predate this and keep their original raw reads: changing them would
+   *    alter how EXISTING blobs decode, which is a different and much larger blast radius. */
+  function _uN(v) { return v === undefined ? undefined : v; }
+  function _uS(v) { return v === undefined ? undefined : (v === 0 ? '' : v); }
+
   function cBlueprint(s) {
     if (!s) return 0;
     var p = s.profile || {}, ss = s.ss || {}, inc = s.income || {},
@@ -112,16 +126,23 @@
     var cw = cl.custom_weights;
     return {
       b: s.blueprint_id || 0, t: s.saved_at || 0,
+      /* APPENDED for schema 1.1.0 (slots 8-11) — append-only, per the convention documented at
+         cSketch below. Slots 0-7 must never be reordered: an old blob is read positionally. */
       P: [p.primary_name || '', p.co_architect_name || '', p.primary_dob || '',
           p.co_architect_dob || '', p.target_retirement_date || '',
-          p.co_architect_retirement_date || '', p.plan_end_age || 0, p.co_architect_enabled ? 1 : 0],
+          p.co_architect_retirement_date || '', p.plan_end_age || 0, p.co_architect_enabled ? 1 : 0,
+          p.plan_end_date || '', p.primary_salary || 0, p.co_architect_salary || 0,
+          p.co_architect_plan_end_date || ''],
       A: (s.accounts || []).map(cAcct),
       ct: s.contributions_total || 0, pt: s.portfolio_total || 0,
       S: [ss.strategy_primary || 0, ss.strategy_secondary || 0,
           pri.v62 || 0, pri.v67 || 0, pri.v70 || 0, sec.v62 || 0, sec.v67 || 0, sec.v70 || 0],
       I: [inc.pension_primary_annual || 0, inc.pension_secondary_annual || 0],
       C: [cl.outlook || 0, cw ? [cw.bootstrap, cw.parametric, cw.regime, cw.cape] : 0],
-      T: [tx.filing || 0, tx.location || 0, tx.working_year_effective_rate || 0],
+      /* APPENDED for schema 1.1.0 (slots 3-7) — the tax METHOD plus the four co-architect mirrors. */
+      T: [tx.filing || 0, tx.location || 0, tx.working_year_effective_rate || 0,
+          tx.method || 0, tx.co_method || 0, tx.co_filing || 0, tx.co_location || 0,
+          tx.co_working_year_effective_rate || 0],
       U: [up.upkeep_total || 0, up.charity_total || 0],
       D: [dt.net_datum_v1 || 0, dt.gross_funding_need || 0, dt.derived_from || 'quick']
     };
@@ -133,7 +154,9 @@
       profile: {
         primary_name: c.P[0], co_architect_name: c.P[1], primary_dob: c.P[2],
         co_architect_dob: c.P[3], target_retirement_date: c.P[4],
-        co_architect_retirement_date: c.P[5], plan_end_age: c.P[6], co_architect_enabled: !!c.P[7]
+        co_architect_retirement_date: c.P[5], plan_end_age: c.P[6], co_architect_enabled: !!c.P[7],
+        plan_end_date: _uS(c.P[8]), primary_salary: _uN(c.P[9]),
+        co_architect_salary: _uN(c.P[10]), co_architect_plan_end_date: _uS(c.P[11])
       },
       accounts: (c.A || []).map(dAcct),
       contributions_total: c.ct, portfolio_total: c.pt,
@@ -145,7 +168,9 @@
       income: { pension_primary_annual: c.I[0], pension_secondary_annual: c.I[1] },
       climate: { outlook: c.C[0], custom_weights: c.C[1]
         ? { bootstrap: c.C[1][0], parametric: c.C[1][1], regime: c.C[1][2], cape: c.C[1][3] } : null },
-      tax: { filing: c.T[0], location: c.T[1], working_year_effective_rate: c.T[2] },
+      tax: { filing: c.T[0], location: c.T[1], working_year_effective_rate: c.T[2],
+             method: _uS(c.T[3]), co_method: _uS(c.T[4]), co_filing: _uS(c.T[5]),
+             co_location: _uS(c.T[6]), co_working_year_effective_rate: _uN(c.T[7]) },
       upkeep: { upkeep_total: c.U[0], charity_total: c.U[1] },
       datum: { net_datum_v1: c.D[0], gross_funding_need: c.D[1], derived_from: c.D[2] }
     };
