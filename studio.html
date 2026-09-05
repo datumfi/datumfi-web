@@ -3520,7 +3520,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                 </div>
                 <div class="architect-field architect-field-co">
                   <label class="architect-solo-label" for="co-dob">Date of birth</label>
-                  <input type="text" class="architect-input" id="co-dob" value="" placeholder="MM/YYYY" onfocus="this.select(); window._captureProfileGood &amp;&amp; window._captureProfileGood(this)" oninput="_fmtRetDate(this)" onblur="_validateCoDob(this)">
+                  <input type="text" class="architect-input" id="co-dob" value="" placeholder="MM/YYYY" onfocus="this.select(); window._captureProfileGood &amp;&amp; window._captureProfileGood(this)" oninput="_fmtRetDate(this); window._mirrorCoPlanEnd &amp;&amp; window._mirrorCoPlanEnd()" onblur="_validateCoDob(this)">
                   <div id="co-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
                 </div>
 
@@ -3567,20 +3567,26 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                   <label class="architect-solo-label" for="pri-salary">Gross annual salary</label>
                   <input type="text" class="architect-input curr-format value-money" id="pri-salary" value="" placeholder="$0" tabindex="13" oninput="updateSalaryTT('pri'); calculateUpkeepLoad(); updateAnalysisText();">
                   <div class="salary-tooltip" id="pri-salary-tt"></div>
-                  <div class="architect-nm-note">Recorded, not yet modelled.</div>
                 </div>
                 <div class="architect-field architect-field-co">
                   <label class="architect-solo-label" for="co-salary">Gross annual salary</label>
                   <input type="text" class="architect-input curr-format value-money" id="co-salary" value="" placeholder="$0" oninput="updateSalaryTT('co'); calculateUpkeepLoad(); updateAnalysisText();">
                   <div class="salary-tooltip" id="co-salary-tt"></div>
-                  <div class="architect-nm-note">Recorded, not yet modelled.</div>
                 </div>
 
                 <!-- ⛔ ONCE, ABOVE THE TAX BLOCK. Authored, bank-locked, verbatim.
                      AN UNCONSUMED INPUT IS NOT A NEUTRAL PLACEHOLDER; IT IS A QUESTION THAT IMPLIES
                      ITS OWN ANSWER MATTERS — and a person hands over a second human's private
                      financial data only because they believe it does. -->
-                <div class="architect-span-note architect-section-note">We record these for your plan&#39;s history and for features still being drawn. Today your Range is driven by the dates and the capital.</div>
+                <!-- ⚠️ ARCHITECT-AUTHORED, VERBATIM, AND TRUE ONLY UNDER A CONDITION. The previous
+                     sentence ended "...driven by the dates and the capital." — false by our own
+                     progress: eff-tax-rate reaches _taxStated AND out.taxMult, which is the Shape's
+                     ceiling, floor and datum. Same disease as the markers it sits above, one level up
+                     and spanning the whole block.
+                     ⛔ THIS LINE IS TRUE ONLY WHILE eff-tax-rate REACHES taxMult AND THE OTHER SEVEN
+                        FIELDS DO NOT. If a further field wires into the Shape, this sentence is wrong
+                        again — IT GOES BACK TO THE ARCHITECT. Do not patch it here. -->
+                <div class="architect-span-note architect-section-note">We record these for your plan&#39;s history and for features still being drawn. Today your Range is driven by the dates, the capital, and the tax bracket you set above.</div>
 
                 <div class="architect-row-label">Tax rate method</div>
                 <div class="architect-field">
@@ -3598,7 +3604,6 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                 <div class="architect-field">
                   <label class="architect-solo-label" for="eff-tax-rate">Tax bracket</label>
                   <select class="architect-select" id="eff-tax-rate" tabindex="14" onchange="updateAnalysisText()"><option value="" selected>Select tax rate</option><option value="12%">12% bracket</option><option value="22%">22% blended estimate</option><option value="24%">24% bracket</option><option value="32%">32% bracket</option><option value="35%">35% bracket</option><option value="37%">37% bracket</option></select>
-                                  <div class="architect-nm-note">Recorded, not yet modelled.</div>
                 </div>
                 <div class="architect-field architect-field-co">
                   <label class="architect-solo-label" for="co-tax-bracket">Tax bracket</label>
@@ -3656,11 +3661,24 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                     revealed" when it watches the co-architect BLOCK). That is stale prose, it is
                     real, and it is flagged rather than renamed here - renaming another gate's
                     assertion is its own cause. -->
-            <div id="co-arch-fields" style="display:none;">
-              <!-- P8.2 — Co-Architect note (DISPLAY-ONLY, static copy). Kept verbatim; _p82's
-                   leg (3d) asserts this string and (3a)/(3b) the header relabel it pairs with. -->
-              <div id="co-arch-note" style="font-family:var(--font-serif);font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px;">We see your Co-Architect. For now your Shape treats you as one household; per-person precision arrives as you draft your Estate.</div>
-            </div>
+            <!-- ⛔⛔ THE CO-ARCHITECT NOTE IS DELETED (2026-09-05), AND IT WENT BECAUSE IT BECAME
+                 FALSE, NOT BECAUSE IT BECAME UNWANTED. It read: "We see your Co-Architect. For now
+                 your Shape treats you as one household; per-person precision arrives as you draft
+                 your Estate." That was TRUE when P8.2 shipped it. f4b0a64 (F67) then made
+                 _coArchitectFacts() send co_architect_age / co_architect_retirement_age /
+                 co_architect_plan_end_age into /api/calculate, and the engine reads a present
+                 co_architect_age as a SECOND PERSON — the single-filer healthcare track is no
+                 longer taken and n_spouses_65plus moves the standard deduction.
+                 🔑 THE PRODUCT STOPPED TREATING THEM AS ONE HOUSEHOLD AND THE SENTENCE SAYING SO
+                    STAYED. A "not yet" note is a claim with an expiry date and nobody watches the
+                    clock: it was falsified NOT BY BEING EDITED but by the product growing around it.
+                 ⚖️ DELETED RATHER THAN RE-AUTHORED — it is a construction marker, and the correct
+                    maintenance of one is its removal.
+                 ⚠️ THE CONTAINER STAYS AND IT IS LOAD-BEARING: _applyCoArchVisibility (F71)
+                    DEREFERENCES #co-arch-fields UNGUARDED and would throw without it, and four gate
+                    files assert fields === 'block'. It is empty today, and an empty container whose
+                    absence throws is not dead markup. DELETE THE NOTE, KEEP THE CONTAINER. -->
+            <div id="co-arch-fields" style="display:none;"></div>
           </div>
 
         </div>
@@ -5631,7 +5649,26 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           exactly what the off-state writes. The change listener above is the only other writer of
           either, so this cannot fight anything.
        Gate: scripts/_gate_coarch_reveal_matches_toggle.js (L1 red on pre-fix bytes). */
-    window.addEventListener('pageshow', function () { _applyCoArchVisibility(); });
+    /* ⛔⛔ ITEM 10 — THE PREFILL WAS BOUND TO THE TRANSITION, NEVER TO THE STATE (Captain-found,
+       2026-09-05). `_prefillCoArchTax()` was called from ONE place: the toggle's own `change`
+       listener. So it fired on solo -> joint and NEVER on arrival. A user who was ALREADY joint —
+       which is EVERY returning user after a reload — got no prefill at all, and toggling to solo
+       and back was the only way to produce it.
+       🔑 THE FEATURE WORKED WHEN DEMONSTRATED AND FAILED WHEN USED, and that is exactly why no gate
+          caught it: any test that TOGGLES in order to reach joint can never observe the defect.
+          THE REPRODUCTION STEPS WERE THE CAMOUFLAGE.
+       ⚠️ IT RIDES pageshow BESIDE THE REVEAL, NOT INSIDE IT. `_applyCoArchVisibility` promises to be
+          display-only and is gated on that promise (F71); folding a field-writing prefill into it
+          would break the contract its own gate asserts. Same event, same idempotence, separate call.
+       ⚠️ SAFE TO REPEAT BY CONSTRUCTION: the prefill is only-if-empty and never overwrites a real
+          answer, so running it on every entry cannot clobber a restored draft.
+       ⭐ AND THIS IS WHAT FINALLY MAKES §82.1626 TRUE. `_given()` buys honesty by DISCARDING a
+          prefilled value rather than persisting it, which was defended on the grounds that a skipped
+          prefill is RE-OFFERED next load. It was not being re-offered — nothing re-ran it. It is now.
+       ⚠️ KNOWN LIMIT, NOT SOLVED HERE: a co-architect field the user DELIBERATELY cleared is
+          indistinguishable from one never answered, so it will be re-offered. That is the missing
+          provenance primitive (queue #2), not a defect in this repair. */
+    window.addEventListener('pageshow', function () { _applyCoArchVisibility(); if (coToggle.checked) _prefillCoArchTax(); });
 
     // --- PLUMBING / UPKEEP LOGIC & CHARITY LOGIC ---
     let upkeepItems = [
@@ -14977,7 +15014,21 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             return { type: ACCOUNT_TYPE_MAP[a.baseId] || a.baseId, balance: a.value || 0, annual_contribution: a.inflow || 0 };
           });
 
-        const body = { current_age: currentAge, retirement_age: retireAge, location: 'FL', datum_spend: datumSpend, market_outlook: outlookValue, ss_strategy_primary: ssStrategy, accounts, plan_end_age: planEndAge };
+        /* ⛔ `location: 'FL'` DELETED (2026-09-05) — HYGIENE, NOT A WIRING CHANGE, AND THE
+           DISTINCTION MATTERS. Measured in the engine's own source: `CalculateRequest`
+           (datum-fi/schemas.py:64) DECLARES NO `location` FIELD, and pydantic's default
+           `extra='ignore'` DISCARDS IT AT THE DOOR — it never became an attribute. State tax is
+           Florida $0 and filing is MFJ by DECLARED V1 DESIGN, bound as module-level numpy constants
+           in engine/tax.py with no parameter to pass.
+           ⇒ REMOVING THIS CHANGES NOTHING THE ENGINE COMPUTES. It removes a line that READ as
+             though location were wired: the next person to grep this payload found the key, assumed
+             a consumer, and stopped looking.
+           🔑 REMOVING A FALSE IMPLICATION IS NOT THE SAME ACT AS SUPPLYING THE TRUTH IT IMPLIED.
+              Location is STILL unmodelled, its "Recorded, not yet modelled." note STAYS, and wiring
+              it is an engine tax-model rewrite — a different arc, not a follow-up to this line.
+           ⚠️ ADDING `co_location` BESIDE IT WOULD HAVE BEEN THE SAME DEFECT TWICE: a second key the
+              receiver drops, making the code read MORE wired while changing nothing. */
+        const body = { current_age: currentAge, retirement_age: retireAge, datum_spend: datumSpend, market_outlook: outlookValue, ss_strategy_primary: ssStrategy, accounts, plan_end_age: planEndAge };
         if (customWeights) body.custom_weights = customWeights;
         /* ⛔ FINDING 67 — tell the engine who actually lives here. Without these keys
            `co_architect_age = None` makes the engine model a SINGLE household while still taxing it
@@ -16550,6 +16601,12 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     // 2A — the sl-plan-through slider is the single PTA-age source; the Profile "Plan Through"
     // field is a DOB-anchored MM/YYYY mirror of it (display) + a typed-date entry (writes back).
     function _mirrorPlanEnd() {
+      /* PARITY RIDES THE SAME TRIGGER SET, ON PURPOSE. _mirrorPlanEnd has SEVEN call sites (the
+         slider, the sketch carry, the hydration handshake, the blur commit, ...). Duplicating the
+         co-architect call across all seven is how a change gets half-shipped — one home instead, so
+         the two derivations cannot drift apart. It runs BEFORE the primary's early returns: the
+         co-architect's date must not depend on whether the PRIMARY has a readable DOB. */
+      _mirrorCoPlanEnd();
       var pEl = $('plan-end-age');
       if (!pEl) return;
       /* ── L47 SOURCED-OR-BLANK: NEVER WRITE A DATE BUILT FROM A FALLBACK IDENTITY ───────────────
@@ -16609,6 +16666,47 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       var _yr = dob.yr + pta + (mo < dob.mo ? 1 : 0);
       pEl.value = _fmtDateStr(_pad2(mo) + '/' + _yr);
     }
+    /* ── PLAN-THROUGH PARITY — the co-architect's date DERIVES too (2026-09-05) ──────────────────
+     * #plan-end-age has a derivation, a slider behind it, a warn host and a blur commit.
+     * #co-plan-end carried `onfocus`/`_fmtRetDate` and NO DERIVATION AT ALL — a field the engine
+     * reads (co_architect_plan_end_age) that nothing ever helped the user fill.
+     *
+     * ⛔⛔ PARITY OF MECHANISM IS NOT PARITY OF AUTHORITY, AND THIS IS THE WHOLE DESIGN.
+     * The primary's field is a MIRROR: `sl-plan-through` is the single source of truth, so
+     * _mirrorPlanEnd is entitled to overwrite whatever is in the box. THE CO-ARCHITECT HAS NO
+     * SLIDER — their field IS the source; buildStudioRequest derives co_architect_plan_end_age FROM
+     * it. Copying the mirror's overwrite semantics would DESTROY a deliberate answer: a user who
+     * plans their partner through 100 while planning themselves through 93 would watch it snap
+     * back. So this DERIVES INTO AN EMPTY FIELD ONLY and never touches a value that is there.
+     *
+     * ⚖️ THE DEFAULT IS THE SHARED PLAN-THROUGH AGE, ANCHORED TO THEIR OWN BIRTH DATE — never the
+     * primary's. Both people plan to the same AGE, which lands on different DATES across an age
+     * gap, and that is exactly the LAST-SURVIVOR reading the engine already implements (a younger
+     * co-architect EXTENDS the horizon). Anchoring on the primary's DOB would model the couple to
+     * the wrong horizon — the reason already recorded at _coArchitectFacts.
+     * ⭐ IT IS A DERIVATION, NOT A FABRICATION: every input is the user's own — THEIR date of birth
+     *   and the plan-through age they set. Traceable, therefore Third-Law clean.
+     *
+     * ⚠️ THE RETRACTION HALF IS DELIBERATELY ABSENT, AND IT IS THE MISSING PRIMITIVE AGAIN.
+     * _mirrorPlanEnd BLANKS the primary's box when the DOB stops validating (F51: a value derived
+     * from refused input must be retracted). This cannot do that safely, because with no provenance
+     * flag A DERIVED DATE AND A TYPED DATE ARE THE SAME STRING — retracting would sometimes delete
+     * an answer the user gave. Refusing to guess is the honest half; the fix is queue #2, not here. */
+    function _mirrorCoPlanEnd() {
+      var cEl = $('co-plan-end');
+      if (!cEl || String(cEl.value || '').trim()) return;      // never overwrite — see above
+      var dEl = $('co-dob');
+      var dm = String((dEl && dEl.value) || '').replace(/\s/g, '').match(/^(\d{1,2})\/(\d{4})$/);
+      if (!dm) return;                                          // L47 sourced-or-blank: nothing to derive from
+      var dobMo = parseInt(dm[1], 10), dobYr = parseInt(dm[2], 10);
+      if (!dobMo || dobMo > 12 || !dobYr) return;
+      var pta = parseInt(($('sl-plan-through') || {}).value, 10) || 93;
+      /* Same anchoring contract as the primary: the DOB month is BOTH the output month and the year
+         anchor, so ageAtDate() reads back the age we meant. */
+      cEl.value = _fmtDateStr(_pad2(dobMo) + '/' + (dobYr + pta));
+    }
+    window._mirrorCoPlanEnd = _mirrorCoPlanEnd;
+
     window._mirrorPlanEnd = _mirrorPlanEnd;
     window._studioDateForField = _dateForField;   // gate hook: the MM/YYYY a toggle box shows on focus
     function _commitPlanEndDate(el) {

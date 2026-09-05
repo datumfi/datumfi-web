@@ -108,7 +108,6 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
   await page.waitForTimeout(250);
   const onReadable = await snap();
 
-  const noteTxt = await page.evaluate(() => (document.getElementById('co-arch-note') || {}).textContent);
 
   // ── ON->OFF revert: untoggle and confirm the header reverts ─────────────
   await page.evaluate(() => { var t = document.getElementById('co-arch-toggle'); t.checked = false; t.dispatchEvent(new Event('change')); });
@@ -149,7 +148,37 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
   check('(3a) header OFF = "01 / YOUR TIMELINE" (have+want)', hdrOff.have === '01 / YOUR TIMELINE' && hdrOff.want === '01 / YOUR TIMELINE', JSON.stringify(hdrOff));
   check('(3b) header ON = "01 / PRIMARY TIMELINE" (have+want)', hdrOn.have === '01 / PRIMARY TIMELINE' && hdrOn.want === '01 / PRIMARY TIMELINE', JSON.stringify(hdrOn));
   check('(3c) header reverts to YOUR on toggle OFF', hdrRevert.have === '01 / YOUR TIMELINE' && hdrRevert.want === '01 / YOUR TIMELINE', JSON.stringify(hdrRevert));
-  check('(3d) Profile note copy verbatim + present', (noteTxt || '').trim() === NOTE, JSON.stringify(noteTxt));
+  /* ⛔⛔ LEG (3d) INVERTED 2026-09-05 — THE STRING IT GUARDED IS GONE, BY RULING.
+     OLD EXPECTATION: #co-arch-note exists and reads VERBATIM
+       "We see your Co-Architect. For now your Shape treats you as one household; per-person
+        precision arrives as you draft your Estate."
+     NEW EXPECTATION: #co-arch-note DOES NOT EXIST, and that sentence appears NOWHERE on the page.
+     WHY: it was true when P8.2 shipped and f4b0a64 (F67) falsified it — _coArchitectFacts() now
+     sends co_architect_age to /api/calculate and the engine models a SECOND PERSON, so the Shape
+     demonstrably no longer treats the household as one. The same reason leg (1) was rewritten a day
+     earlier: THIS GATE HAS NOW ASSERTED TWO CONTRACTS THAT F67 STRUCK, and both stayed green
+     because nothing re-read the prose against the code.
+     ⚖️ WHAT THIS GATE STILL PROTECTS IS UNCHANGED: (1a)/(1b) the payload boundary, (2)/(2b) the
+     Shape, (3a)/(3b)/(3c) the header relabel. Only the deleted sentence moves.
+     ⚠️ A NEGATIVE LEG NEEDS AN EXISTENCE LEG OR IT PASSES ON A BLANK PAGE. "The note is absent" is
+        trivially true of a page that failed to render, never reached dual mode, or 404'd — so the
+        CONTAINER that used to hold it is asserted present and revealed in the same breath. That
+        container is also the thing F71 dereferences unguarded, so this doubles as its guard. */
+  const NOTE_GONE = await page.evaluate((s) => ({
+    noteEl: !!document.getElementById('co-arch-note'),
+    holder: !!document.getElementById('co-arch-fields'),
+    holderShown: (function () { var e = document.getElementById('co-arch-fields');
+      return e ? getComputedStyle(e).display : null; })(),
+    stringAnywhere: document.body.innerText.indexOf(s) >= 0
+  }), NOTE);
+  check('(3d-existence) the container that HELD the note is present and revealed in dual mode — '
+    + 'without this, "the note is gone" would pass on a page that never rendered',
+    NOTE_GONE.holder === true && NOTE_GONE.holderShown === 'block',
+    'holder=' + NOTE_GONE.holder + ' display=' + JSON.stringify(NOTE_GONE.holderShown));
+  check('(3d) the one-household note is DELETED — element absent AND the sentence appears nowhere '
+    + 'on the page (F67 made it false; a construction marker is removed, not re-authored)',
+    NOTE_GONE.noteEl === false && NOTE_GONE.stringAnywhere === false,
+    'element=' + NOTE_GONE.noteEl + ' stringAnywhere=' + NOTE_GONE.stringAnywhere);
   check('(4) no page errors', errs.length === 0, errs.join(' ; '));
 
   await browser.close(); server.close();

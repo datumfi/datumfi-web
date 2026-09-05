@@ -21,6 +21,7 @@
  */
 const http = require('http'), fs = require('fs'), path = require('path');
 const { chromium } = require('playwright');
+const { STUDIO_PATH } = require('./_studio_source.cjs');   // Phase 0: the helper owns where the shell lives
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = process.env.PW_PORT || 8657;
@@ -28,6 +29,11 @@ const PORT = process.env.PW_PORT || 8657;
    leave every other leg green: a control that reds everything is indistinguishable from a broken
    rig. §82.1512 — disjoint red sets. */
 const NOGATE = process.argv.includes('--nogate');
+/* --pretransition: restores the PRE-FIX binding — the prefill runs ONLY from the toggle's
+   change listener, never on arrival. Reproduces the literal symptom the Captain reported and must
+   red ONLY the L6 state-bound legs; every transition-driven leg above stays green, because those
+   legs reach dual mode by clicking and the pre-fix code served them perfectly well. */
+const PRETRANS = process.argv.includes('--pretransition');
 
 const GUARD_T = `      if (!el || el.hasAttribute('data-prefilled')) return '';`;
 const GUARD_B = `      if (!el) return '';   /* provenance gate removed by --nogate */`;
@@ -36,6 +42,24 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.csv': 'text/csv' };
 
 let SERVE_BP = null;
+let SERVE_HTML = null;
+if (PRETRANS) {
+  /* Phase 0: the helper owns where the shell lives. studioSource() is NOT usable here — this
+     SERVES the page to a browser and studioSource() returns shell + parts composed, which would
+     double-define every part. See the fuller note in _gate_salary_unstated_suppressed.js. */
+  SERVE_HTML = fs.readFileSync(STUDIO_PATH, 'utf8');
+  /* ⚠️ ONE LINE, AND THAT IS LOAD-BEARING RATHER THAN STYLISTIC. This handler was briefly written
+     across four lines; _gate_coarch_reveal_matches_toggle.js parses it LINE-BY-LINE and anchors BOTH
+     of its controls (--defect, --replay) on the single-line text, so the multi-line form left that
+     gate unable to see the sync AND unable to mutate it — two controls over an F71 data-loss defect,
+     disarmed by a formatting choice. Keep this on one line, and if it must grow, fix that gate's
+     parser in the same commit. */
+  const AH = "    window.addEventListener('pageshow', function () { _applyCoArchVisibility(); if (coToggle.checked) _prefillCoArchTax(); });";
+  const BH = "    window.addEventListener('pageshow', function () { _applyCoArchVisibility(); });";
+  const nh = SERVE_HTML.split(AH).length - 1;
+  if (nh !== 1) { console.log('ABORT — --pretransition anchor found ' + nh + 'x, expected 1. A red-first that did not land proves nothing.'); process.exit(2); }
+  SERVE_HTML = SERVE_HTML.replace(AH, BH);
+}
 if (NOGATE) {
   const f = path.join(ROOT, 'scripts', 'studio-blueprint.js');
   SERVE_BP = fs.readFileSync(f, 'utf8');
@@ -46,6 +70,9 @@ if (NOGATE) {
 
 const srv = http.createServer((q, s) => {
   let p = decodeURIComponent(q.url.split('?')[0]); if (p === '/') p = '/index.html';
+  if (SERVE_HTML && p === '/studio.html') {
+    s.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return s.end(SERVE_HTML);
+  }
   if (SERVE_BP && p === '/scripts/studio-blueprint.js') {
     s.writeHead(200, { 'content-type': 'text/javascript' }); return s.end(SERVE_BP);
   }
@@ -110,7 +137,7 @@ const readState = (P) => P.evaluate((ids) => {
       e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); } };
     set('pri-dob', '08/1982');   // capturedProof — an unrelated field that proves captureDOM ran
     set('pri-tax-method', 'Blended estimate'); set('eff-tax-rate', '24%');
-    set('pri-location', 'California'); set('filing-status', 'Married Filing Jointly');
+    set('pri-location', 'California'); set('filing-status', 'Head of Household');   /* NOT 'Married Filing Jointly': that EQUALS the schema default and the restore guard skips it, so the source would vanish on reload and L6 would red for a foreign reason. See finding_restore_skips_default_equal_answer. */
   });
   await P.waitForTimeout(400);
 
@@ -160,9 +187,57 @@ const readState = (P) => P.evaluate((ids) => {
     ['co-tax-method', 'co-tax-bracket', 'co-filing-status'].every((id) => owned.fields[id] && owned.fields[id].length),
     JSON.stringify(owned.fields));
 
+  /* ── L6 STATE-BOUND, NOT TRANSITION-BOUND (item 10, Captain-found 2026-09-05) ────────────────
+   * `_prefillCoArchTax()` was called from ONE place: the toggle's own `change` listener. It fired
+   * on solo -> joint and NEVER on arrival, so a user who was ALREADY joint — EVERY returning user
+   * after a reload — got no prefill, and toggling off and back on was the only way to produce one.
+   * 🔑 THE FEATURE WORKED WHEN DEMONSTRATED AND FAILED WHEN USED. Every leg above reaches dual mode
+   *    BY CLICKING THE TOGGLE, so not one of them could ever have seen this. THE REPRODUCTION STEPS
+   *    WERE THE CAMOUFLAGE — which is why this leg is forbidden from touching the toggle at all.
+   * THE SCENARIO IS THE CAPTAIN'S, VERBATIM: be joint, RELOAD, touch nothing. The checkbox comes
+   * back checked by BROWSER FORM RESTORATION with no change event fired (the F71 mechanism), so a
+   * transition-bound prefill cannot run and a state-bound one must. */
+  await P.reload({ waitUntil: 'load' });
+  await P.waitForTimeout(1800);
+  try { if (await P.locator('#studioCloseIntro').isVisible({ timeout: 1200 })) await P.click('#studioCloseIntro'); } catch (e) {}
+  await P.waitForFunction(() => typeof window._studioEnterRoom === 'function', null, { timeout: 9000 });
+  await P.evaluate(() => window._studioEnterRoom('data'));
+  await P.waitForTimeout(900);
+
+  const reloaded = await readState(P);
+  const stillJoint = await P.evaluate(() => !!(document.getElementById('co-arch-toggle') || {}).checked);
+  const priKept = await P.evaluate(() => ['pri-tax-method','eff-tax-rate','pri-location','filing-status'].reduce(function(o,id){ o[id]=String((document.getElementById(id)||{}).value||''); return o; }, {}));
+
+  /* EXISTENCE FIRST — all three preconditions, or the leg below is vacuous. A green here with the
+     toggle off, or with the primary's source value gone, would prove nothing at all. */
+  check('L6 EXISTENCE: the page came back ALREADY JOINT without any toggle interaction',
+    stillJoint === true, 'co-arch-toggle.checked=' + stillJoint);
+  /* ⚠️ ALL FOUR SOURCES, NOT ONE. The first draft of this leg checked only eff-tax-rate, and the
+     STATE-BOUND leg below then red on co-filing-status for a reason that had nothing to do with the
+     prefill: the primary's filing status had not survived the reload, so there was nothing to copy.
+     A one-field existence check let a four-field claim rest on a one-field precondition. */
+  check('L6 EXISTENCE: and EVERY primary source survived the reload (else the prefill has nothing '
+    + 'to copy and the leg below is vacuous)',
+    Object.keys(priKept).every((k) => priKept[k].length > 0), JSON.stringify(priKept));
+  check('L6 STATE-BOUND: arriving already-joint PREFILLS the co-architect fields — no transition '
+    + 'required [BITE pretransition]',
+    CO_TAX.every((id) => reloaded.fields[id] && reloaded.fields[id].length), JSON.stringify(reloaded.fields));
+  /* ⚠️ NOT "all four are stamped" — that was over-asserted and this leg red on its own fixture.
+     co-location is the field the user OWNED in L4, so it is persisted as a real answer and comes
+     back as THEIR value, correctly UNSTAMPED. Asserting a uniform stamp would have demanded the
+     product forget an answer it is required to keep. The claim is a DISTINCTION, not a uniformity. */
+  check('L6 STATE-BOUND: the three un-owned fields come back STAMPED — §82.1626\'s "re-offered, not '
+    + 'lost" is finally true rather than asserted [BITE pretransition]',
+    ['co-tax-method', 'co-tax-bracket', 'co-filing-status'].every((id) => reloaded.stamped[id] === true),
+    JSON.stringify(reloaded.stamped));
+  check('L6 OWNERSHIP SURVIVES: and the field the user ANSWERED returns as their value, UNSTAMPED — '
+    + 'the re-offer does not overwrite an answer, and does not re-label one as a suggestion',
+    reloaded.fields['co-location'] === 'Texas' && reloaded.stamped['co-location'] === false,
+    'co-location=' + JSON.stringify(reloaded.fields['co-location']) + ' stamped=' + reloaded.stamped['co-location']);
+
   await b.close(); srv.close();
   console.log(out.join('\n'));
-  console.log('\nMODE: ' + (NOGATE ? '--nogate' : 'clean'));
+  console.log('\nMODE: ' + (NOGATE ? '--nogate' : (PRETRANS ? '--pretransition' : 'clean')));
   console.log('OVERALL: ' + (fails ? 'RED' : 'GREEN') + '   (' + (out.length - fails) + ' pass / ' + fails + ' fail)');
   process.exit(fails ? 1 : 0);
 })().catch(e => { console.error('GATE FAULT', e.message); try { srv.close(); } catch (x) {} process.exit(2); });

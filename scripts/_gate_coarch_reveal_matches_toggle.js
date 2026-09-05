@@ -98,7 +98,7 @@ const REPLAY = process.argv.includes('--replay');
 
 /* The fix's own line, verbatim. Both controls anchor here. If this string stops matching, the
    controls REFUSE rather than silently testing nothing — an unarmed control is worse than none. */
-const SYNC_LINE = "    window.addEventListener('pageshow', function () { _applyCoArchVisibility(); });";
+const SYNC_LINE = "    window.addEventListener('pageshow', function () { _applyCoArchVisibility(); if (coToggle.checked) _prefillCoArchTax(); });";
 const SYNC_REPLAY = "    window.addEventListener('pageshow', function () { coToggle.dispatchEvent(new Event('change')); });";
 
 let fails = 0; const results = [];

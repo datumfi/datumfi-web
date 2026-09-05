@@ -37,9 +37,13 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
+const { STUDIO_PATH } = require('./_studio_source.cjs');   // Phase 0: the helper owns where the shell lives
 
 const REFAB = process.argv.includes('--refab');
 const RETEAL = process.argv.includes('--reteal');
+/* --reword: changes ONE WORD of an authored sentence. Must red ONLY L8 — proof that the copy leg
+   grips the text rather than merely confirming a div exists. */
+const REWORD = process.argv.includes('--reword');
 const ROOT = path.resolve(__dirname, '..');
 const URL = 'http://127.0.0.1:8001/studio.html';
 
@@ -74,6 +78,16 @@ function mutate(src) {
       'if(_salKnown && monthlyGrossIncome > 0) {',
       'if(monthlyGrossIncome > 0) {']);
   }
+  if (REWORD) {
+    /* ⚠️ THE SHORT CLAUSE IS NOT UNIQUE AND THE GUARD CAUGHT IT: 'Until then, this figure would be
+       a guess.' appears TWICE — the cash-flow diagnostic and String 4 — because the Architect reused
+       it verbatim so both read as the same product speaking. Anchor on the WHOLE authored sentence. */
+    const from = 'Add your income above and your upkeep load appears here. Until then, this figure would be a guess.';
+    const to   = 'Add your income above and your upkeep load appears here. Until then, this figure would be an estimate.';
+    const n = src.split(from).length - 1;
+    if (n !== 1) { console.log('⛔ --reword ANCHOR MATCHED ' + n + ' TIMES, EXPECTED EXACTLY 1.'); process.exit(1); }
+    src = src.split(from).join(to);
+  }
   if (RETEAL) {
     swaps.push([
       '            if(!_salKnown) {\n                pctEl.classList.remove(\'healthy\');\n                pctEl.classList.add(\'unstated\');\n                if(hudPctEl) hudPctEl.style.color = "";\n            } else if(loadPct < 50) {',
@@ -97,9 +111,21 @@ function mutate(src) {
   const page = await ctx.newPage();
   const errs = []; page.on('pageerror', (e) => errs.push(e.message));
 
-  const MUTATING = REFAB || RETEAL;
+  const MUTATING = REFAB || RETEAL || REWORD;
   if (MUTATING) {
-    const raw = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+    /* ⛔ THE PATH COMES FROM THE HELPER, NOT FROM A LITERAL HERE (Phase 0 contract). This gate SERVES
+       a mutated page to a real browser, so it needs THE SHELL — and studioSource() is deliberately
+       NOT that: it returns shell + extracted parts COMPOSED (measured 2026-09-05: 1,995,647 bytes
+       against the shell's 1,584,614). Serving the composed text would inline every part while the
+       <script src> tags load them again, double-defining the file's own functions.
+       ⇒ There are TWO legitimate reads of the Studio source and the contract names only one:
+         ASSERTING ABOUT THE TEXT (studioSource()) and SERVING THE BYTES (the shell). Taking
+         STUDIO_PATH from the helper satisfies what the contract is actually protecting — nobody here
+         hard-codes where the file lives, so if the shell moves this follows it.
+       ⚠️ AND IT IS INVISIBLE TO THAT GATE'S CENSUS, WHICH IS A REPORTED GAP, NOT A LOOPHOLE I CHOSE:
+          the matcher needs 'studio.html' and readFileSync on ONE line, so ANY path-in-a-variable read
+          passes unseen. Two shipped gates already read the shell this way. Raised for a ruling. */
+    const raw = fs.readFileSync(STUDIO_PATH, 'utf8');
     const body = mutate(raw);
     await page.route('**/studio.html', (r) => r.fulfill({ status: 200, contentType: 'text/html', body }));
   }
@@ -198,6 +224,68 @@ function mutate(src) {
   ok(zero.pctText !== '—' && zero.noteOwnDisplay === 'none',
     'L6 a typed 0 is treated as ANSWERED, not as silence — the suppression lifts (got '
     + JSON.stringify(zero.pctText) + ') [a `> 0` guard fails ONLY here]');
+
+  /* ── L8 AUTHORED COPY, VERBATIM (§82.1701) ────────────────────────────────────────────────────
+   * Every string below is Architect-authored and the Wirer may not draft, reflow or re-punctuate
+   * one. Until this leg existed the gate merely proved a suppression HAPPENED; the actual sentence
+   * could have drifted a word at a time with nothing objecting.
+   * ⚠️ THIS FILE ONCE DECLARED `const NOTE = ...` AND NEVER USED IT — so it READ as though it
+   *    verified the copy while verifying nothing. FALSE ASSURANCE INSIDE AN INSTRUMENT is the exact
+   *    disease this cause was spent on. That constant is now consumed here. */
+  const AUTHORED = [
+    ['ledger Needs/Wants', '— add your income to see this —'],
+    ['upkeep-load adjacent', 'Add your income above and your upkeep load appears here. Until then, this figure would be a guess.'],
+    ['charity % suppression', '— add your income for the % —'],
+    ['construction marker', 'Recorded, not yet modelled.'],
+    /* The section note that spans the whole tax block. Its previous form ended "...the dates and the
+       capital", which our own consumption map falsified — eff-tax-rate reaches out.taxMult and
+       therefore the Shape. Pinned here so the corrected sentence cannot drift back. */
+    ['tax-block section note', 'Today your Range is driven by the dates, the capital, and the tax bracket you set above.']
+  ];
+  const html = await page.content();
+  const drifted = AUTHORED.filter(([, s]) => html.indexOf(s) < 0);
+  ok(drifted.length === 0, 'L8 COPY VERBATIM: every authored string appears exactly as authored'
+    + (drifted.length ? ' — DRIFTED/ABSENT: ' + drifted.map(([n]) => n).join(', ') : '') + ' [BITE reword]');
+
+  /* ── L9 THE MARKER INVENTORY IS ITSELF A CLAIM (§82.1717) ─────────────────────────────────────
+   * "Recorded, not yet modelled." is a CONSTRUCTION MARKER, not product copy: it comes down as each
+   * field is proven wired, so THE ABSENCE OF THE NOTE IS AS MUCH A STATEMENT AS ITS PRESENCE.
+   * Three fields had theirs removed on PROOF OF A READER (salary ×2 — upkeep load, needs/wants,
+   * charity, the 401k match; eff-tax-rate — _taxStated and out.taxMult into the Shape). The other
+   * seven keep theirs because nothing reads them.
+   * ⛔ A NOTE RE-APPEARING ON A WIRED FIELD, OR VANISHING FROM AN UNWIRED ONE, IS A FALSE STATUS
+   *    CLAIM — and this is the only thing that would notice. */
+  const NOTED = ['pri-tax-method', 'co-tax-method', 'co-tax-bracket', 'pri-location', 'co-location',
+                 'filing-status', 'co-filing-status'];
+  const UNNOTED = ['pri-salary', 'co-salary', 'eff-tax-rate'];
+  const inv = await page.evaluate(([noted, unnoted]) => {
+    const has = (id) => { const e = document.getElementById(id); if (!e) return null;
+      const f = e.closest('.architect-field'); return f ? !!f.querySelector('.architect-nm-note') : null; };
+    const o = { missing: [], unexpected: [], absent: [], total: document.querySelectorAll('.architect-nm-note').length };
+    noted.forEach((id) => { const h = has(id); if (h === null) o.absent.push(id); else if (!h) o.missing.push(id); });
+    unnoted.forEach((id) => { const h = has(id); if (h === null) o.absent.push(id); else if (h) o.unexpected.push(id); });
+    return o;
+  }, [NOTED, UNNOTED]);
+  ok(inv.absent.length === 0, 'L9 EXISTENCE: all ten profile fields are present to be judged'
+    + (inv.absent.length ? ' — MISSING FROM THE DOM: ' + inv.absent.join(', ') : ''));
+  /* ⚠️⚠️ DECLARE THE STRENGTH OF THE CLAIM, NOT JUST THE CLAIM (§82.1699). THIS LEG PINS AN
+     INVENTORY THAT WAS ASSERTED, NOT A TRUTH THAT WAS MEASURED. The two lists above are HAND-WRITTEN
+     from the 2026-09-05 consumption map — they are NOT derived from the world, so this is a
+     §82.1671 MIRRORED FIXTURE by construction and it is labelled as one rather than left to read
+     like a proof.
+     ⇒ IT CATCHES DRIFT FROM THE LIST. IT CANNOT CATCH THE LIST BEING WRONG. If a field gains its
+       first reader tomorrow, its marker becomes false and THIS LEG STAYS GREEN, because the lists
+       still agree with each other. The half that would notice — detecting readers from the code
+       rather than from a list — is NOT built and NOT authorised.
+     🔑 A weak check honestly labelled is usable forever; a weak check named like a strong one
+        becomes a mirror the moment its author leaves. The report is read once; the name is read
+        forever. */
+  ok(inv.missing.length === 0 && inv.unexpected.length === 0 && inv.total === NOTED.length,
+    'L9 MARKER INVENTORY [pins an ASSERTED list, not a measured truth — catches drift from the list, '
+    + 'never the list being wrong]: exactly the ' + NOTED.length + ' unwired fields carry the marker and the '
+    + UNNOTED.length + ' proven-wired ones do not (total=' + inv.total + ')'
+    + (inv.missing.length ? ' — LOST FROM AN UNWIRED FIELD: ' + inv.missing.join(', ') : '')
+    + (inv.unexpected.length ? ' — CLAIMS UNWIRED BUT HAS A READER: ' + inv.unexpected.join(', ') : ''));
 
   ok(errs.length === 0, 'L7 no page errors — ' + JSON.stringify(errs.slice(0, 2)));
 
