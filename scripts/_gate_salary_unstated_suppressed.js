@@ -273,8 +273,23 @@ function mutate(src) {
    *    not earn their notes' removal — they stopped existing. The two that survive keep their
    *    notes precisely because they are still unread: the engine has no filing-status parameter
    *    and no state-tax model at all. Their notes come off in Batch 2, on proof, or not at all. */
-  const NOTED = ['pri-location', 'filing-status'];
-  const UNNOTED = ['pri-salary', 'co-salary', 'eff-tax-rate'];
+  /* ⭐⭐ eff-tax-rate MOVES BACK TO NOTED (2026-09-06), AND THIS IS L9's OWN DECLARED HOLE FIRING.
+     Read the paragraph above: "IT CANNOT CATCH THE LIST BEING WRONG... the half that would notice —
+     detecting readers from the code rather than from a list — is NOT built." It has now been built
+     and run, and the list was wrong.
+     Its marker came off on "proof of a reader" — `_taxStated` and `out.taxMult` into the Shape.
+     THAT PROOF WAS REAL AND IT WAS HALF THE QUESTION. Measured by browser census, both household
+     modes, positive control passed: eff-tax-rate reaches the SHAPE and DOES NOT REACH THE ENGINE,
+     and its typed-entry box reached NOTHING AT ALL.
+     ⛔ §82.1872 — A MARKER COMES OFF ONLY WHEN THE FIELD IS FULLY WIRED. Not partway, not "yes
+        here but not there". ARRIVAL IS NOT MODELLING: a field that reaches the engine and is then
+        ignored by a module constant is still unmodelled, which is why "reaches the engine" was
+        rejected as the predicate. The operational test is the ladder — change the field, assert the
+        OUTPUT moves.
+     🔑 THE MARKER IS SCAFFOLDING, NOT PRODUCT COPY. Its correct maintenance is REMOVAL, and it is
+        removed by a measurement, never by a belief that the work is done. */
+  const NOTED = ['pri-location', 'filing-status', 'eff-tax-rate'];
+  const UNNOTED = ['pri-salary', 'co-salary'];
   const inv = await page.evaluate(([noted, unnoted]) => {
     const has = (id) => { const e = document.getElementById(id); if (!e) return null;
       const f = e.closest('.architect-field'); return f ? !!f.querySelector('.architect-nm-note') : null; };

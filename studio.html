@@ -3659,8 +3659,9 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                 <div class="architect-field architect-field-household architect-rate-field">
                   <label class="architect-household-label" for="eff-tax-rate">Effective rate in retirement</label>
                   <select class="architect-select" id="eff-tax-rate" onchange="_effRateExact(); updateAnalysisText();"><option value="" selected>Select tax rate</option><option value="0%">Nothing at all</option><option value="2%">Almost nothing</option><option value="5%">A small share</option><option value="9%">A notable share</option><option value="15%">A serious share</option><option value="19%">A large share</option><option value="exact">I know my rate</option></select>
-                  <input type="text" class="architect-input" id="eff-tax-rate-exact" style="display:none" placeholder="14.2%" inputmode="decimal" aria-label="Your exact effective rate in retirement" oninput="updateAnalysisText();">
+                  <input type="text" class="architect-input" id="eff-tax-rate-exact" style="display:none" placeholder="14.2%" inputmode="decimal" maxlength="6" aria-label="Your exact effective rate in retirement" oninput="_taxExactSanitize(this); updateAnalysisText();" onfocus="_taxExactUnformat(this);" onblur="_taxExactFormat(this);">
                   <div class="architect-rate-source">These bands are measured from the plan&#39;s own tax model, not from a survey.</div>
+                  <div class="architect-nm-note">Recorded, not yet modelled.</div>
                 </div>
                 <div class="architect-field architect-field-household">
                   <label class="architect-household-label" for="pri-location">Expected retirement location</label>
@@ -5703,6 +5704,37 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           F71 back-nav data-loss defect while leaving them green. */
     /* The typed-rate box appears only for the "I know my rate" option. Switching AWAY clears it —
        a stale figure behind a band the user has since changed is a value nobody chose. */
+    /* ⛔ THE TYPED BOX ACCEPTED ANYTHING — measured: letters, punctuation, a bare "%", "999".
+       It is type="text" with no pattern and no maxlength; `inputmode="decimal"` only HINTS a phone
+       keyboard and does nothing on a desktop. That was not untidiness. captureDOM guards on
+       `isFinite && >= 0 && < 100`, so the two halves of the fault were:
+         · "abc"    -> NaN -> SILENTLY DISCARDED. Told they were heard, then not heard.
+         · "22abc"  -> 22  -> SILENTLY STORED. A number the user never typed, kept as their answer.
+       Both are the disease this arc exists to remove, in one field, in opposite directions.
+       ⚠️ THE % IS RENDERED ON BLUR, NOT PER KEYSTROKE. Appending it while typing fights the caret;
+          the restore path at :14659 already renders this exact `N%` shape, so the two agree and a
+          round-trip is stable.
+       ⚠️ THE >= 100 TRIM IS A LOOP, NOT ONE SLICE, AND THE GATE FOUND THAT: a single slice turns
+          "1000" into "100", which is still not a rate. Drop trailing digits until it is one. */
+    function _taxExactSanitize(el) {
+      if (!el) return;
+      var s = String(el.value).replace(/[^0-9.]/g, '');
+      var i = s.indexOf('.');
+      if (i !== -1) s = s.slice(0, i + 1) + s.slice(i + 1).replace(/\./g, '');   // one point only
+      while (s.length && parseFloat(s) >= 100) s = s.slice(0, -1);
+      if (el.value !== s) el.value = s;
+    }
+    function _taxExactFormat(el) {
+      if (!el) return;
+      _taxExactSanitize(el);
+      var n = parseFloat(el.value);
+      el.value = (isFinite(n) && n >= 0 && n < 100) ? (String(+n.toFixed(2)) + '%') : '';
+    }
+    function _taxExactUnformat(el) { if (el) el.value = String(el.value).replace('%', ''); }
+    window._taxExactSanitize = _taxExactSanitize;
+    window._taxExactFormat   = _taxExactFormat;
+    window._taxExactUnformat = _taxExactUnformat;
+
     function _effRateExact() {
       var _s = document.getElementById('eff-tax-rate');
       var _i = document.getElementById('eff-tax-rate-exact');
@@ -17361,13 +17393,57 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           window._studioApplyProfileDates();
         });
       });
+      /* ⛔⛔ `|| 22` KILLED (2026-09-06). MEASURED THROUGH A BROWSER, ALL SEVEN OPTIONS:
+           · "Nothing at all" (value "0%")    -> parseFloat -> 0   -> `0 || 22`   -> slider took 22
+           · "I know my rate" (value "exact") -> parseFloat -> NaN -> `NaN || 22` -> slider took 22
+           · returning to "Select tax rate"   -> parseFloat('') -> NaN            -> slider took 22
+         slider-tax feeds out.taxMult (:16014), which multiplies the Shape's floor AND ceiling
+         (datum-shape.js:103-104). THIS MOVES MONEY. The one answer 39% of measured households would
+         truthfully give cut their range by 22% — WORSE than not answering, because the cold slider
+         is 20. The product punished "I pay no tax" harder than silence.
+         🔑 TRUTHY-ZERO, ONE LAYER BELOW THE FIX THAT SHIPPED. Batch 1b repaired `>= 0` at CAPTURE
+            and nobody checked the ARITHMETIC. A saved answer and a computed answer are DIFFERENT
+            CONSUMERS: the reload smoke proved the first and was silent on the second, which is why
+            269 gates and a 16-item hand smoke all passed over it.
+         ⛔ `22` WAS THE RETIRED `_TAX_WHEN_UNSET` GHOST — a value the product no longer offers.
+         ⛔ THE UNANSWERED CASE NOW MOVES NOTHING. There is no fallback and there must not be one:
+            §82.1856 — a default answers FOR the user; only an empty state may admit it cannot
+            answer yet. An unstated rate leaves the slider where the user last put it.
+         ⚠️ `if (v <= 1) v = v * 100` DELETED, NOT PRESERVED. A units guess. Measured against every
+            option, the ONLY select value it touched was 0 (0*100 === 0, a no-op) — while on the
+            typed box it would turn a genuine 0.5% into 50%. A heuristic that is a no-op on every
+            real input and catastrophic on one is not a safeguard.
+         ⚠️ THE SLIDER IS INTEGER-STEP, so a typed 14.2 shows 14 HERE while the blueprint keeps 14.2.
+            That is the HUD's resolution, not a rounding of the user's answer.
+         Gated by scripts/_gate_tax_option_agreement.js — every option must produce the number it
+         names. Seen RED on these exact bytes (7 fails) before this edit existed. */
       var taxProfEl = $('eff-tax-rate');
-      if (taxProfEl) taxProfEl.addEventListener('change', function () {
-        var v = parseFloat(String(taxProfEl.value).replace('%','')) || 22;
-        if (v <= 1) v = v * 100;
-        var sT = $('slider-tax'); if (sT) { sT.value = clampN(Math.round(v), 0, 40); updateTaxLabel(); }
+      var taxExactEl = $('eff-tax-rate-exact');
+      /* The stated rate, or null. NULL IS NOT ZERO — "Nothing at all" is 0 and IS an answer; an
+         untouched select is null and is not. Separated by TYPE, never by magnitude. */
+      function _statedTaxPct() {
+        if (!taxProfEl) return null;
+        var raw = String(taxProfEl.value);
+        if (raw === '') return null;
+        var n = (raw === 'exact')
+          ? parseFloat(String(taxExactEl ? taxExactEl.value : '').replace('%', ''))
+          : parseFloat(raw.replace('%', ''));
+        return (isFinite(n) && n >= 0 && n < 100) ? n : null;
+      }
+      function _pushTaxToShape() {
+        var v = _statedTaxPct();
+        if (v === null) return;                     // unstated: answer nothing, move nothing
+        var sT = $('slider-tax');
+        if (sT) { sT.value = clampN(Math.round(v), 0, 40); updateTaxLabel(); }
         fireUpdate();
-      });
+      }
+      if (taxProfEl) taxProfEl.addEventListener('change', _pushTaxToShape);
+      /* ⛔ THE TYPED BOX NEVER REACHED ANY CONSUMER — measured, both household modes: with "I know
+         my rate" chosen and 14.2 typed, the engine payload, the slider and the Shape were ALL
+         unchanged. The select's change event had already fired carrying the sentinel "exact", and
+         nothing listened to the input itself. The most precise answer the form accepts was the one
+         answer that reached nothing. */
+      if (taxExactEl) taxExactEl.addEventListener('input', _pushTaxToShape);
     }
 
     /* ── 02/ Estate Drafting -> 00/ Sketch writeback ────────────────────────
