@@ -106,9 +106,53 @@ if (OLD) {
      headReaders.length + ' readers at HEAD — this red is the expected result');
 }
 
-const nowReaders = census(false).filter((r) => !r.startsWith(HELPER_REL));
-ck('P1 ZERO gate files disk-read studio.html — studioSource() is the only door',
+/* ⛔⛔ THE SERVING EXEMPTION — NAMED, WITH ITS REASON AT THE POINT OF EXEMPTION (2026-09-06).
+   THE CONTRACT NAMED ONE LEGITIMATE READ AND THERE ARE TWO. Measured 2026-09-05 and predicted in
+   writing the same day: "the next serving gate either reds honestly or hides accidentally, and
+   neither is a decision." _gate_profile_reachable.js was that next gate and it red honestly, inside
+   24 hours. This is the decision.
+     1. ASSERTING ABOUT THE TEXT -> studioSource(). Shell + parts, COMPOSED (~2.0MB vs the shell's
+        ~1.58MB). Every claim about what the source says goes through this door and no other.
+     2. SERVING THE BYTES TO A BROWSER -> the shell alone. A gate that mutates the page and serves it
+        CANNOT use studioSource(): the composed text inlines every part while the `<script src>` tags
+        load them again, DOUBLE-DEFINING EVERYTHING. Such a gate is not making a claim about the
+        source; it is making a fixture out of it.
+   🔑 THE EXEMPTION IS BY PATH WITH A REASON, NEVER BY PATTERN. A pattern ("gates that serve") would
+      excuse whatever anyone later named that way, which is the hand-maintained-list rot this gate
+      exists to prevent. Adding an entry here is a DECISION someone signs, and P1b makes a stale one
+      go red rather than rot quietly.
+   ⚠️ THE INTERIM CONVENTION IS STILL THE PREFERRED FIX WHERE IT APPLIES: take STUDIO_PATH from the
+      helper so nothing hard-codes where the file lives. It is not enough on its own — the matcher
+      cannot tell that from hiding the literal in a variable — which is exactly why the exemption is
+      declared here in the open instead. */
+/* MUTATION CONTROLS, and they must produce DISJOINT red sets or they are one control with two names:
+     --unexempt     drop every exemption. P1 must RED (the real serving reader reappears); P1b goes
+                    vacuously green over an empty list, which is itself worth seeing.
+     --staleexempt  add an exemption for a path that reads nothing. P1b must RED; P1 stays GREEN.
+   Neither touches the tree. Run both before trusting either leg. */
+const UNEXEMPT = process.argv.includes('--unexempt');
+const STALE_EXEMPT = process.argv.includes('--staleexempt');
+const SERVING_EXEMPT = UNEXEMPT ? [] : [
+  ['scripts/_gate_profile_reachable.js',
+   'serves a tabindex-mutated shell to a browser (--retabindex); composing parts would double-define them'],
+  ...(STALE_EXEMPT ? [['scripts/__no_such_gate_reads_anything.js', 'deliberately stale, --staleexempt']] : []),
+];
+const _exemptPaths = SERVING_EXEMPT.map(([p]) => p);
+const _allReaders = census(false).filter((r) => !r.startsWith(HELPER_REL));
+const nowReaders = _allReaders.filter((r) => !_exemptPaths.some((p) => r.startsWith(p)));
+ck('P1 ZERO unexempted gate files disk-read the shell — studioSource() is the only door',
    nowReaders.length === 0, nowReaders.length ? nowReaders.length + ' still reading: ' + nowReaders.slice(0, 3).join(' | ') : 'zero');
+
+/* ⛔ P1b — EXCLUSION NEEDS PRESENCE. An exemption for a file that no longer exists, or that no
+   longer performs the read it was excused for, is a SILENT HOLE: it would sit here forever excusing
+   nothing, and the day someone renames the gate back into a violation the list would still read as
+   deliberate. So each entry must be BOTH tracked AND still caught by the census — a stale exemption
+   is a red, not a shrug. Same discipline as L2's "every excluded path EXISTS in the fixture". */
+const _staleExempt = _exemptPaths.filter((p) => !_allReaders.some((r) => r.startsWith(p)));
+ck('P1b every serving exemption is STILL a live reader (a stale exemption is a silent hole)',
+   _staleExempt.length === 0,
+   _staleExempt.length ? 'stale, remove from SERVING_EXEMPT: ' + _staleExempt.join(', ')
+                       : _exemptPaths.length + ' exemption(s), all live: ' + _exemptPaths.join(', '));
 
 /* P2 IS SYNTHETIC ON PURPOSE, so it keeps working for the life of the repo. It feeds the REAL
    matcher a fabricated source that plainly is a violation, and a second that plainly is not. If P1
