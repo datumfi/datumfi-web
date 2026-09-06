@@ -3659,7 +3659,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                 <div class="architect-field architect-field-household architect-rate-field">
                   <label class="architect-household-label" for="eff-tax-rate">Effective rate in retirement</label>
                   <select class="architect-select" id="eff-tax-rate" onchange="_effRateExact(); updateAnalysisText();"><option value="" selected>Select tax rate</option><option value="0%">Nothing at all</option><option value="2%">Almost nothing</option><option value="5%">A small share</option><option value="9%">A notable share</option><option value="15%">A serious share</option><option value="19%">A large share</option><option value="exact">I know my rate</option></select>
-                  <input type="text" class="architect-input" id="eff-tax-rate-exact" style="display:none" placeholder="14.2%" inputmode="decimal" maxlength="6" aria-label="Your exact effective rate in retirement" oninput="_taxExactSanitize(this); updateAnalysisText();" onfocus="_taxExactUnformat(this);" onblur="_taxExactFormat(this);">
+                  <input type="text" class="architect-input" id="eff-tax-rate-exact" style="display:none" placeholder="14.2%" inputmode="decimal" maxlength="6" aria-label="Your exact effective rate in retirement" oninput="_taxExactLive(this); updateAnalysisText();" onblur="_taxExactFormat(this);">
                   <div class="architect-rate-source">These bands are measured from the plan&#39;s own tax model, not from a survey.</div>
                   <div class="architect-nm-note">Recorded, not yet modelled.</div>
                 </div>
@@ -5716,24 +5716,53 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           round-trip is stable.
        ⚠️ THE >= 100 TRIM IS A LOOP, NOT ONE SLICE, AND THE GATE FOUND THAT: a single slice turns
           "1000" into "100", which is still not a rate. Drop trailing digits until it is one. */
-    function _taxExactSanitize(el) {
-      if (!el) return;
-      var s = String(el.value).replace(/[^0-9.]/g, '');
+    /* THE DIGITS, CLEANED. Pure — takes a string, returns a string, touches no DOM, so the live
+       pass and the blur pass cannot drift apart by being written twice. */
+    function _taxExactClean(raw) {
+      var s = String(raw == null ? '' : raw).replace(/[^0-9.]/g, '');
       var i = s.indexOf('.');
       if (i !== -1) s = s.slice(0, i + 1) + s.slice(i + 1).replace(/\./g, '');   // one point only
       while (s.length && parseFloat(s) >= 100) s = s.slice(0, -1);
-      if (el.value !== s) el.value = s;
+      return s;
     }
+    /* ⭐ LIVE, AS YOU TYPE — PARITY WITH SALARY, WHICH IS THE WHOLE REQUIREMENT (Captain, 2026-09-06):
+       THE USER NEVER TYPES THE SYMBOL. Type 60000 in salary and it becomes $60,000 while you type;
+       type 10 here and it becomes 10% while you type. Same contract, same moment.
+       ⚠️ THE CARET IS PARKED BEFORE THE '%', OR THE FIELD FIGHTS THE TYPIST. A suffix mask that
+          re-writes .value moves the caret to the end — behind the symbol — so the next keystroke
+          lands after the '%' and the field appears to scramble what you typed. Salary never had
+          this problem because '$' is a PREFIX and the caret naturally trails it.
+       ⛔ THE % LIVES IN .value AND THAT IS DELIBERATE — IT IS THE HOUSE PATTERN, NOT AN OVERSIGHT.
+          Measured against the siblings: salary carries "$60,000" in .value and moneyToInt() strips
+          it; DOB carries the slashes and capture parses them out. This carries "14.2%" and
+          captureDOM strips it to store 0.142. Making this field store a bare number would have made
+          it the ONLY control in the form behaving unlike its neighbours.
+       ⛔ `moneypct-format` WAS CONSIDERED AND REJECTED — L48 says reuse, and reuse would have been
+          WRONG HERE. That mask is DUAL-MODE: with no '%' typed it renders CURRENCY, so typing 10
+          gives "$10", and it requires the user to type the symbol to reach percent mode — which is
+          precisely the behaviour being removed. 🔑 REUSE-DON'T-FORK ASSUMES THE DONOR DOES YOUR JOB;
+          CHECK WHAT THE DONOR IS FOR, NOT WHAT IT IS CALLED. A similar name doing a different job is
+          the most expensive kind of reuse because it reads as compliance with the law. */
+    function _taxExactLive(el) {
+      if (!el) return;
+      var caret = null;
+      try { caret = el.selectionStart; } catch (_e) {}
+      var s = _taxExactClean(el.value);
+      var out = s === '' ? '' : s + '%';
+      if (el.value === out) return;
+      el.value = out;
+      var pos = Math.min(s.length, caret === null ? s.length : caret);
+      try { el.setSelectionRange(pos, pos); } catch (_e) {}
+    }
+    /* Settle on blur: two decimals, or empty. "14." becomes "14%"; junk becomes nothing. */
     function _taxExactFormat(el) {
       if (!el) return;
-      _taxExactSanitize(el);
-      var n = parseFloat(el.value);
+      var n = parseFloat(_taxExactClean(el.value));
       el.value = (isFinite(n) && n >= 0 && n < 100) ? (String(+n.toFixed(2)) + '%') : '';
     }
-    function _taxExactUnformat(el) { if (el) el.value = String(el.value).replace('%', ''); }
-    window._taxExactSanitize = _taxExactSanitize;
-    window._taxExactFormat   = _taxExactFormat;
-    window._taxExactUnformat = _taxExactUnformat;
+    window._taxExactClean  = _taxExactClean;
+    window._taxExactLive   = _taxExactLive;
+    window._taxExactFormat = _taxExactFormat;
 
     function _effRateExact() {
       var _s = document.getElementById('eff-tax-rate');

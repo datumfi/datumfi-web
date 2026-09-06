@@ -135,6 +135,13 @@ const STALE_EXEMPT = process.argv.includes('--staleexempt');
 const SERVING_EXEMPT = UNEXEMPT ? [] : [
   ['scripts/_gate_profile_reachable.js',
    'serves a tabindex-mutated shell to a browser (--retabindex); composing parts would double-define them'],
+  /* ⭐ THE SECOND ENTRY, AND IT ARRIVED THE WAY THE MECHANISM INTENDED (2026-09-06). This gate was
+     written with the 'studio.html' literal ON the read line specifically so the census would SEE
+     it — the path-in-a-variable form would have slipped past unnoticed, which is the very gap that
+     produced this exemption list. It went red, a human decided, the decision is here. A control
+     that forces a decision is worth more than one that quietly permits. */
+  ['scripts/_gate_tax_option_agreement.js',
+   'serves a --bluronly mutated shell to a browser; the mutation targets an inline handler in the shell'],
   ...(STALE_EXEMPT ? [['scripts/__no_such_gate_reads_anything.js', 'deliberately stale, --staleexempt']] : []),
 ];
 const _exemptPaths = SERVING_EXEMPT.map(([p]) => p);

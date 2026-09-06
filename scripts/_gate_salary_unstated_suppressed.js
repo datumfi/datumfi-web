@@ -335,4 +335,33 @@ function mutate(src) {
   console.log('OVERALL: ' + (fail === 0 ? 'GREEN' : 'RED'));
   console.log('');
   process.exit(fail === 0 ? 0 : 1);
-})().catch((e) => { console.log('⛔ GATE THREW: ' + e.message); console.log('OVERALL: RED'); process.exit(1); });
+/* ⛔ §82.1880 — A GATE THAT CANNOT RUN MUST NOT SAY "RED".
+ * A red means "I measured, and the product is wrong." A missing dependency means "I MEASURED
+ * NOTHING." Collapsing those into one word is how a standing red becomes background noise, and it
+ * cost a whole commit to clear the last one. This gate needs the repo served on 127.0.0.1:8001 —
+ * the suite runner starts it; run the gate by hand without one and every leg is unreachable.
+ * ⚠️ THE EXIT CODE STILL SAYS FAILURE, ON PURPOSE, AND THE RUNNER STILL SCORES IT RED. That is not
+ *    a half-measure, it is the runner's own documented law: "exit 1 STAYS RED, always... NOT
+ *    reclassifiable without reading the reason, which is a human's job. Only reclassify what is
+ *    PROVABLY not a verdict." A connection refusal is not provably a dead harness — the product
+ *    could equally have failed to serve. So the classifier is left alone and THE MESSAGE is fixed:
+ *    exit 2 rather than 1 to mark it distinct, and a verdict line a human cannot misread.
+ * 🔑 THE FIX IS TO THE SENTENCE, NOT THE SCORE. A conservative score with an honest reason beats a
+ *    generous score with a guess behind it. */
+})().catch((e) => {
+  const msg = String((e && e.message) || e);
+  /* Regex INLINED, not hoisted to a const: the first draft declared it inside the async IIFE
+     while this callback lives outside it — valid syntax, ReferenceError at runtime, and reachable
+     ONLY on the error path this block exists to serve. A guard that throws when it fires is worse
+     than no guard. */
+  if (/ERR_CONNECTION_REFUSED|ECONNREFUSED|net::ERR_CONNECTION|ERR_ADDRESS_UNREACHABLE/.test(msg)) {
+    console.log('⛔ MISSING PRECONDITION — nothing is serving http://127.0.0.1:8001');
+    console.log('   This gate MEASURED NOTHING. It is not a product failure and it is not a red.');
+    console.log('   The suite runner starts that server automatically; running this gate standalone does not.');
+    console.log('OVERALL: MISSING PRECONDITION   (0 legs evaluated)');
+    process.exit(2);
+  }
+  console.log('⛔ GATE THREW: ' + msg);
+  console.log('OVERALL: RED');
+  process.exit(1);
+});

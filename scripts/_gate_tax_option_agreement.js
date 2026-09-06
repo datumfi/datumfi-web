@@ -48,8 +48,32 @@ const ROOT = path.resolve(__dirname, '..');
 const PORT = 8236;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.csv': 'text/csv' };
+/* ── MUTATION CONTROL · --bluronly ────────────────────────────────────────────────────────────
+   Removes ONLY the live rendering of the '%', leaving the live SANITISER intact, so the red set is
+   the narrowest possible: L7a alone. A cruder mutation (deleting the whole oninput handler) would
+   also red L5a/L5b/L5d, because sanitising and symbol-rendering share one function — and a control
+   that reds four legs cannot tell you which one it proved.
+   ⚠️ L7b IS EXPECTED TO STAY GREEN UNDER THIS CONTROL, and that is the point: focus is unchanged, so
+      the discriminator correctly reports "still focused" while L7a reports the missing symbol. The
+      two legs answer different questions and the control demonstrates it.
+   ⛔ THIS READS studio.html OFF DISK ON PURPOSE AND DECLARES IT. It SERVES mutated bytes to a
+      browser, which is the category-2 read named in _gate_studio_source's SERVING_EXEMPT — the
+      composed studioSource() text would inline every part while the <script src> tags load them
+      again. The literal is kept on the read line so the census can SEE it rather than passing
+      unnoticed through a path-in-a-variable. */
+const BLURONLY = process.argv.includes('--bluronly');
+let SERVE_HTML = null;
+if (BLURONLY) {
+  SERVE_HTML = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+  const A = "      var out = s === '' ? '' : s + '%';";
+  const n = SERVE_HTML.split(A).length - 1;
+  if (n !== 1) { console.log('ABORT — --bluronly anchor matched ' + n + 'x, expected 1.'); process.exit(2); }
+  SERVE_HTML = SERVE_HTML.replace(A, "      var out = s;   // --bluronly: symbol deferred to blur");
+}
+
 const srv = http.createServer((q, s) => {
   let p = decodeURIComponent(q.url.split('?')[0]); if (p === '/') p = '/index.html';
+  if (SERVE_HTML && p === '/studio.html') { s.writeHead(200, { 'content-type': MIME['.html'] }); return s.end(SERVE_HTML); }
   fs.readFile(path.join(ROOT, path.normalize(p).replace(/^[\\/]+/, '')), (e, b) => {
     if (e) { s.writeHead(404).end(); return; }
     s.writeHead(200, { 'content-type': MIME[path.extname(p).toLowerCase()] || 'application/octet-stream' }); s.end(b);
@@ -150,7 +174,7 @@ const readSlider = (P) => P.evaluate(() => { const s = document.getElementById('
     ok('L5a letters are refused visibly, not swallowed silently', /^$/.test(String(junk)),
        'typed "abc" -> box holds "' + junk + '"');
     const twoDots = await probe('1.2.3');
-    ok('L5b a second decimal point is refused', /^\d*(\.\d*)?$/.test(String(twoDots)),
+    ok('L5b a second decimal point is refused', /^\d*(\.\d*)?%?$/.test(String(twoDots)),
        'typed "1.2.3" -> box holds "' + twoDots + '"');
     const tooBig = await probe('999');
     const tb = parseFloat(String(tooBig).replace('%', ''));
@@ -159,6 +183,29 @@ const readSlider = (P) => P.evaluate(() => { const s = document.getElementById('
     const mixed = await probe('22abc');
     ok('L5d "22abc" does not silently become 22 behind the user\'s back — the box SHOWS what it kept',
        /^\d*(\.\d*)?%?$/.test(String(mixed)), 'typed "22abc" -> box holds "' + mixed + '"');
+  }
+
+  /* ── L7 LIVE FORMAT ────────────────────────────────────────────────────────────────────────────
+     THE USER NEVER TYPES THE SYMBOL, and they see it the moment they type — parity with salary,
+     which renders "$60,000" while you type rather than when you leave.
+     ⚠️ THIS LEG MUST DISTINGUISH LIVE FROM BLUR OR IT PROVES NOTHING. A blur-only formatter would
+        produce the SAME final value, so reading the value alone cannot tell the two apart. L7b
+        asserts the field is STILL FOCUSED at the moment the % is observed: formatting that has
+        already happened while focus remains can only have happened on input. */
+  if (hasExact) {
+    await P.selectOption('#eff-tax-rate', 'exact');
+    await P.waitForTimeout(240);
+    await P.fill('#eff-tax-rate-exact', '14');
+    await P.waitForTimeout(300);
+    const live = await P.evaluate(() => {
+      const el = document.getElementById('eff-tax-rate-exact');
+      return { value: el ? el.value : null,
+               focused: !!(document.activeElement && document.activeElement.id === 'eff-tax-rate-exact') };
+    });
+    ok('L7a typing 14 shows "14%" immediately — the field supplies the symbol',
+       live.value === '14%', 'box holds "' + live.value + '"');
+    ok('L7b DISCRIMINATOR — the field is still FOCUSED, so that % came from input, not from blur',
+       live.focused === true, 'focused=' + live.focused);
   }
 
   /* ── L6 CONTROL ────────────────────────────────────────────────────────────────────────────── */
