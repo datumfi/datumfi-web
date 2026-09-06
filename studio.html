@@ -3515,7 +3515,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                 <div class="architect-row-label">Date of birth</div>
                 <div class="architect-field">
                   <label class="architect-solo-label" for="pri-dob">Date of birth</label>
-                  <input type="text" class="architect-input" id="pri-dob" data-field="current_age" value="" placeholder="MM/YYYY" tabindex="11" onfocus="this.select(); window._captureProfileGood &amp;&amp; window._captureProfileGood(this)" oninput="_fmtRetDate(this); _updatePlanEndAge()" onblur="_validatePriDob(this)">
+                  <input type="text" class="architect-input" id="pri-dob" data-field="current_age" value="" placeholder="MM/YYYY" onfocus="this.select(); window._captureProfileGood &amp;&amp; window._captureProfileGood(this)" oninput="_fmtRetDate(this); _updatePlanEndAge()" onblur="_validatePriDob(this)">
                   <div id="pri-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
                 </div>
                 <div class="architect-field architect-field-co">
@@ -3527,7 +3527,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                 <div class="architect-row-label">Target retirement date</div>
                 <div class="architect-field">
                   <label class="architect-solo-label" for="target-ret">Target retirement date</label>
-                  <input type="text" class="architect-input" id="target-ret" data-field="retirement_age" value="" placeholder="MM/YYYY" tabindex="16" onfocus="this.select(); window._captureProfileGood &amp;&amp; window._captureProfileGood(this)" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
+                  <input type="text" class="architect-input" id="target-ret" data-field="retirement_age" value="" placeholder="MM/YYYY" onfocus="this.select(); window._captureProfileGood &amp;&amp; window._captureProfileGood(this)" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
                   <div id="ret-date-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;">Retirement age exceeds 100 — plan capped at age 120.</div>
                 </div>
                 <div class="architect-field architect-field-co">
@@ -3539,7 +3539,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                 <div class="architect-row-label">Plan through date</div>
                 <div class="architect-field">
                   <label class="architect-solo-label" for="plan-end-age">Plan through date</label>
-                  <input type="text" class="architect-input" id="plan-end-age" value="" placeholder="MM/YYYY" tabindex="17" title="The date through which your retirement plan is modeled (the slider is the source of truth)." onfocus="this.select()" oninput="_fmtRetDate(this)" onblur="window._commitPlanEndDate &amp;&amp; window._commitPlanEndDate(this)">
+                  <input type="text" class="architect-input" id="plan-end-age" value="" placeholder="MM/YYYY" title="The date through which your retirement plan is modeled (the slider is the source of truth)." onfocus="this.select()" oninput="_fmtRetDate(this)" onblur="window._commitPlanEndDate &amp;&amp; window._commitPlanEndDate(this)">
                   <div id="plan-end-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
                 </div>
                 <div class="architect-field architect-field-co">
@@ -3560,12 +3560,11 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                         which is .architect-row-label's own idiom, not a new mechanism.
                      ⛔ COUPLED TO THE ENGINE TAKING max() OF TWO PLAN-END AGES. If that ever stops
                         being true this sentence is wrong and must be re-authored, not re-worded. -->
-                <div class="architect-span-note architect-field-co" id="architect-lastsurvivor-note">Your Range runs to the later of your two plan-through ages. It is one household planning to a single horizon &mdash; not a forecast of who outlives whom, and not a survivor&#39;s plan. We don&#39;t model the year a household becomes one person: no change in spending, no change in tax filing, no change in Social Security. Those shifts are real, and this plan does not price them.</div>
 
                 <div class="architect-row-label">Gross annual salary</div>
                 <div class="architect-field">
                   <label class="architect-solo-label" for="pri-salary">Gross annual salary</label>
-                  <input type="text" class="architect-input curr-format value-money" id="pri-salary" value="" placeholder="$0" tabindex="13" oninput="updateSalaryTT('pri'); calculateUpkeepLoad(); updateAnalysisText();">
+                  <input type="text" class="architect-input curr-format value-money" id="pri-salary" value="" placeholder="$0" oninput="updateSalaryTT('pri'); calculateUpkeepLoad(); updateAnalysisText();">
                   <div class="salary-tooltip" id="pri-salary-tt"></div>
                 </div>
                 <div class="architect-field architect-field-co">
@@ -3586,64 +3585,116 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                      ⛔ THIS LINE IS TRUE ONLY WHILE eff-tax-rate REACHES taxMult AND THE OTHER SEVEN
                         FIELDS DO NOT. If a further field wires into the Shape, this sentence is wrong
                         again — IT GOES BACK TO THE ARCHITECT. Do not patch it here. -->
-                <div class="architect-span-note architect-section-note">We record these for your plan&#39;s history and for features still being drawn. Today your Range is driven by the dates, the capital, and the tax bracket you set above.</div>
 
-                <div class="architect-row-label">Tax rate method</div>
-                <div class="architect-field">
-                  <label class="architect-solo-label" for="pri-tax-method">Tax rate method</label>
-                  <select class="architect-select" id="pri-tax-method" tabindex="18"><option value="" selected>Select method</option><option>Blended estimate</option><option>Effective paid</option><option>Marginal bracket</option><option>Custom</option></select>
-                                  <div class="architect-nm-note">Recorded, not yet modelled.</div>
+                <!-- ⭐⭐ THE HOUSEHOLD BAND — THESE ARE FACTS ABOUT A RETURN, NOT ABOUT A PERSON.
+                     A joint return has ONE combined taxable income and ONE bracket schedule, so
+                     filing status, the retirement tax rate and the retirement tax base each have a
+                     single answer for the household. Asking twice did not gather more information;
+                     it invited two answers to a question that has one.
+                     ⛔ THESE FIELDS CARRY NO .architect-field-co AND MUST NEVER GAIN ONE. Solo-parity
+                        hides -co fields, and a household field must render in BOTH modes — a single
+                        filer still has a filing status, and they are the population the engine
+                        currently mis-taxes.
+                     ⚠️ MARRIED FILING SEPARATELY IS GENUINELY TWO RETURNS and the band is specified
+                        to split for it. That split is Batch 1b; until it lands, MFS is served the
+                        single-control form, which is the pre-existing behaviour and not a regression.
+                     ⚠️ BAND LABEL IS PROVISIONAL AND AWAITS THE ARCHITECT. It paraphrases his ruling
+                        ("we ask once, for the household") rather than quoting authored copy. -->
+                <!-- ⭐⭐ THE HOUSEHOLD BAND — A 2x2 BLOCK, NOT A SPANNING INTERRUPTION (Captain-ruled).
+                     These are facts about a RETURN, not about a person: a joint return has one
+                     combined taxable income and one bracket schedule, so each is asked ONCE.
+                     ⛔ THE KICKER IS A GRID CELL, AND THAT IS THE FIX. v1 spanned and centred each
+                        field (big empty margins, an extra row each); v2 flowed them but left the
+                        section title floating above the grid, tightly spaced and reading as a
+                        different design language from the paired rows. Putting the title IN the
+                        fourth cell fills the empty quarter and makes the block match the grid above
+                        it. It reuses .workspace-kicker — the same treatment as "Starting conditions"
+                        — rather than inventing a section-header style.
+                     ⛔ NO .architect-field-co ON ANY OF THESE, EVER. Solo-parity hides -co fields,
+                        and a single filer still has a filing status — they are the population the
+                        engine currently mis-taxes.
+                     ⚠️ LABELS ARE .architect-household-label, NOT .architect-solo-label: paired mode
+                        kills per-field labels because paired rows share one centred row-label, and
+                        three DIFFERENT questions side by side cannot share one. See profile.css.
+                     ⚠️ COPY IS THE ARCHITECT'S AND THREE STRINGS HERE AWAIT RATIFICATION —
+                        "Household taxes", "Effective rate in retirement", "Expected retirement
+                        location" — plus the shortened "Select status" placeholder. -->
+                <!-- ⛔ THE SECTION BREAK IS NOW A RULE, NOT A PARAGRAPH, AND IT IS LOAD-BEARING IN
+                     SOLO ESPECIALLY. The deleted section note was carrying this separation as a
+                     side effect of its border-top. Removing it left the band running straight into
+                     Gross Annual Salary.
+                     🔑 IT MATTERS MORE IN SOLO THAN IN DUAL, WHICH IS THE OPPOSITE OF WHAT YOU WOULD
+                        GUESS. In dual the personal fields are visibly paired per architect, so a
+                        single-width item reads as a different KIND of thing on its own. In solo the
+                        co column is hidden and the personal fields reflow two-across — so without
+                        this rule the household questions look like four more personal fields in a
+                        uniform grid, with nothing saying they are asked once for the household.
+                     ⚠️ NO .architect-field-co AND NOT AN .architect-field: it must draw in BOTH
+                        modes, and solo-parity hides both of those. -->
+                <div class="architect-band-rule" aria-hidden="true"></div>
+                <div class="architect-field architect-field-household architect-household-kicker">
+                  <div class="workspace-kicker">Household taxes</div>
                 </div>
-                <div class="architect-field architect-field-co">
-                  <label class="architect-solo-label" for="co-tax-method">Tax rate method</label>
-                  <select class="architect-select" id="co-tax-method"><option value="" selected>Select method</option><option>Blended estimate</option><option>Effective paid</option><option>Marginal bracket</option><option>Custom</option></select>
-                                  <div class="architect-nm-note">Recorded, not yet modelled.</div>
+                <div class="architect-field architect-field-household">
+                  <label class="architect-household-label" for="filing-status">Filing status</label>
+                  <select class="architect-select" id="filing-status"><option value="" selected>Select status</option><option>Single / Individual</option><option>Married Filing Jointly</option><option>Married Filing Separately</option><option>Head of Household</option></select>
+                  <div class="architect-nm-note">Recorded, not yet modelled.</div>
+                </div>
+                <!-- ⭐⭐ THE BANDS ARE MEASURED, NOT AUTHORED (Batch 0). 210 households through the
+                     engine's own compute_year_tax: range 0-20.1%, median 2.1%, and 39% pay NOTHING.
+                     The list this replaced offered 12/22/24/32/35/37% — MARGINAL BRACKET values, of
+                     which the cheapest sat above the 80th percentile of what the engine computes.
+                     Four in five households had no honest answer available to them.
+                     ⛔ THE VALUES ARE BAND MIDPOINTS DERIVED FROM THE MEASURED BOUNDS, NEVER PICKED.
+                        0 / 2 / 5 / 9 / 15 / 19. THE TOP BAND IS 19%, NOT 20%, AND THAT IS LOAD-BEARING:
+                        working_year_effective_rate DEFAULTS to 0.20, and a selectable answer equal to
+                        a silent default is the exact defect this arc exists to remove — the restore
+                        guard cannot tell a decision from a default. 19 avoids the collision;
+                        scripts/_gate_answer_survives_reload.js sweeps every option against every
+                        default so a future edit cannot reintroduce it.
+                     ⛔ AND THE TYPED BOX CANNOT DODGE IT BY VALUE — someone typing exactly 20 hits the
+                        same hole, and no band value can fix that. That is what bp.tax.method='exact'
+                        is for: provenance, so the restore is unconditional for a rate the user typed.
+                        SCOPE FENCE — that key carries provenance for THIS FIELD ONLY. -->
+                <div class="architect-field architect-field-household architect-rate-field">
+                  <label class="architect-household-label" for="eff-tax-rate">Effective rate in retirement</label>
+                  <select class="architect-select" id="eff-tax-rate" onchange="_effRateExact(); updateAnalysisText();"><option value="" selected>Select tax rate</option><option value="0%">Nothing at all</option><option value="2%">Almost nothing</option><option value="5%">A small share</option><option value="9%">A notable share</option><option value="15%">A serious share</option><option value="19%">A large share</option><option value="exact">I know my rate</option></select>
+                  <input type="text" class="architect-input" id="eff-tax-rate-exact" style="display:none" placeholder="14.2%" inputmode="decimal" aria-label="Your exact effective rate in retirement" oninput="updateAnalysisText();">
+                  <div class="architect-rate-source">These bands are measured from the plan&#39;s own tax model, not from a survey.</div>
+                </div>
+                <div class="architect-field architect-field-household">
+                  <label class="architect-household-label" for="pri-location">Expected retirement location</label>
+                  <select class="architect-select" id="pri-location"><option value="" selected>Select state</option><option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option></select>
+                  <div class="architect-nm-note">Recorded, not yet modelled.</div>
                 </div>
 
-                <div class="architect-row-label">Tax bracket</div>
-                <div class="architect-field">
-                  <label class="architect-solo-label" for="eff-tax-rate">Tax bracket</label>
-                  <select class="architect-select" id="eff-tax-rate" tabindex="14" onchange="updateAnalysisText()"><option value="" selected>Select tax rate</option><option value="12%">12% bracket</option><option value="22%">22% blended estimate</option><option value="24%">24% bracket</option><option value="32%">32% bracket</option><option value="35%">35% bracket</option><option value="37%">37% bracket</option></select>
-                </div>
-                <div class="architect-field architect-field-co">
-                  <label class="architect-solo-label" for="co-tax-bracket">Tax bracket</label>
-                  <select class="architect-select" id="co-tax-bracket"><option value="" selected>Select tax rate</option><option value="12%">12% bracket</option><option value="22%">22% blended estimate</option><option value="24%">24% bracket</option><option value="32%">32% bracket</option><option value="35%">35% bracket</option><option value="37%">37% bracket</option></select>
-                                  <div class="architect-nm-note">Recorded, not yet modelled.</div>
-                </div>
+                <!-- ⛔ INLINE, NEVER HOVER (§82.1832). This is DECISION SUPPORT — it exists to stop
+                     someone answering wrongly, and THE USER WHO NEVER SEES IT IS THE USER IT WAS
+                     WRITTEN FOR. Hover explains a decision already made; this informs one being made.
+                     ⚠️ It spans the band rather than sitting in the rate column: at 161px it would run
+                        five lines and drag that cell's height away from its row-mate. Spanning keeps
+                        it beside the control it serves without deforming the 2x2. -->
+                <div class="architect-band-help">Most households pay little or nothing. Not sure? Leave it &mdash; the plan works out the real figure.</div>
 
-                <div class="architect-row-label">Location (tax base)</div>
-                <div class="architect-field">
-                  <label class="architect-solo-label" for="pri-location">Location (tax base)</label>
-                  <select class="architect-select" id="pri-location" tabindex="12"><option value="" selected>Select state</option><option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option></select>
-                                  <div class="architect-nm-note">Recorded, not yet modelled.</div>
-                </div>
-                <div class="architect-field architect-field-co">
-                  <label class="architect-solo-label" for="co-location">Location (tax base)</label>
-                  <select class="architect-select" id="co-location"><option value="" selected>Select state</option><option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option></select>
-                                  <div class="architect-nm-note">Recorded, not yet modelled.</div>
-                </div>
-
-                <!-- ⚖️ FILING STATUS IS APPENDED AS THE FINAL ROW AND THE MOCK DOES NOT HAVE IT.
-                     Captain-ruled: married-filing-separately is real, so a joint plan needs the
-                     question. Appended LAST, in the established row pattern, so solo and dual field
-                     order match and toggling the household does not reshuffle the form. NO NEW COPY —
-                     the label and every option are live's own. -->
-                <div class="architect-row-label">Filing status</div>
-                <div class="architect-field">
-                  <label class="architect-solo-label" for="filing-status">Filing status</label>
-                  <select class="architect-select" id="filing-status" tabindex="15"><option value="" selected>Select filing status</option><option>Single / Individual</option><option>Married Filing Jointly</option><option>Married Filing Separately</option><option>Head of Household</option></select>
-                                  <div class="architect-nm-note">Recorded, not yet modelled.</div>
-                </div>
-                <div class="architect-field architect-field-co">
-                  <label class="architect-solo-label" for="co-filing-status">Filing status</label>
-                  <select class="architect-select" id="co-filing-status"><option value="" selected>Select filing status</option><option>Single / Individual</option><option>Married Filing Jointly</option><option>Married Filing Separately</option><option>Head of Household</option></select>
-                                  <div class="architect-nm-note">Recorded, not yet modelled.</div>
-                </div>
-
+                <!-- ⭐ THE LAST-SURVIVOR DISCLOSURE IS HOVER COPY ON THIS BUTTON, DUAL ONLY (Captain-ruled).
+                     It was a five-line paragraph sitting in the middle of the form between the
+                     plan-through dates and the salaries, and it pushed every field below it down.
+                     THE WORDS ARE UNCHANGED — this is a placement change, not a re-authoring.
+                     ⛔ DUAL-ONLY COMES FROM .architect-field-co, NOT FROM NEW JAVASCRIPT. Solo-parity
+                        already hides that class, so a single architect never sees a disclosure about
+                        two plan-through ages. Reused, not rebuilt.
+                     ⛔ AND THE REVEAL IS THE .salary-tooltip IDIOM, ALSO REUSED — a CSS :hover on the
+                        wrapper. No handler, nothing to unbind, nothing to leak between rooms.
+                     ⚠️ IT IS STILL COUPLED TO THE ENGINE TAKING max() OF TWO PLAN-END AGES. If that
+                        stops being true the sentence is wrong wherever it lives, and it goes back to
+                        the Architect to re-author rather than being reworded here. -->
+                <div class="architect-complete-wrap full">
                 <button class="architect-complete-profile full" type="button" aria-label="Complete profile and build Master Suite">
                   <span class="architect-complete-title">Complete Profile</span>
                   <span class="architect-complete-sub">Build Master Suite</span>
                 </button>
+                  <div class="architect-lastsurvivor-tip architect-field-co" id="architect-lastsurvivor-note">Your Range runs to the later of your two plan-through ages. It is one household planning to a single horizon &mdash; not a forecast of who outlives whom, and not a survivor&#39;s plan. We don&#39;t model the year a household becomes one person: no change in spending, no change in tax filing, no change in Social Security. Those shifts are real, and this plan does not price them.</div>
+                </div>
               </div>
             </div>
 
@@ -5592,37 +5643,25 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       coToggle.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
-    /* §82.1548 — PREFILL THE CO-ARCHITECT'S TAX FIELDS, VISIBLY, NEVER SILENTLY.
-       Two people planning together usually share a state, a bracket and a filing status, so
-       asking twice is friction. But COPYING WITHOUT SAYING SO IS A DEFAULT NOBODY MADE — the
-       exact class this arc has spent itself removing — so each copied field is stamped
-       data-prefilled and carries a visual treatment until the user touches it.
-       ⚠️ ONLY-IF-EMPTY, so it can never overwrite a restored draft or a real answer, and it is
-          idempotent for the same reason.
-       ⚠️ NO NEW COPY. Nothing is authored for "this was prefilled", so the distinction is made
-          visually and structurally; inventing a sentence here would be authoring, not wiring. */
-    function _prefillCoArchTax() {
-      [['pri-tax-method','co-tax-method'],
-       ['eff-tax-rate','co-tax-bracket'],
-       ['pri-location','co-location'],
-       ['filing-status','co-filing-status']].forEach(function (pair) {
-        var src = document.getElementById(pair[0]), dst = document.getElementById(pair[1]);
-        if (!src || !dst || !src.value) return;
-        if (dst.value) return;                     // never overwrite a real answer
-        dst.value = src.value;
-        if (dst.value === src.value) dst.setAttribute('data-prefilled', 'true');
-      });
-    }
-    ['co-tax-method','co-tax-bracket','co-location','co-filing-status'].forEach(function (id) {
-      var el = document.getElementById(id);
-      /* The stamp is retired the moment the user takes ownership of the value. */
-      if (el) el.addEventListener('change', function () { el.removeAttribute('data-prefilled'); });
-    });
-    window._prefillCoArchTax = _prefillCoArchTax;   // gate seam
+    /* ⛔⛔ §82.1548 — THE CO-ARCHITECT TAX PREFILL IS RETIRED, NOT DISABLED (Batch 1a).
+       ~~It copied the primary's four tax answers into the co-architect's four, only-if-empty,
+       each stamped `data-prefilled` until the user took ownership.~~ STRUCK, NOT DELETED, so
+       nobody rebuilds it: ALL FOUR OF ITS TARGETS NO LONGER EXIST. `co-tax-method` and
+       `co-location` are deleted outright; `co-tax-bracket` and `co-filing-status` are replaced by
+       single household controls, because a joint return has one combined income and one rate.
+       🔑 A COPY MECHANISM WITH NOTHING LEFT TO COPY IS NOT A FEATURE THAT BROKE — IT IS A FEATURE
+          WHOSE PROBLEM WAS DELETED. The Captain's smoke finding (the co-architect fields do not
+          refill when the primary's change) is resolved the same way: there is no second field.
+       ⛔ AND THE DEBT IT CARRIED GOES WITH IT. `data-prefilled` existed because a copied value and
+          a typed value were indistinguishable one round-trip later. That was the provenance
+          primitive's last live consumer in the tax block. Do not resurrect the stamp here to solve
+          a problem this deletion already solved.
+       ⚠️ IF MARRIED-FILING-SEPARATELY EVER SPLITS THE BAND BACK INTO TWO (Batch 1b), THE COPY
+          QUESTION RETURNS AND SO DOES THE STAMP. It would then be a NEW mechanism against a NEW
+          shape, deliberately specified — never this one restored from history. */
 
     coToggle.addEventListener('change', () => {
       _applyCoArchVisibility();
-      if (coToggle.checked) _prefillCoArchTax();
       if(!coToggle.checked) {
         let i = state.accounts.length;
         while (i--) {
@@ -5649,26 +5688,32 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           exactly what the off-state writes. The change listener above is the only other writer of
           either, so this cannot fight anything.
        Gate: scripts/_gate_coarch_reveal_matches_toggle.js (L1 red on pre-fix bytes). */
-    /* ⛔⛔ ITEM 10 — THE PREFILL WAS BOUND TO THE TRANSITION, NEVER TO THE STATE (Captain-found,
-       2026-09-05). `_prefillCoArchTax()` was called from ONE place: the toggle's own `change`
-       listener. So it fired on solo -> joint and NEVER on arrival. A user who was ALREADY joint —
-       which is EVERY returning user after a reload — got no prefill at all, and toggling to solo
-       and back was the only way to produce it.
-       🔑 THE FEATURE WORKED WHEN DEMONSTRATED AND FAILED WHEN USED, and that is exactly why no gate
-          caught it: any test that TOGGLES in order to reach joint can never observe the defect.
-          THE REPRODUCTION STEPS WERE THE CAMOUFLAGE.
-       ⚠️ IT RIDES pageshow BESIDE THE REVEAL, NOT INSIDE IT. `_applyCoArchVisibility` promises to be
-          display-only and is gated on that promise (F71); folding a field-writing prefill into it
-          would break the contract its own gate asserts. Same event, same idempotence, separate call.
-       ⚠️ SAFE TO REPEAT BY CONSTRUCTION: the prefill is only-if-empty and never overwrites a real
-          answer, so running it on every entry cannot clobber a restored draft.
-       ⭐ AND THIS IS WHAT FINALLY MAKES §82.1626 TRUE. `_given()` buys honesty by DISCARDING a
-          prefilled value rather than persisting it, which was defended on the grounds that a skipped
-          prefill is RE-OFFERED next load. It was not being re-offered — nothing re-ran it. It is now.
-       ⚠️ KNOWN LIMIT, NOT SOLVED HERE: a co-architect field the user DELIBERATELY cleared is
-          indistinguishable from one never answered, so it will be re-offered. That is the missing
-          provenance primitive (queue #2), not a defect in this repair. */
-    window.addEventListener('pageshow', function () { _applyCoArchVisibility(); if (coToggle.checked) _prefillCoArchTax(); });
+    /* ⛔⛔ ITEM 10 IS CLOSED BY DELETION, NOT BY REPAIR (Batch 1a). The line below used to carry a
+       second call — `if (coToggle.checked) _prefillCoArchTax();` — added 2026-09-05 because the
+       prefill was bound to the toggle TRANSITION and so never ran for a returning user who was
+       already joint. ~~"THE FEATURE WORKED WHEN DEMONSTRATED AND FAILED WHEN USED"~~ was true, and
+       the repair was correct for the shape the form then had.
+       🔑 THAT SHAPE IS GONE. All four prefill targets were per-architect tax fields, and all four
+          left the personal columns in this batch — two deleted, two replaced by single household
+          controls. The call is removed because THE FUNCTION IS REMOVED, not because the item-10
+          defect was re-litigated. See the struck block at the retired prefill above.
+       ⛔ THE HANDLER STAYS ONE LINE AND STAYS HERE. `_gate_coarch_reveal_matches_toggle` parses BY
+          LINE and anchors its mutation controls on this literal — its SYNC_LINE was updated in this
+          same commit to follow the removed call. A reformat here disarms two live controls over the
+          F71 back-nav data-loss defect while leaving them green. */
+    /* The typed-rate box appears only for the "I know my rate" option. Switching AWAY clears it —
+       a stale figure behind a band the user has since changed is a value nobody chose. */
+    function _effRateExact() {
+      var _s = document.getElementById('eff-tax-rate');
+      var _i = document.getElementById('eff-tax-rate-exact');
+      if (!_s || !_i) return;
+      var _on = (_s.value === 'exact');
+      _i.style.display = _on ? '' : 'none';
+      if (!_on) _i.value = '';
+    }
+    window._effRateExact = _effRateExact;
+
+    window.addEventListener('pageshow', function () { _applyCoArchVisibility(); });
 
     // --- PLUMBING / UPKEEP LOGIC & CHARITY LOGIC ---
     let upkeepItems = [
@@ -14594,11 +14639,26 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         var _optHas = function (el, val) { return !!el && Array.prototype.some.call(el.options || [], function (o) { return (o.value || o.text) === val; }); };
         if (_tx.location && _tx.location !== _defTax.location) { var _lo = document.getElementById('pri-location'); if (_optHas(_lo, _tx.location)) _lo.value = _tx.location; }
         if (_tx.filing   && _tx.filing   !== _defTax.filing)   { var _fi = document.getElementById('filing-status'); if (_optHas(_fi, _tx.filing))   _fi.value = _tx.filing; }
-        if (typeof _tx.working_year_effective_rate === 'number' && _tx.working_year_effective_rate > 0
-            && _tx.working_year_effective_rate !== _defTax.working_year_effective_rate) {
+        /* ⛔ >= 0, NOT > 0 — "Nothing at all" IS AN ANSWER AND IT IS THE MOST COMMON ONE.
+           82 of 210 measured households pay no federal tax on their withdrawal at all. A guard
+           discarding zero would have accepted the answer on screen and dropped it on reload: the
+           user told, then not heard. TRUTHY-ZERO — the family of fault where the most meaningful
+           value in the domain is the one the language treats as absent.
+           ⛔ AND `_tx.method === 'exact'` MAKES THE RESTORE UNCONDITIONAL FOR A TYPED RATE. Without
+              it, someone typing exactly 20 loses their answer to the schema default, which no band
+              value can prevent. The legacy vocabulary of that key was '', 'Blended estimate',
+              'Effective paid', 'Marginal bracket', 'Custom' — all disjoint from 'exact', so a
+              blueprint saved under its old meaning cannot be mistaken for provenance. */
+        if (typeof _tx.working_year_effective_rate === 'number' && _tx.working_year_effective_rate >= 0
+            && (_tx.method === 'exact' || _tx.working_year_effective_rate !== _defTax.working_year_effective_rate)) {
           var _rv = Math.round(_tx.working_year_effective_rate * 100) + '%';
           var _te = document.getElementById('eff-tax-rate');
-          if (_optHas(_te, _rv)) _te.value = _rv;
+          var _tex = document.getElementById('eff-tax-rate-exact');
+          if (_tx.method === 'exact' && _te && _tex) {
+            _te.value = 'exact';
+            _tex.value = String(+(_tx.working_year_effective_rate * 100).toFixed(2)) + '%';
+          } else if (_optHas(_te, _rv)) { _te.value = _rv; }
+          if (typeof window._effRateExact === 'function') window._effRateExact();
         }
 
         /* ⛔ 1.1.0 — THE RESTORE SIDE OF THE EIGHT. The capture side is studio-blueprint.js;
@@ -14615,16 +14675,17 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         if (prof.primary_salary)      { var _ps = document.getElementById('pri-salary'); if (_ps) _ps.value = _money(prof.primary_salary); }
         if (prof.co_architect_salary) { var _cs = document.getElementById('co-salary');  if (_cs) _cs.value = _money(prof.co_architect_salary); }
         if (prof.co_architect_plan_end_date) { var _cp = document.getElementById('co-plan-end'); if (_cp) _cp.value = prof.co_architect_plan_end_date; }
-        if (_tx.method    && _tx.method    !== _defTax.method)    { var _tm = document.getElementById('pri-tax-method');   if (_optHas(_tm, _tx.method))    _tm.value = _tx.method; }
-        if (_tx.co_method && _tx.co_method !== _defTax.co_method) { var _cm = document.getElementById('co-tax-method');    if (_optHas(_cm, _tx.co_method)) _cm.value = _tx.co_method; }
-        if (_tx.co_filing && _tx.co_filing !== _defTax.co_filing) { var _cf = document.getElementById('co-filing-status'); if (_optHas(_cf, _tx.co_filing)) _cf.value = _tx.co_filing; }
-        if (_tx.co_location && _tx.co_location !== _defTax.co_location) { var _cl = document.getElementById('co-location'); if (_optHas(_cl, _tx.co_location)) _cl.value = _tx.co_location; }
-        if (typeof _tx.co_working_year_effective_rate === 'number' && _tx.co_working_year_effective_rate > 0
-            && _tx.co_working_year_effective_rate !== _defTax.co_working_year_effective_rate) {
-          var _cb = document.getElementById('co-tax-bracket');
-          var _cbv = Math.round(_tx.co_working_year_effective_rate * 100) + '%';
-          if (_optHas(_cb, _cbv)) _cb.value = _cbv;
-        }
+        /* ⛔ FOUR RESTORE LINES REMOVED IN BATCH 1a — method, co_method, co_filing, co_location.
+           Their target elements no longer exist. They were null-safe (`_optHas` guards on !!el) so
+           they would not have thrown — WHICH IS EXACTLY WHY THEY HAD TO GO RATHER THAN BE LEFT.
+           A restore line pointing at a deleted control is silently inert: it reads as wiring, it
+           survives every gate, and the next person maintains a path that cannot run.
+           ⚠️ THE SCHEMA KEYS THEMSELVES ARE DELIBERATELY LEFT IN PLACE. Removing them would shift
+              the codec's POSITIONAL `T` array and break every blueprint already saved. Retiring
+              the keys is a codec version bump, and it is Batch 1b's problem, not this one's. */
+        /* ⛔ THE FIFTH RESTORE LINE, REMOVED WITH THE OTHER FOUR — the co-architect's tax rate.
+           Its target `co-tax-bracket` is gone: a joint return has one combined taxable income and
+           therefore one rate, so the household band asks it once. Same reasoning, same batch. */
         /* ⛔ ANNOUNCE A RESTORE ONLY IF SOMETHING WAS ACTUALLY RESTORED. readSessionDraft() can
            hand back a NON-NULL but EMPTY draft, so `if (!bp) return;` is NOT the same test as
            "there was something to bring back".

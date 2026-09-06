@@ -237,10 +237,17 @@ function mutate(src) {
     ['upkeep-load adjacent', 'Add your income above and your upkeep load appears here. Until then, this figure would be a guess.'],
     ['charity % suppression', '— add your income for the % —'],
     ['construction marker', 'Recorded, not yet modelled.'],
-    /* The section note that spans the whole tax block. Its previous form ended "...the dates and the
-       capital", which our own consumption map falsified — eff-tax-rate reaches out.taxMult and
-       therefore the Shape. Pinned here so the corrected sentence cannot drift back. */
-    ['tax-block section note', 'Today your Range is driven by the dates, the capital, and the tax bracket you set above.']
+    /* ⛔ THE TAX-BLOCK SECTION NOTE IS REMOVED FROM THE PRODUCT, SO ITS PIN IS REMOVED HERE.
+       ~~['tax-block section note', 'Today your Range is driven by the dates, the capital, and the
+       tax bracket you set above.']~~ — struck, not deleted, so the removal is auditable.
+       CAPTAIN-RULED in Batch 1a. The sentence had become false on its own terms: it says "the tax
+       bracket you set ABOVE", and the tax rate now sits BELOW it inside the household band. It was
+       pinned here precisely so a corrected sentence could not drift back — and that pin did its job
+       right up to the moment the sentence was retired rather than reworded.
+       ⚠️ THIS IS A COPY DELETION AND COPY IS THE ARCHITECT'S. It is recorded as the Captain's ruling,
+          not as a wiring decision, and it is flagged to the Architect in the same report. If he
+          re-authors a replacement, PIN IT HERE AGAIN — an unpinned authored sentence is one nobody
+          will notice drifting. */
   ];
   const html = await page.content();
   const drifted = AUTHORED.filter(([, s]) => html.indexOf(s) < 0);
@@ -251,12 +258,22 @@ function mutate(src) {
    * "Recorded, not yet modelled." is a CONSTRUCTION MARKER, not product copy: it comes down as each
    * field is proven wired, so THE ABSENCE OF THE NOTE IS AS MUCH A STATEMENT AS ITS PRESENCE.
    * Three fields had theirs removed on PROOF OF A READER (salary ×2 — upkeep load, needs/wants,
-   * charity, the 401k match; eff-tax-rate — _taxStated and out.taxMult into the Shape). The other
-   * seven keep theirs because nothing reads them.
+   * charity, the 401k match; eff-tax-rate — _taxStated and out.taxMult into the Shape).
    * ⛔ A NOTE RE-APPEARING ON A WIRED FIELD, OR VANISHING FROM AN UNWIRED ONE, IS A FALSE STATUS
-   *    CLAIM — and this is the only thing that would notice. */
-  const NOTED = ['pri-tax-method', 'co-tax-method', 'co-tax-bracket', 'pri-location', 'co-location',
-                 'filing-status', 'co-filing-status'];
+   *    CLAIM — and this is the only thing that would notice.
+   *
+   * ⭐ BATCH 1a — THE LIST FELL FROM SEVEN TO TWO, AND NOT ONE OF THE FIVE WAS WIRED.
+   *    ~~['pri-tax-method', 'co-tax-method', 'co-tax-bracket', 'pri-location', 'co-location',
+   *      'filing-status', 'co-filing-status']~~ — struck, not deleted, so the shrink is auditable.
+   *    Tax rate method (both) was DELETED outright; co-tax-bracket, co-location and
+   *    co-filing-status were REPLACED by single household controls, because a joint return has one
+   *    combined taxable income and one rate. Five markers came off by SUBTRACTION.
+   * ⛔ WHICH IS A DIFFERENT ACT FROM CLEARING A MARKER, AND THE DISTINCTION IS THE WHOLE POINT OF
+   *    §82.1717. A marker comes off a SURVIVING field only on proof of a reader. These fields did
+   *    not earn their notes' removal — they stopped existing. The two that survive keep their
+   *    notes precisely because they are still unread: the engine has no filing-status parameter
+   *    and no state-tax model at all. Their notes come off in Batch 2, on proof, or not at all. */
+  const NOTED = ['pri-location', 'filing-status'];
   const UNNOTED = ['pri-salary', 'co-salary', 'eff-tax-rate'];
   const inv = await page.evaluate(([noted, unnoted]) => {
     const has = (id) => { const e = document.getElementById(id); if (!e) return null;
@@ -266,7 +283,11 @@ function mutate(src) {
     unnoted.forEach((id) => { const h = has(id); if (h === null) o.absent.push(id); else if (h) o.unexpected.push(id); });
     return o;
   }, [NOTED, UNNOTED]);
-  ok(inv.absent.length === 0, 'L9 EXISTENCE: all ten profile fields are present to be judged'
+  /* ⚠️ THE COUNT IS DERIVED, NEVER SPELLED. It read "all ten profile fields" and would have gone
+     on reading ten after Batch 1a left five — a label that states a number the code no longer
+     computes is a stale fact with a citation, in the one place a reader trusts most. */
+  ok(inv.absent.length === 0, 'L9 EXISTENCE: all ' + (NOTED.length + UNNOTED.length)
+    + ' profile fields are present to be judged'
     + (inv.absent.length ? ' — MISSING FROM THE DOM: ' + inv.absent.join(', ') : ''));
   /* ⚠️⚠️ DECLARE THE STRENGTH OF THE CLAIM, NOT JUST THE CLAIM (§82.1699). THIS LEG PINS AN
      INVENTORY THAT WAS ASSERTED, NOT A TRUTH THAT WAS MEASURED. The two lists above are HAND-WRITTEN

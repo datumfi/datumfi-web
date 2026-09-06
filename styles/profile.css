@@ -234,6 +234,11 @@ body.light-mode .architect-profile-note{color:#68787d}
 @media(max-width:720px){
   .architect-field-grid{grid-template-columns:1fr}
   .architect-field.full{grid-column:auto}
+  /* ⭐ NO HOUSEHOLD RULE IS NEEDED HERE ANY MORE, AND THAT IS THE POINT OF v2.
+     v1 spanned and centred the band at a width derived from the two-column grid, so the collapse
+     to one column needed an override or the control became a narrow box. v2 makes them ordinary
+     grid cells, so they collapse exactly as every other field does — the layout that needs no
+     special case at the breakpoint is the one that was expressed in the grid's own terms. */
 }
 .architect-profile-head{align-items:center;
   padding-bottom:10px;
@@ -638,6 +643,177 @@ body.light-mode [data-profile-port] .architect-span-note{color:rgba(77,99,108,.8
 }
 body.light-mode [data-profile-port] .architect-section-note{border-top-color:rgba(52,73,78,.14);}
 
+/* ── THE HOUSEHOLD BAND ─────────────────────────────────────────────────────────────────────
+   A field that belongs to the RETURN, not to either architect. Filing status, the retirement
+   tax rate and the retirement tax base are one answer for the household — a joint return has
+   one combined income and one rate — so they are asked ONCE and straddle both columns.
+
+   ⭐ CENTRED ON THE SEAM, AT ONE COLUMN'S WIDTH (Captain-ruled). It spans 1/-1 like every other
+      full-width element here, but the CONTROL is held to a single column and centred, so it sits
+      across the join between the two architects rather than stretching over both. A full-bleed
+      select would read as a wide version of a personal field; this reads as a different KIND of
+      field, which is exactly what it is.
+   ⚠️ THE WIDTH IS DERIVED FROM THE GRID, NOT PINNED. `calc(50% - 4px)` is one column of
+      `repeat(2,minmax(0,1fr))` minus half the 8px gap. Change the grid's gap or column count and
+      this must be re-derived — it is arithmetic on the grid above, not a magic number.
+   ⛔ IT DOES NOT USE .architect-field-co, AND THAT IS THE POINT. Solo-parity hides -co fields
+      (R536); a household field must render in BOTH modes, because a solo filer still has a filing
+      status. Marking it -co would make the household's own tax question vanish for single users —
+      the exact population the engine currently mis-taxes. */
+/* ⭐ v2, CAPTAIN-RULED: THE BAND FLOWS IN THE GRID, IT DOES NOT SPAN IT.
+   ~~`grid-column:1/-1; width:calc(50% - 4px); margin-inline:auto`~~ — struck. Spanning and
+   centring each field cost a full row apiece, left large empty margins either side, and broke
+   rhythm with the paired personal rows above, which are two-across. These are ordinary grid cells
+   now, so three fields occupy TWO rows and the empty cell falls beside the third:
+       [ filing status | tax rate ]
+       [ location      | (empty)  ]
+   The class survives because the LABELS still need it (below) and because it names what these
+   fields are — the band is now carried by .architect-band-label alone. */
+[data-profile-port] .architect-field-household{grid-column:auto;}
+
+/* ⛔ THE HOUSEHOLD LABEL NEEDS AN EXPLICIT OVERRIDE, AND THE FIRST ATTEMPT WAS WRONG.
+   ~~"a new name escapes the !important, the way .architect-nm-note did"~~ — STRUCK, AND MEASURED
+   WRONG: all three household labels rendered `display:none` in joint mode. The nm-note precedent
+   escaped because R416 names a CLASS there (`.architect-field-note`). For labels the SAME rule
+   names an ELEMENT — `.architect-field-grid-paired .architect-field label` — so no class name can
+   step around it. A new name only helps when the rule you are avoiding is spelled as a name.
+   🔑 SO THIS IS A CARVE-OUT, NOT A FIGHT, AND THE DISTINCTION IS THE JUSTIFICATION. R416 exists
+      because PAIRED ROWS SHARE ONE CENTRED .architect-row-label, which makes per-field labels
+      redundant. Household fields are not paired rows: three different questions sit side by side
+      with no row label to share. The premise of the rule does not hold here, so overriding it
+      honours the design decision rather than overruling it.
+   ⚠️ SCOPED AS TIGHTLY AS IT CAN BE — this class only, inside the port, and it is the ONLY
+      !important added. Widen it and R416 stops meaning anything.
+   ⛔⛔ `!important` ALONE DID NOT WIN, AND THE FIRST VERSION OF THIS RULE SHIPPED HIDDEN.
+      MEASURED: `[data-profile-port] .architect-household-label` is (0,2,0) — one attribute, one
+      class. R416's `.architect-field-grid-paired .architect-field label` is (0,2,1). BOTH carry
+      !important, so the cascade falls through to specificity and R416 wins by its element
+      selector. The extra `.architect-field` below buys the class column, (0,3,0), and takes it.
+      🔑 TWO !importants DO NOT CANCEL — THE MORE SPECIFIC ONE STILL WINS. An override that loses
+         renders exactly like a rule that was never written, which is why this was caught by
+         reading computed `display` off the page and never would have been caught by reading CSS. */
+[data-profile-port] .architect-field .architect-household-label{
+  display:block !important;
+  color:#8f9ba2;font:500 7.4px/1.35 var(--mono);
+  letter-spacing:.10em;text-transform:uppercase;
+  /* ⛔ NO min-height. ~~`min-height:calc(7.4px * 1.35 * 2)`~~ reserved TWO label lines because v2's
+     "Expected tax rate in retirement" wrapped. The Captain's v3 labels — "Expected retirement tax
+     rate" / "Expected retirement location" — both fit ONE line, so the reserve became pure dead
+     space that pushed every dropdown in this band lower than the paired rows above it. Captain
+     caught it on sight: the gap above these controls was visibly larger than the gap above Date of
+     Birth. THE LABEL IS NOW TYPOGRAPHICALLY IDENTICAL TO THE SOLO LABEL, WHICH IS THE PARITY ASKED
+     FOR — same font, same letter-spacing, same 7px flex gap to the control beneath it.
+     ⚠️ IF A LABEL HERE EVER WRAPS AGAIN, ALIGNMENT BREAKS BEFORE ANYTHING ELSE DOES. Shorten the
+        label; do not re-add a reserve, or the whole band drifts down again. */
+}
+body.light-mode [data-profile-port] .architect-household-label{color:#68787d;}
+/* ⭐ v3 — THE SECTION TITLE IS A GRID CELL, NOT A SPANNING HEADER (Captain-ruled).
+   ~~.architect-band-label spanned 1/-1 with its own rule and centred text.~~ Struck: it floated
+   above the grid, sat tighter than everything around it, and read as a different design language
+   from the paired rows. Three fields also left one quarter of the block empty.
+   🔑 PUTTING THE TITLE IN THAT EMPTY QUARTER SOLVES BOTH AT ONCE — the block becomes a 2x2 that
+      matches the grid above it, and the spacing problem disappears because the title is now spaced
+      BY the grid rather than against it.
+   ⛔ IT REUSES .workspace-kicker — the same treatment as "Starting conditions" a few rows up —
+      rather than inventing a section-header style. The section note above already carries the
+      border-top that separates this block, so no rule is drawn here. */
+/* ⚠️ CENTRED VERTICALLY, ALIGNED LEFT — AND THE TWO ARE DIFFERENT AXES, WHICH IS WHY THIS WAS
+   WRONG TWICE. .architect-field is a flex COLUMN, so `justify-content` is the VERTICAL axis and
+   `align-items` is the HORIZONTAL one. v3 centred both (title floating mid-cell, but also centred
+   horizontally — not the "Starting conditions" idiom). v4 set both to flex-start (left, but pinned
+   to the top, sitting above the control beside it). The Captain asked for one of each: sitting at
+   the same height as the SELECT box to its right, starting at the same left edge as every other
+   label in the panel.
+   🔑 "CENTRED, BUT LEFT-ALIGNED" IS NOT A CONTRADICTION IN A FLEX COLUMN — it is one property per
+      axis, and reading it as a single alignment is what produced both wrong versions. */
+/* The section break the deleted note used to carry as a side effect of its border-top. Same
+   hairline, same weight, no copy — a rule that separates rather than a sentence that explains. */
+[data-profile-port] .architect-band-rule{
+  grid-column:1 / -1;
+  margin:13px 0 5px;
+  border-top:1px solid rgba(142,160,168,.14);
+}
+/* ⚠️ LIGHT MODE NEEDS MORE ALPHA THAN DARK, AND IT IS NOT A PREFERENCE — IT IS THE GROUND.
+   The deleted section note used rgba(52,73,78,.14) here and it was invisible in practice:
+   MEASURED, that resolves to ~216 on a 243 ground, a 27-step difference the eye reads as nothing.
+   The dark rule clears its ground more easily because the ink is LIGHTER than the paper there.
+   🔑 COPYING AN ALPHA ACROSS THEMES COPIES THE NUMBER, NOT THE CONTRAST. Raised until the hairline
+      is actually a hairline; still lighter than any border in the panel. */
+body.light-mode [data-profile-port] .architect-band-rule{border-top-color:rgba(52,73,78,.30);}
+
+[data-profile-port] .architect-household-kicker{
+  justify-content:center;align-items:flex-start;text-align:left;
+}
+
+/* ── THE BAND HELPER — INLINE, SPANNING, AND NOT NEGOTIABLE (§82.1832) ──────────────────────
+   Decision support: it exists to stop someone answering wrongly, so it must be visible WHILE the
+   answer is being given. Hover explains a decision already made; this informs one being made.
+   ⚠️ It spans rather than sitting in the rate column because at 161px it runs five lines and would
+      drag that cell's height away from its row-mate, breaking the 2x2 the band is built on. */
+[data-profile-port] .architect-band-help{
+  grid-column:1 / -1;margin:9px 0 2px;
+  font:300 10.5px/1.5 var(--sans);color:rgba(177,192,198,.72);
+}
+body.light-mode [data-profile-port] .architect-band-help{color:rgba(77,99,108,.8);}
+
+/* The band list's PROVENANCE note. Hover is permitted here and not for the helper above, because
+   this is where the numbers came from rather than guidance on what to answer — secondary by
+   §82.1832's own test. :focus-within so the keyboard reaches it, per the Batch 1a lesson. */
+[data-profile-port] .architect-rate-field{position:relative;}
+[data-profile-port] .architect-rate-source{
+  position:absolute;bottom:calc(100% + 6px);left:0;right:0;
+  padding:9px 11px;border-radius:4px;
+  border:1px solid rgba(142,160,168,.18);background:#060b14;
+  box-shadow:0 10px 30px rgba(0,0,0,.8);
+  font:300 10px/1.45 var(--sans);color:rgba(177,192,198,.86);
+  opacity:0;pointer-events:none;transition:opacity .25s;z-index:60;
+}
+[data-profile-port] .architect-rate-field:hover .architect-rate-source,
+[data-profile-port] .architect-rate-field:focus-within .architect-rate-source{opacity:1;}
+body.light-mode [data-profile-port] .architect-rate-source{
+  background:#f7f9f9;border-color:rgba(52,73,78,.18);color:#4d636c;
+  box-shadow:0 10px 30px rgba(52,73,78,.18);
+}
+
+/* The typed-rate box sits directly under its select when "I know my rate" is chosen. */
+[data-profile-port] #eff-tax-rate-exact{margin-top:-1px;}
+[data-profile-port] .architect-household-kicker .workspace-kicker{
+  margin:0;color:var(--teal);
+}
+
+/* ── THE LAST-SURVIVOR DISCLOSURE, AS HOVER COPY ON COMPLETE PROFILE ────────────────────────
+   Lifted out of the form body, where it was a five-line paragraph pushing every field below it
+   down. Reveal is the .salary-tooltip idiom (a CSS :hover on the wrapper, no JavaScript), and
+   dual-only comes from .architect-field-co, which solo-parity already hides.
+   ⚠️ THE WRAPPER MUST BE THE POSITIONED ANCESTOR, not the button: a <div> is not valid inside
+      <button>, so the tip is a SIBLING and the wrapper carries `full` for the grid span. */
+[data-profile-port] .architect-complete-wrap{position:relative;}
+[data-profile-port] .architect-lastsurvivor-tip{
+  position:absolute;bottom:calc(100% + 8px);left:0;right:0;
+  padding:11px 13px;border-radius:4px;
+  border:1px solid rgba(142,160,168,.18);
+  background:#060b14;
+  box-shadow:0 10px 30px rgba(0,0,0,.8);
+  font:300 10.5px/1.5 var(--sans);color:rgba(177,192,198,.86);
+  opacity:0;pointer-events:none;transition:opacity .25s;z-index:60;
+}
+/* ⛔⛔ :focus-within IS NOT A NICETY HERE — WITHOUT IT THIS DISCLOSURE HAS NO KEYBOARD AUDIENCE.
+   The paragraph was moved out of the form body into a hover, which was the right destination and
+   the wrong reveal: a pointer-only trigger meant anyone tabbing through the form could never
+   reach it at all. THE WORDS SURVIVED THE MOVE; THE AUDIENCE DID NOT.
+   🔑 RENDERED IS NOT REACHABLE. Every gate in the suite asks what the page CONTAINS; none asked
+      what a user can REACH, which is why 268 green said nothing about this.
+   ⚠️ THE WRAPPER IS THE FOCUS SCOPE, AND THAT IS WHY IT WORKS WITH NO NEW MARKUP: the Complete
+      Profile button is already focusable and already inside it, so tabbing to the button opens the
+      disclosure exactly as hovering the wrapper does. Reuse, but reuse whose limits were checked
+      this time. */
+[data-profile-port] .architect-complete-wrap:hover .architect-lastsurvivor-tip,
+[data-profile-port] .architect-complete-wrap:focus-within .architect-lastsurvivor-tip{opacity:1;}
+body.light-mode [data-profile-port] .architect-lastsurvivor-tip{
+  background:#f7f9f9;border-color:rgba(52,73,78,.18);color:#4d636c;
+  box-shadow:0 10px 30px rgba(52,73,78,.18);
+}
+
 /* "Recorded, not yet modelled." — the field-level marker on the five that reach nothing.
    ⚠️ A DISTINCT CLASS ON PURPOSE. The mock kills .architect-field-note in the paired grid with
       `display:none !important` (R5370). That was a deliberate density decision about the mock's
@@ -650,10 +826,14 @@ body.light-mode [data-profile-port] .architect-section-note{border-top-color:rgb
 }
 body.light-mode [data-profile-port] .architect-nm-note{color:rgba(77,99,108,.62);}
 
-/* Prefilled, and SAYING SO WITHOUT WORDS. No copy is authored for "this was copied from the
-   primary", so the distinction is carried visually and structurally (data-prefilled), and the
-   treatment retires itself the moment the user changes the value. */
-[data-profile-port] [data-prefilled="true"]{
-  border-style:dashed;color:rgba(177,192,198,.78);
-}
-body.light-mode [data-profile-port] [data-prefilled="true"]{color:rgba(77,99,108,.85);}
+/* ⛔ THE PREFILLED TREATMENT IS REMOVED, NOT ORPHANED (Batch 1a).
+   ~~"Prefilled, and SAYING SO WITHOUT WORDS. No copy is authored for 'this was copied from the
+   primary', so the distinction is carried visually and structurally (data-prefilled), and the
+   treatment retires itself the moment the user changes the value."~~ Struck, not deleted.
+   Nothing writes `data-prefilled` any more: the co-architect tax prefill had exactly four targets
+   and all four left the personal columns when the tax block became a household band.
+   🔑 A RULE WHOSE SELECTOR CAN NEVER MATCH IS INDISTINGUISHABLE FROM ONE THAT WAS NEVER WRITTEN —
+      it renders nothing, breaks nothing, and survives every visual gate, so it would have sat here
+      being maintained forever. Deleted deliberately rather than left to rot.
+   ⚠️ IF THE MARRIED-FILING-SEPARATELY SPLIT REINTRODUCES A COPY, IT NEEDS THIS TREATMENT BACK —
+      as a new rule against the new shape, authored with it, never revived from this comment. */

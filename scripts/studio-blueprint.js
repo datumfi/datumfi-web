@@ -1640,29 +1640,28 @@
     var coSal  = moneyToInt(v('co-salary'));  if (coSal)  bp.profile.co_architect_salary = coSal;
     var coPlan = mmYYYY(v('co-plan-end'));    if (coPlan) bp.profile.co_architect_plan_end_date = coPlan;
 
-    /* ⛔⛔ PROVENANCE GATE — THE THIRD LAW (§82.1616), AND IT ONLY EXISTS BECAUSE TWO SAFE
-       CHANGES MEET HERE. Cause 2 prefills the co-architect's four tax fields from the primary's,
-       only-if-empty, stamped data-prefilled and un-stamped the moment the user edits. That is a
-       fabrication-safe DISPLAY. This block is a fabrication-safe CAPTURE. Together, without the
-       guard below, they are neither: a value the user never gave would be stored as an answer,
-       and data-prefilled IS A DOM ATTRIBUTE THAT IS NEVER PERSISTED — so after ONE round-trip
-       nothing can tell it from a real one. A LIE WITH ITS LABEL REMOVED.
-       🔑 NEITHER CHANGE IS WRONG ALONE. The defect lives on the bridge between them, which is
-          why it appears in no diff of either.
-       ⚠️ THE COST IS AN UNDER-RESTORE AND IT IS NOT EVEN THAT: the prefill is only-if-empty and
-          re-runs on the next load, so a skipped prefill is re-offered rather than lost. IT CAN
-          UNDER-RESTORE; IT CAN NEVER FABRICATE. */
-    var _given = function (id) {
-      var el = (typeof document !== 'undefined') ? document.getElementById(id) : null;
-      if (!el || el.hasAttribute('data-prefilled')) return '';
-      return v(id);
-    };
-    var taxMethod = v('pri-tax-method');        if (taxMethod) bp.tax.method = taxMethod;
-    var coMethod  = _given('co-tax-method');    if (coMethod)  bp.tax.co_method = coMethod;
-    var coFiling  = _given('co-filing-status'); if (coFiling)  bp.tax.co_filing = coFiling;
-    var coLoc     = _given('co-location');      if (coLoc)     bp.tax.co_location = coLoc;
-    var coRate    = parseFloat(String(_given('co-tax-bracket')).replace('%', ''));
-    if (!isNaN(coRate) && coRate > 0) bp.tax.co_working_year_effective_rate = coRate / 100;
+    /* ⛔⛔ THE PROVENANCE GATE IS RETIRED BECAUSE ITS BRIDGE WAS DEMOLISHED (Batch 1a).
+       ~~"Cause 2 prefills the co-architect's four tax fields from the primary's, only-if-empty,
+       stamped data-prefilled... This block is a fabrication-safe CAPTURE. Together, without the
+       guard below, they are neither: a value the user never gave would be stored as an answer...
+       A LIE WITH ITS LABEL REMOVED."~~ STRUCK, NOT DELETED. Every word of it was true, and the
+       guard was the correct repair for the shape that then existed.
+       🔑 THE DEFECT LIVED ON A BRIDGE BETWEEN A DISPLAY AND A CAPTURE, AND BATCH 1a REMOVED THE
+          DISPLAY END. All four prefill targets — co-tax-method, co-tax-bracket, co-location,
+          co-filing-status — are gone: two deleted, two replaced by single household controls,
+          because a joint return has one combined taxable income and one rate. With nothing
+          copying values in, there is no unattributed value to guard against on the way out.
+       ⛔ SO `_given` GOES WITH THE FIVE CAPTURE LINES IT SERVED, AND THAT IS THE WHOLE POINT: it
+          had exactly those callers and no others. A guard kept alive past its threat is not free
+          — it is a mechanism the next reader must understand and maintain in order to discover it
+          protects nothing.
+       ⚠️ THE SCHEMA KEYS (`method`, `co_method`, `co_filing`, `co_location`,
+          `co_working_year_effective_rate`) ARE DELIBERATELY LEFT DECLARED. They are positional in
+          the codec's `T` array; removing them shifts every later slot and breaks blueprints
+          already saved. Retiring them is a codec version bump — Batch 1b, not this one.
+       ⚠️ AND IF MARRIED-FILING-SEPARATELY EVER SPLITS THE BAND BACK IN TWO, THE BRIDGE RETURNS.
+          A new copy mechanism would need a new provenance guard, specified against that shape.
+          Do not restore this one from history; it was built for four fields that no longer exist. */
 
     /* ⛔ THE TAX BLOCK — three controls whose slots ALREADY EXIST and are codec-carried, written
        until now ONLY by applyDossier (the Dossier), never from the Studio's own DOM. MEASURED: a
@@ -1678,8 +1677,30 @@
     if (!bp.tax) bp.tax = {};
     var _loc = v('pri-location');  if (_loc) bp.tax.location = _loc;
     var _fil = v('filing-status'); if (_fil) bp.tax.filing   = _fil;
-    var _txr = parseFloat(String(v('eff-tax-rate')).replace('%', ''));
-    if (isFinite(_txr) && _txr > 0 && _txr < 100) bp.tax.working_year_effective_rate = _txr / 100;
+    /* ⛔⛔ >= 0, NOT > 0. "Nothing at all" IS AN ANSWER, AND IT IS THE MOST COMMON ONE — 82 of the
+       210 households measured through the engine pay no federal tax on their withdrawal at all.
+       ~~`_txr > 0`~~ would have accepted that answer on screen and silently discarded it at capture:
+       the user told they were heard, and then not heard. TRUTHY-ZERO, the fault family where the
+       most meaningful value in the domain is the one the language treats as absent.
+       ⚠️ THE PLACEHOLDER IS STILL EXCLUDED, AND BY A DIFFERENT TEST: an unanswered select yields ''
+          which parseFloat turns into NaN, so `isFinite` rejects it. Zero-the-answer and
+          zero-the-absence are separated by TYPE, not by magnitude. That is the whole repair.
+       ⛔ bp.tax.method IS PROVENANCE FOR THIS FIELD AND NOTHING ELSE. An orphaned key — its own
+          control was deleted in Batch 1a — brought back into service because its declared meaning,
+          "how this rate was given", is exactly what is now needed. It records that the user TYPED a
+          figure, which makes the restore unconditional and rescues the one value no band can dodge:
+          someone entering exactly 20, which is byte-identical to the schema default.
+       ⚠️ IT IS CLEARED, NOT LEFT, WHEN THE ANSWER IS NOT TYPED. A legacy blueprint may carry
+          'Blended estimate' / 'Effective paid' / 'Marginal bracket' / 'Custom' from the deleted
+          control. Those are all disjoint from 'exact' so they cannot be mistaken for provenance,
+          but they describe a field that no longer exists and can never be shown or edited again —
+          so they are stale data with no owner, and this writes them out rather than preserving them. */
+    var _txSel   = String(v('eff-tax-rate'));
+    var _txExact = (_txSel === 'exact');
+    var _txr = _txExact ? parseFloat(String(v('eff-tax-rate-exact')).replace('%', ''))
+                        : parseFloat(_txSel.replace('%', ''));
+    if (isFinite(_txr) && _txr >= 0 && _txr < 100) bp.tax.working_year_effective_rate = _txr / 100;
+    bp.tax.method = _txExact ? 'exact' : '';
 
     var portE = d.getElementById('bp-portfolio-total');
     if (portE) bp.portfolio_total = moneyToInt(portE.value);

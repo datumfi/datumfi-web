@@ -56,6 +56,10 @@ const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '..');
 const PORT = process.env.PW_PORT || 8663;
 const COLLIDE = process.argv.includes('--collide');
+/* --zerodrop restores the pre-Batch-1b capture guard (`_txr > 0`) on the served blueprint part.
+   MUST red L6 TRUTHY-ZERO and NOTHING ELSE — the non-zero honest half must stay green, which is
+   what proves the control reproduces a truthy-zero fault rather than breaking capture outright. */
+const ZERODROP = process.argv.includes('--zerodrop');
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.csv': 'text/csv' };
@@ -73,6 +77,15 @@ if (COLLIDE) {
     process.exit(2);
   }
   SERVE_BP = SERVE_BP.replace(A, "tax:     { filing: 'Married Filing Jointly', location: 'FL',");
+}
+if (ZERODROP) {
+  const f = path.join(ROOT, 'scripts', 'studio-blueprint.js');
+  SERVE_BP = fs.readFileSync(f, 'utf8');
+  const A = 'if (isFinite(_txr) && _txr >= 0 && _txr < 100)';
+  const B = 'if (isFinite(_txr) && _txr > 0 && _txr < 100)';
+  const n = SERVE_BP.split(A).length - 1;
+  if (n !== 1) { console.log(`ABORT — --zerodrop anchor found ${n}x, expected 1. A red-first that did not land proves nothing.`); process.exit(2); }
+  SERVE_BP = SERVE_BP.replace(A, B);
 }
 
 const srv = http.createServer((q, s) => {
@@ -93,15 +106,24 @@ const check = (l, c, d) => { const ok = !!c; if (!ok) fails++; out.push((ok ? 'P
       as Math.round(rate*100)+'%' before comparing against the options, so the invariant must be
       tested in the SAME space the guard compares in, or L2 would be asking a question the product
       never asks. */
+/* ⭐ BATCH 1a — EIGHT CONTROLS BECAME THREE, AND THE SWEEP FOLLOWED THE PRODUCT.
+   ~~co-filing-status · co-location · pri-tax-method · co-tax-method · co-tax-bracket~~ are gone:
+   tax rate method deleted outright, the three co-architect tax fields replaced by single household
+   controls because a joint return has one combined taxable income and one rate.
+   ⛔ THE SCHEMA KEYS THEY USED (`co_filing`, `co_location`, `method`, `co_method`,
+      `co_working_year_effective_rate`) STILL EXIST and are still codec-carried — they are
+      positional in the `T` array and retiring them is a version bump. They are dropped from THIS
+      sweep because the sweep's claim is about SELECTABLE ANSWERS colliding with defaults, and a key
+      with no control offers no answers to collide. A key nothing can write cannot lose a value.
+   ⚠️ SO THIS GATE'S SILENCE ON THEM IS DELIBERATE AND NARROW, not an oversight: if a control is
+      ever re-attached to one of those keys — the Married-Filing-Separately split is specified to do
+      exactly that — IT MUST BE ADDED BACK HERE IN THE SAME COMMIT, or its default collision goes
+      unmeasured. L1 below fails loudly if a listed control is missing; it CANNOT notice a control
+      that exists and is not listed. */
 const FIELDS = [
   { sel: 'filing-status',   key: 'filing',                          kind: 'str' },
-  { sel: 'co-filing-status', key: 'co_filing',                      kind: 'str' },
   { sel: 'pri-location',    key: 'location',                        kind: 'str' },
-  { sel: 'co-location',     key: 'co_location',                     kind: 'str' },
-  { sel: 'pri-tax-method',  key: 'method',                          kind: 'str' },
-  { sel: 'co-tax-method',   key: 'co_method',                       kind: 'str' },
   { sel: 'eff-tax-rate',    key: 'working_year_effective_rate',     kind: 'pct' },
-  { sel: 'co-tax-bracket',  key: 'co_working_year_effective_rate',  kind: 'pct' },
 ];
 
 const enterDataRoom = async (P) => {
@@ -152,7 +174,7 @@ const enterDataRoom = async (P) => {
 
   check('L1 EXISTENCE: the live schema exposes a tax object',
     world.tax && typeof world.tax === 'object', JSON.stringify(world.tax));
-  check('L1 EXISTENCE: all eight profile tax selects exist in the DOM',
+  check('L1 EXISTENCE: all ' + FIELDS.length + ' profile tax selects exist in the DOM',
     FIELDS.every((f) => Array.isArray(world.sel[f.sel])),
     FIELDS.filter((f) => !Array.isArray(world.sel[f.sel])).map((f) => f.sel).join(',') || 'all present');
   check('L1 EXISTENCE: the schema declares every key this gate compares against',
@@ -221,26 +243,73 @@ const enterDataRoom = async (P) => {
   check('L3 THE SYMPTOM: an answer that EQUALS the default survives the reload too [BITE collide]',
     afterSubject.filing === SUBJECT, 'filing-status=' + JSON.stringify(afterSubject.filing));
 
+  /* ── L6 TRUTHY-ZERO — ITS OWN LEG, NEVER FOLDED INTO A GENERAL ROUND-TRIP ──────────────────
+   * "Nothing at all" is 0%, and it is THE MOST COMMON MEASURED ANSWER: 82 of 210 households pay
+   * no federal tax on their withdrawal at all. The capture guard read `_txr > 0`, which would have
+   * accepted that answer on screen and discarded it at capture — THE ANSWER THE ENTIRE BAND
+   * REDESIGN EXISTS TO ENABLE, silently deleted.
+   * ⛔ IT IS SEPARATE FROM L3 ON PURPOSE. L3 asks whether a value equal to a DEFAULT survives;
+   *    this asks whether a value the language treats as ABSENT survives. Same symptom on screen,
+   *    different mechanism, and a general leg passing tells you nothing about this one.
+   * ⚠️ AND IT NEEDS ITS OWN HONEST HALF: a non-zero band must survive the same trip, or a red here
+   *    is indistinguishable from a round-trip that persists no rate at all. */
+  const setRateAndReload = async (optionValue) => {
+    await P.evaluate((v) => {
+      const e = document.getElementById('eff-tax-rate');
+      e.value = v;
+      e.dispatchEvent(new Event('change', { bubbles: true }));
+      const d = document.getElementById('pri-dob');
+      if (d) { d.value = '08/1982'; d.dispatchEvent(new Event('input', { bubbles: true })); d.dispatchEvent(new Event('change', { bubbles: true })); }
+    }, optionValue);
+    await P.waitForTimeout(900);
+    await P.reload({ waitUntil: 'load' });
+    await enterDataRoom(P);
+    return P.evaluate(() => ({
+      rate: String((document.getElementById('eff-tax-rate') || {}).value || ''),
+      dob:  String((document.getElementById('pri-dob') || {}).value || ''),
+    }));
+  };
+
+  const nonZero = await setRateAndReload('9%');
+  check('L6 HONEST HALF: a NON-ZERO band survives the reload (else a red below is a dead '
+    + 'round-trip, not a truthy-zero fault)',
+    nonZero.rate === '9%' && /1982/.test(nonZero.dob),
+    'eff-tax-rate=' + JSON.stringify(nonZero.rate) + ' pri-dob=' + JSON.stringify(nonZero.dob));
+
+  const zero = await setRateAndReload('0%');
+  check('L6 TRUTHY-ZERO: "Nothing at all" (0%) survives the reload — the most common measured '
+    + 'answer is storable [BITE zerodrop]',
+    zero.rate === '0%', 'eff-tax-rate=' + JSON.stringify(zero.rate));
+
   await b.close(); srv.close();
 
   /* ── THE CONTROL MUST BITE, OR THERE IS NO VERDICT ───────────────────────────────────────────
      Under --collide the pre-fix defaults are served back. If that does NOT produce the two reds it
      is aimed at, the mutation did not land and a green from the clean run means nothing. */
-  const BITE = ['L2 INVARIANT', 'L3 THE SYMPTOM'];
-  if (COLLIDE) {
+  /* ⭐ THE TWO CONTROLS AIM AT DISJOINT LEGS, AND THAT IS THE POINT. One control proves the gate
+     reacts to SOMETHING. Two controls reddening non-overlapping legs prove it can tell the two
+     defects APART — a default collision and a truthy-zero discard produce the same symptom on
+     screen (an answer that vanishes) and must not produce the same verdict here. */
+  const BITE = COLLIDE ? ['L2 INVARIANT', 'L3 THE SYMPTOM'] : (ZERODROP ? ['L6 TRUTHY-ZERO'] : null);
+  if (BITE) {
+    const mode = COLLIDE ? '--collide' : '--zerodrop';
     const bit = BITE.filter((tag) => out.some((l) => l.startsWith('FAIL') && l.indexOf(tag) !== -1));
-    const existenceHeld = out.filter((l) => l.indexOf('L1 EXISTENCE') !== -1 || l.indexOf('L3 EXISTENCE') !== -1 || l.indexOf('L3 HONEST HALF') !== -1)
+    const existenceHeld = out.filter((l) => l.indexOf('EXISTENCE') !== -1 || l.indexOf('HONEST HALF') !== -1)
                              .every((l) => l.startsWith('PASS'));
+    /* Legs this control is NOT aimed at must stay green, or the red set is not disjoint. */
+    const unaimed = out.filter((l) => !BITE.some((t) => l.indexOf(t) !== -1)
+      && (l.indexOf('L2 INVARIANT') !== -1 || l.indexOf('L3 THE SYMPTOM') !== -1 || l.indexOf('L6 TRUTHY-ZERO') !== -1));
+    const disjoint = unaimed.every((l) => l.startsWith('PASS'));
     console.log(out.join('\n'));
-    console.log('\nMODE: --collide');
-    if (bit.length !== BITE.length || !existenceHeld) {
+    console.log('\nMODE: ' + mode);
+    if (bit.length !== BITE.length || !existenceHeld || !disjoint) {
       console.log('CONTROL DID NOT LAND — bit [' + bit.join(', ') + '] of [' + BITE.join(', ') + ']'
-        + '; existence/honest legs held: ' + existenceHeld);
+        + '; existence/honest legs held: ' + existenceHeld + '; red set disjoint: ' + disjoint);
       console.log('NO VERDICT — a control that does not bite cannot certify anything.');
       process.exit(2);
     }
-    console.log('CONTROL LANDED: both aimed legs red, every existence and honest-half leg still green.');
-    console.log('OVERALL: RED (expected under --collide)   (' + (out.length - fails) + ' pass / ' + fails + ' fail)');
+    console.log('CONTROL LANDED: aimed legs red, every existence/honest-half leg green, red set disjoint.');
+    console.log('OVERALL: RED (expected under ' + mode + ')   (' + (out.length - fails) + ' pass / ' + fails + ' fail)');
     process.exit(0);
   }
 

@@ -166,8 +166,22 @@ const URL = 'http://127.0.0.1:8001/studio.html';
        hides where it came from). This fixture never stated one, so it was relying on that hidden
        default — a fixture describing a user who never chose a bracket yet receives advice computed
        from one. Fixture strengthened; the assertions are untouched. */
+    /* ⛔⛔ '22%' WAS RETIRED IN BATCH 1b AND THIS FIXTURE WENT ON SETTING IT. The rate control no
+       longer offers marginal bracket values — it offers MEASURED BANDS (0/2/5/9/15/19). Assigning a
+       value a <select> does not have is SILENT: the element takes '' instead, so the rate went
+       UNSTATED, the outflow section correctly suppressed itself, and this gate red on the two
+       clauses below. THE GATE WAS RIGHT AND THE FIXTURE WAS STALE.
+       🔑 A FIXTURE THAT SELECTS A VALUE THAT NO LONGER EXISTS DESCRIBES A USER WHO CANNOT EXIST —
+          the same fault class as the tabindex constants and the positional schema key: a hardcoded
+          value that outlived the structure giving it meaning.
+       ⛔ SO THE ASSIGNMENT IS NOW CHECKED. Setting a select is the one DOM write that fails without
+          throwing, which is exactly why this survived unnoticed until a downstream assertion caught
+          it two clauses later. If the value does not take, say so HERE, where the cause is, rather
+          than letting it surface as a mysterious content failure somewhere else. */
     try { document.getElementById('pri-salary').value = '$500,000';
-          var _tx = document.getElementById('eff-tax-rate'); if (_tx) _tx.value = '22%';
+          var _tx = document.getElementById('eff-tax-rate');
+          if (_tx) { _tx.value = '15%';
+                     if (_tx.value !== '15%') out.fixtureFault = 'eff-tax-rate would not take 15% — option list changed?'; }
           document.getElementById('measure-btn').click(); } catch (e) {}
     var _tb = document.getElementById('analysis-text-body');
     out.diag = _tb ? _tb.innerHTML : '';

@@ -70,7 +70,15 @@ function check(label, cond, detail) {
 const DECLARED_OPEN = [];
 /* The three tax controls, left UNANSWERED in the L3 arm. Named here only to decide which ARM they
    belong to — never to decide whether they are part of the population. */
-const TAX_CONTROLS = ['pri-location', 'eff-tax-rate', 'filing-status'];
+/* ⛔ eff-tax-rate-exact JOINS THIS SET BECAUSE IT IS DEPENDENT, NOT MERELY BECAUSE IT IS TAXY.
+   L3 leaves these unanswered and asserts they come back blank. The typed-rate box is captured ONLY
+   while #eff-tax-rate reads 'exact' — so leaving the select unanswered while ANSWERING the box
+   describes a user who typed a figure into a control they never opened. Its value is then correctly
+   discarded, and L4 red over a fixture that could not exist rather than over a defect.
+   🔑 A CONTROL WITH A PRECONDITION MUST BE ARMED AND DISARMED WITH THE CONTROL IT DEPENDS ON.
+      Enumerating the DOM finds every control; it cannot find which ones only mean something
+      together. That relationship has to be declared, and this is the declaration. */
+const TAX_CONTROLS = ['pri-location', 'eff-tax-rate', 'eff-tax-rate-exact', 'filing-status'];
 
 async function enter(page, BASE) {
   await page.goto(BASE + '/studio.html', { waitUntil: 'load' });
@@ -123,6 +131,17 @@ const PTA_FIXTURE  = '09 / 2064';   // age 90 — not the 93 the plan-through sl
 function valueFor(f, i) {
   if (f.kind === 'checkbox') return true;
   if (f.kind === 'select') return f.options && f.options.length > 1 ? f.options[f.options.length - 1] : null;
+  /* ⛔ THE TYPED-RATE BOX TAKES A RATE, NOT A SENTENCE. The generic fallback below hands every
+     text input 'Fixture <id> <n>', which is deliberately unmistakable — but this control parses
+     what it is given, so a sentence lands as NaN, is correctly refused at capture, and the leg
+     reds over a fixture that described a user who cannot exist.
+     🔑 A FIXTURE VALUE MUST BE A VALUE THE FIELD CAN HOLD. The unmistakable-string trick works for
+        free-text fields and silently misdescribes typed ones.
+     ⚠️ ITS PRECONDITION IS ALREADY MET BY CONSTRUCTION, AND THAT IS LUCK WORTH NAMING: this box is
+        only captured while #eff-tax-rate reads 'exact', and valueFor picks a select's LAST option,
+        which is "I know my rate". If that option ever stops being last, THIS LEG GOES RED FOR A
+        REASON THAT HAS NOTHING TO DO WITH THE RATE — check the option order before the plumbing. */
+  if (f.id === 'eff-tax-rate-exact') return '14.2%';
   if (f.id === 'plan-end-age') return PTA_FIXTURE;
   if (/^co-/.test(f.id) && /dob/.test(f.id)) return CO_DOB;
   if (/^co-/.test(f.id) && /ret/.test(f.id))  return CO_RET;

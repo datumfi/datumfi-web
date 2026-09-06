@@ -97,8 +97,16 @@ const DEFECT = process.argv.includes('--defect');
 const REPLAY = process.argv.includes('--replay');
 
 /* The fix's own line, verbatim. Both controls anchor here. If this string stops matching, the
-   controls REFUSE rather than silently testing nothing — an unarmed control is worse than none. */
-const SYNC_LINE = "    window.addEventListener('pageshow', function () { _applyCoArchVisibility(); if (coToggle.checked) _prefillCoArchTax(); });";
+   controls REFUSE rather than silently testing nothing — an unarmed control is worse than none.
+   ⚠️ UPDATED IN BATCH 1a, AND THE DISTINCTION MATTERS. This anchor lost `if (coToggle.checked)
+      _prefillCoArchTax();` because THE FUNCTION WAS DELETED — the co-architect tax prefill has no
+      targets left once the tax block became a household band. That is an instrument following a
+      legitimate product change, which is the OPPOSITE of the 2026-09-05 case where a cosmetic
+      reformat broke this same anchor and the CHANGE was reverted rather than the gate widened.
+      🔑 THE TEST FOR WHICH ONE YOU ARE IN: did the subject's BEHAVIOUR change, or only its shape?
+         Here the behaviour changed — one fewer thing happens on pageshow. There the behaviour was
+         identical and only the line breaks moved. Widen the instrument for the first, never the second. */
+const SYNC_LINE = "    window.addEventListener('pageshow', function () { _applyCoArchVisibility(); });";
 const SYNC_REPLAY = "    window.addEventListener('pageshow', function () { coToggle.dispatchEvent(new Event('change')); });";
 
 let fails = 0; const results = [];
