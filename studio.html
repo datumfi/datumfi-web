@@ -3637,7 +3637,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                 </div>
                 <div class="architect-field architect-field-household">
                   <label class="architect-household-label" for="filing-status">Filing status</label>
-                  <select class="architect-select" id="filing-status"><option value="" selected>Select status</option><option>Single / Individual</option><option>Married Filing Jointly</option><option>Married Filing Separately</option><option>Head of Household</option></select>
+                  <select class="architect-select" id="filing-status"><option value="" selected>Select status</option><option>Single / Individual</option><option>Married Filing Jointly</option><option>Married Filing Separately</option><option>Head of Household</option><option>Qualifying Surviving Spouse</option></select>
                   <div class="architect-nm-note">Recorded, not yet modelled.</div>
                 </div>
                 <!-- ⭐⭐ THE BANDS ARE MEASURED, NOT AUTHORED (Batch 0). 210 households through the
@@ -15176,7 +15176,47 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
               it is an engine tax-model rewrite — a different arc, not a follow-up to this line.
            ⚠️ ADDING `co_location` BESIDE IT WOULD HAVE BEEN THE SAME DEFECT TWICE: a second key the
               receiver drops, making the code read MORE wired while changing nothing. */
+        /* ⛔⛔ FILING STATUS REACHES THE ENGINE (2026-09-06). Until this line the Studio
+           collected it, stored it, restored it — and never sent it. engine/tax.py bound
+           married-filing-jointly brackets, deduction and capital-gains threshold as module
+           constants, so EVERY household was taxed as a married couple.
+           MEASURED end to end on a $3M traditional estate: MFJ keystone $146,000 vs SINGLE
+           $139,000 — $7,000/yr over 28 years, about $196,000 of spending the Range promised
+           and the portfolio cannot deliver.
+           ⚠️ THE MAP IS LABEL -> ENUM BECAUSE THE OPTIONS CARRY NO value ATTRIBUTE. Their
+              value IS their visible text, and the codec stores that text positionally in a
+              saved blueprint. So the labels are LOAD-BEARING DATA, not copy: re-word one and
+              every blueprint holding the old string stops mapping. Add options, never rename
+              them, and if a rename is ever required it needs a codec migration.
+           ⛔ AN UNMAPPED OR UNANSWERED STATUS SENDS NOTHING — it must never guess. The engine
+              still defaults to mfj for a request that omits the key, and that default is a
+              DATED TRANSITION OBJECT (see the staleness register), not a resting state. */
+        const FILING_STATUS_MAP = {
+          'Single / Individual':         'single',
+          'Married Filing Jointly':      'mfj',
+          'Married Filing Separately':   'mfs',
+          'Head of Household':           'hoh',
+          'Qualifying Surviving Spouse': 'qss',
+        };
+        const _filingRaw = (document.getElementById('filing-status')?.value || '').trim();
+        const filingStatus = FILING_STATUS_MAP[_filingRaw] || null;
+
         const body = { current_age: currentAge, retirement_age: retireAge, datum_spend: datumSpend, market_outlook: outlookValue, ss_strategy_primary: ssStrategy, accounts, plan_end_age: planEndAge };
+        if (filingStatus) body.filing_status = filingStatus;
+        /* ⛔⛔ FILING STATUS IS REQUIRED, AND IT BECAME REQUIRED IN THE SAME COMMIT THAT WIRED IT
+           (§82.1893). Never before — requiring an answer we then discard is the old defect with a
+           gate bolted on. And never the commit AFTER, because for that interval blank on screen
+           would still mean married-filing-jointly in the maths: the forbidden third thing.
+           ⚠️ THE ENGINE STILL DEFAULTS TO mfj FOR A REQUEST THAT OMITS THE KEY, and that default
+              is a DATED TRANSITION OBJECT carried in the staleness register, not a resting state.
+              This refusal is what makes it unreachable from the Studio; the default survives only
+              for callers that are not this browser.
+           ⚠️ NO DOOR STRING IS AUTHORED HERE AND NONE IS NEEDED: TAKE_ME_THERE is a single shared
+              constant every queue entry reuses — the label never varies. This entry supplies only
+              a target id. Read the mechanism, not the five entries, before asking for a sixth. */
+        if (!filingStatus) {
+          _errs.push({ field: 'Filing Status', message: FILING_STATUS_REQUIRED, target: 'filing-status' });
+        }
         if (customWeights) body.custom_weights = customWeights;
         /* ⛔ FINDING 67 — tell the engine who actually lives here. Without these keys
            `co_architect_age = None` makes the engine model a SINGLE household while still taxing it
@@ -15613,6 +15653,14 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       /* ⭐ ONE STRING, EVERY TARGETED REFUSAL, NEVER VARIED BY FIELD. A link whose words change per
          error becomes a sentence the user must READ before they can act, and removing the reading is
          the entire point. It is the USER'S voice, which is why it reads as a door and not an order. */
+      /* ⛔ AUTHORED, VERBATIM, Empty State Copy Bank §4.1. Not drafted here and not to be
+         re-worded — L47 SOURCED-OR-BLANK. Chosen over the §4.2 alternates on MEASURED length
+         parity with the five siblings, not on taste: the set runs 32-97 characters and this is
+         71, sitting just above the 61-char accounts line. It also matches the SHAPE of the row
+         it joins — the short siblings (32-41) are terse FORMAT corrections ("enter a realistic
+         date"); this is a MISSING ANSWER WITH A STAKE, which is the accounts/co-architect
+         family: name the absent thing, then the consequence. */
+      var FILING_STATUS_REQUIRED = 'Your filing status — it changes the tax, and the tax changes the Range.';
       var TAKE_ME_THERE = 'Take me there';
       /* ⚠ RENDERED ONLY WHEN THE TARGET RESOLVES. A door onto an element that is not in the document
          is worse than no door — it promises and does nothing. An unresolvable target renders exactly

@@ -142,6 +142,8 @@ const SERVING_EXEMPT = UNEXEMPT ? [] : [
      that forces a decision is worth more than one that quietly permits. */
   ['scripts/_gate_tax_option_agreement.js',
    'serves a --bluronly mutated shell to a browser; the mutation targets an inline handler in the shell'],
+  ['scripts/_gate_filing_status_reaches_engine.js',
+   'serves an --unmapped mutated shell; the mutation deletes one FILING_STATUS_MAP entry in the shell'],
   ...(STALE_EXEMPT ? [['scripts/__no_such_gate_reads_anything.js', 'deliberately stale, --staleexempt']] : []),
 ];
 const _exemptPaths = SERVING_EXEMPT.map(([p]) => p);

@@ -150,6 +150,27 @@ async function seedForReveal(page) {
   await page.fill('#target-ret', '03/2035');
   await page.evaluate(() => { ['pri-dob', 'target-ret'].forEach((id) => { var e = document.getElementById(id); if (e) e.dispatchEvent(new Event('change', { bubbles: true })); }); });
   await page.waitForTimeout(700);
+  /* ⛔ FILING STATUS BECAME A REQUIRED FIELD 2026-09-06, so a seed that omits it is now
+     REFUSED at the reveal — correctly. This fixture predates the requirement and R4 went red
+     over a product that had just become MORE honest. The repair is the fixture, not the gate.
+     ⚠️ THE ASSIGNMENT IS ASSERTED, NOT ASSUMED: setting a <select> to a value it does not have
+        is SILENT — it takes '' — so a future re-wording of these option labels would put this
+        fixture back exactly where it was, refused, with nothing saying why. */
+  const filedAs = await page.evaluate(() => {
+    const el = document.getElementById('filing-status');
+    if (!el) return '(no #filing-status)';
+    const opt = Array.prototype.find.call(el.options, (o) => String(o.value).trim() !== '');
+    if (!opt) return '(no answerable option)';
+    el.value = opt.value;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return el.value;
+  });
+  if (!filedAs || filedAs.charAt(0) === '(') {
+    console.log('⛔ SEED FAILED — filing status could not be set: ' + filedAs);
+    process.exit(2);
+  }
+  await page.waitForTimeout(200);
+
   const room = await page.evaluate(() => {
     window.addInstance('taxable');
     var a = state.accounts[state.accounts.length - 1]; a.value = 1000000;

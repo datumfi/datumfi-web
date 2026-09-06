@@ -608,6 +608,29 @@ function selftestRepeat() {
   }
   console.log(`timeout/gate: ${TIMEOUT_MS / 1000}s   conc: node=${CONC_NODE} browser=${CONC_BROWSER}`);
   console.log('mode: CLEAN (no mutation flags) — measurement only, nothing is repaired');
+
+  /* ⛔⛔ THE RECEIPT IS INVALIDATED BEFORE THE RUN, NOT AFTER IT (2026-09-06).
+     The results JSON is written only at the END, so a reader who opens it MID-RUN gets THE
+     PREVIOUS RUN'S TOTALS — a receipt that looks current and is not. Caught only because the
+     stale number was implausibly good against a run known to be in flight; HAD IT BEEN
+     PLAUSIBLE IT WOULD HAVE BEEN REPORTED AND RATIFIED, and every earlier "verified from the
+     JSON" claim rests on an assumption nobody knew they were making.
+     🔑 THE REPORTING PATH IS A PRODUCT SURFACE WITH THE SAME DEFECT CLASSES. This is the
+        cache-key defect exactly — a fingerprint that says "same" when the thing has changed.
+     ⇒ Stamping a RUNNING stub converts a SILENT stale read into a LOUD one: a reader now sees
+       status "RUNNING" and a startedAt, instead of last run's confident totals. "I will
+       remember to check" is not a guard; a guard that is never exercised is unvisited. */
+  const RUN_ID = `${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`;
+  {
+    const tier0 = ONLY === 'node' ? '-node' : (ONLY === 'browser' ? '-browser' : '');
+    const stubPath = path.join(os.tmpdir(), `datum-baseline-results${tier0}.json`);
+    try {
+      fs.writeFileSync(stubPath, JSON.stringify({
+        status: 'RUNNING', runId: RUN_ID, startedAt: new Date().toISOString(), only: ONLY,
+        warning: 'THIS RUN HAS NOT FINISHED. Any totals you remember reading are from a PREVIOUS run.',
+      }, null, 1));
+    } catch (_e) { console.log('⚠️  could not stamp the RUNNING stub: ' + _e.message); }
+  }
   console.log(CONC_BROWSER === 1
     ? 'concurrency: SERIAL — the disambiguation configuration. Use this to confirm a suspected concurrency flake.'
     : `concurrency: PARALLEL (${CONC_BROWSER}) — the default. Verdict-identical to serial as of 2026-08-10; solo-pinned gates run alone first.`);
@@ -744,13 +767,19 @@ function selftestRepeat() {
      stable name is KEPT for the full run so nothing that reads the canonical path breaks. */
   const tier = ONLY === 'node' ? '-node' : (ONLY === 'browser' ? '-browser' : '');
   const outPath = path.join(os.tmpdir(), `datum-baseline-results${tier}.json`);
-  fs.writeFileSync(outPath, JSON.stringify(results.map((r) => ({
+  /* The completed receipt is SELF-DESCRIBING: status, the run id stamped at start, and when it
+     finished. A reader can now tell a finished run from a running one without looking at a clock. */
+  fs.writeFileSync(outPath, JSON.stringify({
+    status: 'COMPLETE', runId: RUN_ID, completedAt: new Date().toISOString(),
+    green: green.length, red: red.length, total: results.length,
+    gates: results.map((r) => ({
     name: r.name, browser: r.browser, status: r.status, code: r.code, ms: r.ms,
     // §13.90 — carried into the receipt so a later reader can audit the reconciliation's REACH
     // without re-running the suite (which is how the 2026-08-12 red reasons were lost).
     verdictSeen: !!(r.verdict && r.verdict.seen), verdictFailed: (r.verdict && r.verdict.failed) || null,
     tail: (r.out || '').split('\n').slice(-25).join('\n'), err: (r.err || '').slice(-2000),
-  })), null, 1));
+    })),
+  }, null, 1));
   console.log(`\nfull results -> ${outPath}`);
 
   /* Repeatability. REPORTS what THIS RUN changed; does not clean it, and does not claim to know who
