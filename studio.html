@@ -15244,9 +15244,33 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       function _validateDateField(value, kind, dobAge, fieldName) {
         var dobLabel = fieldName || 'Date of Birth';
         var retLabel = fieldName || 'Target Retirement Date';
-        var yearStr = ((value || '').replace(/\s/g, '').split('/')[1] || '');
+        var _parts    = (value || '').replace(/\s/g, '').split('/');
+        var monthStr  = (_parts[0] || '');
+        var yearStr   = (_parts[1] || '');
         var currentYear = new Date().getFullYear();
         if (yearStr.length !== 4) {
+          return kind === 'dob'
+            ? 'Enter ' + dobLabel + ' as MM / YYYY.'
+            : 'Enter ' + retLabel + ' as MM / YYYY.';
+        }
+        /* ⛔⛔ THE MONTH WAS NEVER VALIDATED. This function split on '/' and read ONLY [1],
+           the year — [0] was parsed nowhere, so EVERY month value was accepted.
+           MEASURED 2026-09-06, no warning shown in any case, payload built in all of them:
+               13/1975 -> accepted, current_age 50   (silently behaves as December)
+               00/1975 -> accepted, current_age 51   (silently behaves as January)
+               99/1975 -> accepted, current_age 51
+           ⛔ current_age GOES STRAIGHT TO THE ENGINE and it is the most powerful field in the
+              profile — ladder-measured on production, the Datum moves $241,000 -> $149,000 across
+              ages 45..60. So a typo in the month shifts the whole horizon and nothing says so.
+           🔑 §82.2004 — THE OFFENCE IS SUBSTITUTION, NOT ABSENCE. The user typed 13 and the
+              engine used something else. That is the same shape as blank-means-married and
+              location-means-Florida, arriving through a typo instead of a default.
+           ⚠️ NO NEW COPY IS AUTHORED HERE (L47). An impossible month IS a format fault, so this
+              REUSES the MM / YYYY message the length check already returns (L48).
+           ⚠️ GUARDS BOTH KINDS: 'dob' and 'ret' share this function, so target-retirement,
+              plan-through and both co-architect dates are covered by the same four lines. */
+        var month = parseInt(monthStr, 10);
+        if (!/^\d{1,2}$/.test(monthStr) || !(month >= 1 && month <= 12)) {
           return kind === 'dob'
             ? 'Enter ' + dobLabel + ' as MM / YYYY.'
             : 'Enter ' + retLabel + ' as MM / YYYY.';
@@ -15354,7 +15378,23 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         return digits.length <= 2 ? digits : digits.slice(0, 2) + ' / ' + digits.slice(2);
       }
       window._fmtDateStr = _fmtDateStr;
-      function _fmtRetDate(el) { el.value = _fmtDateStr(el.value); }
+      /* ⛔⛔ THE TYPING PATH MUST NOT CLAMP THE MONTH. _fmtDateStr SILENTLY REWRITES an
+         impossible month to a plausible one — mm > 12 becomes '12', mm === 0 becomes '01' — so a
+         user who typed 13 had their answer replaced before any validator saw it.
+         MEASURED 2026-09-06 on all six profile date boxes: 13/1975, 00/1975 and 99/1975 were each
+         ACCEPTED WITH NO WARNING, and 13/1975 sent current_age 50 instead of refusing. current_age
+         is the most powerful field in the profile — ladder-measured on production, the Datum moves
+         $241,000 -> $149,000 across ages 45..60 — so a clamped typo shifts the whole horizon.
+         🔑 §82.2004 — THE OFFENCE IS SUBSTITUTION, NOT ABSENCE. Same shape as blank-meaning-married
+            and location-meaning-Florida, arriving through a typo instead of a default.
+         ⭐ THE FIX WAS ALREADY IN THIS FILE, ARGUED FOR, AND POINTED AT OTHER FIELDS. _fmtDateSlash
+            exists precisely so 'a typed "13" stays "13" and the strict parse REJECTS it rather than
+            silently auto-correcting to 12 and hiding the typo'. Its own comment ends 'invalid ->
+            reject everywhere'. Everywhere did not include these six. This is L48, not new code.
+         ⚠️ SCOPED TO THE TYPING PATH ON PURPOSE. _fmtDateStr KEEPS the clamp because its twelve
+            other callers format ALREADY-VALID months programmatically (derive-from-age, profile
+            restore); the clamp is inert for them and only lies when a human is typing. */
+      function _fmtRetDate(el) { el.value = _fmtDateSlash(el.value); }
       window._fmtRetDate = _fmtRetDate;
       // P8.1 Q1 — inline S1 variant: same auto-slash + single-digit-month snap, but does NOT
       // clamp MM (so a typed "13" stays "13" and the strict parse REJECTS it with a toast,

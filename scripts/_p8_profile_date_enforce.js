@@ -118,6 +118,39 @@ const read = (page) => page.evaluate(() => ({
   check('(c) garbage DOB does NOT snap slider-age to a bound', r.age === ageBefore && r.age !== 18 && r.age !== 85, 'age=' + r.age);
   check('(a) DOB inline warn is shown', r.dobWarn === 'block', r.dobWarn);
 
+  /* (h) THE MONTH DIMENSION — ADDED 2026-09-06 AFTER A LIVE DEFECT THIS GATE WENT GREEN OVER.
+     Every invalid fixture above uses an out-of-range YEAR with a PERFECTLY VALID MONTH (06/5656,
+     01/3052), so nothing here could ever reach the month path. Meanwhile _fmtDateStr silently
+     rewrote an impossible month on every keystroke — mm > 12 became '12', mm === 0 became '01' —
+     so revert-or-clear was handed a VALID date and correctly accepted it. The enforcement was
+     never broken; it was never CONSULTED.
+     MEASURED before the fix: 13/1975 accepted with no warning, current_age 50 sent to the engine.
+     00/1975 and 99/1975 likewise. current_age is the strongest field in the profile — ladder-
+     measured on production, the Datum moves $241,000 -> $149,000 across ages 45..60.
+     🔑 §82.1995 — A FIXTURE THAT IS ALWAYS VALID IN THE DIMENSION UNDER TEST CANNOT WITNESS A
+        VALIDATOR FOR THAT DIMENSION. Three fixtures, three invalid years, zero invalid months.
+     ⚠️ THE FIX IS ON THE TYPING PATH, NOT HERE: _fmtRetDate now uses the non-clamping
+        _fmtDateSlash, which already existed and whose own comment argued for exactly this
+        ("invalid -> reject everywhere"). _fmtDateStr KEEPS its clamp for its twelve programmatic
+        callers, where the month is already valid and the clamp is inert. These legs are what stop
+        the clamp returning to the typing path. */
+  for (const badMonth of ['13 / 1975', '00 / 1975', '99 / 1975']) {
+    editProfile(page, 'pri-dob', badMonth); await page.waitForTimeout(150);
+    r = await read(page);
+    const held = r.dob.split(' ').join('');
+    check('(h) impossible month ' + badMonth.slice(0, 2) + ' does NOT persist',
+          held === goodDob.split(' ').join(''), 'field holds ' + r.dob);
+    check('(h) impossible month ' + badMonth.slice(0, 2) + ' is NOT silently clamped to a real month',
+          held !== '12/1975' && held !== '01/1975', 'field holds ' + r.dob);
+  }
+  /* EXISTENCE — the loop above asserts three ABSENCES, and three absences pass trivially if the
+     field stopped accepting anything at all. Re-commit the known-good and prove it still lands. */
+  editProfile(page, 'pri-dob', goodDob); await page.waitForTimeout(150);
+  r = await read(page);
+  check('(h) EXISTENCE: a VALID month still commits after the invalid ones',
+        r.dob.split(' ').join('') === goodDob.split(' ').join('') && r.age === 45,
+        r.dob + ' age=' + r.age);
+
   // (a) — out-of-window Target Retirement (year 3052) reverts; slider unmoved, no snap to 90.
   editProfile(page, 'target-ret', '01 / 3052'); await page.waitForTimeout(150);
   r = await read(page);

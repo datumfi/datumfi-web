@@ -340,6 +340,46 @@ function mutate(src) {
     + (inv.missing.length ? ' — LOST FROM AN UNWIRED FIELD: ' + inv.missing.join(', ') : '')
     + (inv.unexpected.length ? ' — CLAIMS UNWIRED BUT HAS A READER: ' + inv.unexpected.join(', ') : ''));
 
+  /* ⛔⛔ L10 THE CONTRADICTION LEG — THE INVERSE OF L9, AND THE ONE THAT WAS MISSING.
+     L9 catches a marker DRIFTING OFF the list. Nothing caught a marker CONTRADICTING THE PAYLOAD.
+     MEASURED 2026-09-06: filing status reached the engine and moved the Datum $198,000 -> $207,000
+     while still wearing "Recorded, not yet modelled." A human eye caught that twenty seconds before
+     a production push; no gate in 271 could see it.
+     🔑 §82.1989 — THE MARKER TRACKS REACH TO THE ENGINE, NOT REACH TO A READER. So the falsifier
+        is exact: if a NOTED field's key is IN the payload, the marker is a lie and this reds.
+     ⚠️ THIS IS A NARROWER CLAIM THAN L9 AND THE DIFFERENCE MATTERS. L9 pins an asserted list;
+        L10 checks the list against the WORLD in one direction only — it proves no noted field is
+        secretly wired. It CANNOT prove an unnoted field is genuinely wired (that is the ladder, and
+        the ladder runs on production). Two directions, two instruments, and only one is here. */
+  const KEY_OF = { 'eff-tax-rate': ['effective_tax_rate', 'eff_rate', 'tax_rate', 'effective_rate'],
+                   'pri-location': ['location', 'state', 'retirement_location'] };
+  const contra = await page.evaluate(async ([noted, keyOf]) => {
+    /* The payload only builds once the date gates pass. Seeding them is a PRECONDITION of the
+       measurement, not part of it — without this the probe below measures a null and the
+       existence leg (correctly) refuses to score. */
+    const set = (id, v) => { const e = document.getElementById(id); if (!e) return;
+      e.value = v; ['input', 'change', 'blur'].forEach((ev) => e.dispatchEvent(new Event(ev, { bubbles: true }))); };
+    set('pri-dob', '05 / 1975'); set('target-ret', '06 / 2040');
+    await new Promise((r) => setTimeout(r, 900));
+    let pay = null; try { pay = window._buildStudioRequest && window._buildStudioRequest(); } catch (e) {}
+    if (!pay) return { built: false };
+    const hits = [];
+    noted.forEach((id) => (keyOf[id] || []).forEach((k) => {
+      if (Object.prototype.hasOwnProperty.call(pay, k)) hits.push(id + ' -> ' + k + '=' + JSON.stringify(pay[k]));
+    }));
+    return { built: true, keys: Object.keys(pay).length, hits };
+  }, [NOTED, KEY_OF]);
+  /* EXISTENCE FIRST — an absence assertion over a payload that never built passes trivially,
+     which is exactly how the first SS-matrix rig fooled its author (§82.1980). */
+  ok(contra.built === true,
+     'L10 EXISTENCE: the payload BUILDS, so an absent key means absent (built='
+     + contra.built + (contra.built ? ', ' + contra.keys + ' keys' : '') + ')');
+  if (contra.built) {
+    ok(contra.hits.length === 0,
+       'L10 CONTRADICTION: no NOTED field reaches the engine payload — a marker on a wired field is a lie'
+       + (contra.hits.length ? ' — WIRED BUT STILL MARKED: ' + contra.hits.join(' | ') : ''));
+  }
+
   ok(errs.length === 0, 'L7 no page errors — ' + JSON.stringify(errs.slice(0, 2)));
 
   await browser.close();
