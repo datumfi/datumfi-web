@@ -16084,7 +16084,26 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
 
       var SC = (window.DatumShape && DatumShape.scales) || null;
       function $(id) { return document.getElementById(id); }
-      function ival(id, def) { var el = $(id); return el ? (parseInt(el.value, 10) || def) : def; }
+      /* ⛔⛔ `|| def` WAS A LIVE TRUTHY-ZERO FAULT AND IT SHIPPED (fixed 2026-09-07). parseInt("0")
+         is 0, which is FALSY, so a user who dragged the tax slider to 0% silently got the 8%
+         default — MEASURED: slider 0%, readout "0%", taxMult 0.92.
+         ⛔ THE READOUT WAS RIGHT AND THE MATH WAS WRONG, WHICH IS THE WORST PAIRING: the screen
+            AGREED with the user while the model disagreed, so nothing on the page could reveal it.
+         ⛔ IT BIT THE MOST COMMON HONEST ANSWER. 37% of the 540 measured households pay essentially
+            nothing and EVERY all-Roth estate pays exactly 0%; their Shape floor and ceiling read
+            ~8% low (≈$20,000/yr on a $250,000 draw).
+         🔑 SEPARATE "UNSTATED" FROM "ZERO" BY TYPE, NEVER BY TRUTHINESS. This is the same defect as
+            `parseFloat(...) || 22` on the retired profile field — third instance of the class in
+            this arc, in a DIFFERENT control each time. `||` is the wrong operator for any number
+            whose valid range includes zero.
+         ⚠️ The three age callers below were never exposed (0 is not a reachable age on those
+            sliders), but they are one slider-range edit away from the same fault, so the fix is
+            made in the SHARED helper rather than at the one call site that was bleeding. */
+      function ival(id, def) {
+        var el = $(id); if (!el) return def;
+        var n = parseInt(el.value, 10);
+        return Number.isFinite(n) ? n : def;
+      }
 
       // Portfolio (log slider; exactVal override from click-to-type)
       var sPort = $('slider-portfolio');
