@@ -172,6 +172,20 @@ const payload = (page) => page.evaluate(() => {
   await ctx.close(); await browser.close(); server.close();
   results.forEach((r) => console.log('  ' + r));
   console.log('\nSCORE ' + passes + ' / ' + (passes + fails) + ' ' + (fails === 0 ? 'GREEN' : 'RED'));
+  /* ⭐ §82.1981 — THIS GATE DECLARES ITS OWN REACH IN ITS OWN OUTPUT. Measured 2026-09-06:
+     it exercises `window._buildStudioRequest()` ONLY (:69). The Studio has TWO egresses to the
+     engine and this crosses one. Its NAME is a claim about the engine; the instrument is a
+     measurement of one payload builder — the same over-claim that let a live filing-status
+     bypass sit under a 17/17 green (§82.1969).
+     ✅ SUSPECT CLEARED BY MEASUREMENT, AND THE DISTINCTION MATTERS: a browser census the same
+        day confirmed DUAL mode sends co_architect_age, co_architect_retirement_age,
+        co_architect_plan_end_age and ss_strategy_secondary, and buildMatrixRequest EXTENDS
+        that same base rather than rebuilding it — so the second door carries at least what
+        this one proves. NO DEFECT HIDES BEHIND THIS REACH LIMIT TODAY.
+     ⚠️ BUT "no defect today" is not "the instrument is adequate". A rename plus a second-door
+        leg is REGISTERED, not done — recorded here rather than left in someone's memory. */
+  console.log('REACH: _buildStudioRequest() only — 1 of the 2 engine egresses in the Studio.'
+            + ' The SS-Matrix door is NOT crossed by this gate (measured 2026-09-06).');
   console.log('OVERALL: ' + (fails === 0 ? 'GREEN' : 'RED'));
   process.exit(fails === 0 ? 0 : 1);
 })().catch((e) => {

@@ -288,7 +288,24 @@ function mutate(src) {
         OUTPUT moves.
      🔑 THE MARKER IS SCAFFOLDING, NOT PRODUCT COPY. Its correct maintenance is REMOVAL, and it is
         removed by a measurement, never by a belief that the work is done. */
-  const NOTED = ['pri-location', 'filing-status', 'eff-tax-rate'];
+  /* ⭐⭐ filing-status LEAVES THE NOTED LIST (2026-09-06) — THE FIRST MARKER EVER REMOVED BY
+     PASSING L9's OWN LADDER TEST RATHER THAN BY AN ARGUMENT ABOUT READERS.
+     The paragraph above rejected "reaches the engine" as the predicate and named the operational
+     test: CHANGE THE FIELD, ASSERT THE OUTPUT MOVES. Measured ON PRODUCTION, through the shipped
+     REVEAL button, three fresh sessions, $3M all-traditional estate:
+         single $198,000  ·  mfj $207,000  ·  qss $207,000
+     $9,000/yr on the Datum itself. The ladder moved, and qss==mfj held as the regression check.
+     ⛔ THE NOTE WAS NOT MERELY STALE, IT WAS INVERTED. Since the engine+browser deploy this field
+        is REQUIRED and it MOVES MONEY, so the note told the user their forced answer did nothing —
+        §82.1926's shape reflected: a control that reaches everything while claiming to reach nothing.
+     ⚠️ AND THE LIST STILL CARRIES AN UNRESOLVED ASYMMETRY, REGISTERED HERE RATHER THAN QUIETLY
+        FIXED, BECAUSE IT IS A PRODUCT RULING AND NOT THE WIRER'S TO MAKE. eff-tax-rate was moved
+        BACK to noted for reaching the Shape but not the engine. pri-salary / co-salary had their
+        notes removed on the SAME class of proof — local readers (upkeep load, needs/wants, charity,
+        the 401k match) — and a browser census on 2026-09-06 confirms neither salary reaches the
+        engine payload in EITHER household mode. Two fields, one standard, opposite verdicts.
+        Either salary is noted or eff-tax-rate is not; today they disagree. */
+  const NOTED = ['pri-location', 'eff-tax-rate'];
   const UNNOTED = ['pri-salary', 'co-salary'];
   const inv = await page.evaluate(([noted, unnoted]) => {
     const has = (id) => { const e = document.getElementById(id); if (!e) return null;
