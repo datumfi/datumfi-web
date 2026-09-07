@@ -1,5 +1,24 @@
 'use strict';
-/* THE SAVE HANDOFF · RED-FIRST — a save-role button must leave the work IN D1, on every branch.
+/* @gate-concurrency: solo
+ *
+ * ⛔ SOLO IS A MEASUREMENT, NOT A PRECAUTION (declared 2026-09-07, flake-ledger entry #2).
+ * This gate CRASHED the browser twice under `--concbrowser=3` — 2026-09-05 and 2026-09-07 — with the
+ * SAME exit code (3221226505 / 0xC0000409) and, both times, having ALREADY PRINTED `CLEAN GREEN 33 /
+ * RED 0` before the process died. Re-run alone immediately after: green, exit 0, same 33 legs.
+ * 🔑 THE MECHANISM IS IN THIS GATE'S OWN LOG, AND IT WAS THERE BOTH TIMES:
+ *      [re-entrant guard] ... landedOn=chrome-error://chromewebdata/
+ *    HANDOFF 14 deliberately navigates OFF-ORIGIN (vault.html replaces itself). Under concurrency
+ *    that navigation lands on a Chromium error page and the browser dies during teardown; solo it
+ *    does not. So the fault is CONCURRENCY-SPECIFIC AND GATE-SPECIFIC — the same shape, and the same
+ *    remedy, as _gate_rename_persist.
+ * ⛔ AND THE HEADLINE IT KILLS: this was being discounted as "the known ~1-random-gate-per-run flake".
+ *    It is not random. Two crashes, ONE gate, ONE exit code, ONE mechanism. Each instance alone was
+ *    explicable, which is exactly why neither got investigated — only the PAIR was a finding.
+ * ⚠️ A CRASH IS NEITHER A RED NOR A PASS. It is an INCOMPLETE MEASUREMENT, and the run that carries
+ *    one has not scored this gate. Never bank it green on the strength of the verdict it printed
+ *    before dying — re-run it alone, which is now what this declaration makes the runner do.
+ *
+ * THE SAVE HANDOFF · RED-FIRST — a save-role button must leave the work IN D1, on every branch.
  *
  * THE DEFECT THIS EXISTS FOR, MEASURED before the fix: a signed-out visitor pressed "Save my work",
  * completed signup, and landed on an EMPTY sketchbook. _autoConsumeSketch wrote the 4-slot Clerk/LS

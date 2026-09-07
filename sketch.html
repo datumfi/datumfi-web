@@ -1599,29 +1599,29 @@
                 <div class="control-group" style="margin-top: 16px;">
                     <div class="control-header">
                         <label class="control-label" for="slider-tax">Effective Tax Drag</label>
-                        <span class="control-value" id="val-tax" style="font-size: 16px;">20%</span>
+                        <span class="control-value" id="val-tax" style="font-size: 16px;">8%</span>
                     </div>
                     <div class="toggle-wrapper" style="margin-bottom: 10px;">
                         <div class="toggle-container">
                             <div class="toggle-option">
-                                <input type="radio" id="tax-10" name="tax-preset" value="10" tabindex="0">
-                                <label for="tax-10">Low (10%)</label>
+                                <input type="radio" id="tax-10" name="tax-preset" value="3" tabindex="0">
+                                <label for="tax-10">Low (3%)</label>
                                 <div class="mkt-tooltip">
                                   <div class="mkt-tooltip-head" style="color: var(--teal-mid);">Datum Intelligence</div>
                                   <div class="mkt-tooltip-body">Light tax drag. More of each withdrawal is available for spending.<br><br><strong>Plain English:</strong> Your Shape expands because taxes take a smaller bite.</div>
                                 </div>
                             </div>
                             <div class="toggle-option">
-                                <input type="radio" id="tax-20" name="tax-preset" value="20" checked tabindex="0">
-                                <label for="tax-20">Avg (20%)</label>
+                                <input type="radio" id="tax-20" name="tax-preset" value="8" checked tabindex="0">
+                                <label for="tax-20">Typical (8%)</label>
                                 <div class="mkt-tooltip">
                                   <div class="mkt-tooltip-head" style="color: var(--teal-mid);">Datum Intelligence</div>
                                   <div class="mkt-tooltip-body">Middle tax drag assumption. A simple planning haircut, not a tax projection.<br><br><strong>Plain English:</strong> A balanced estimate before Studio models your actual accounts.</div>
                                 </div>
                             </div>
                             <div class="toggle-option">
-                                <input type="radio" id="tax-30" name="tax-preset" value="30" tabindex="0">
-                                <label for="tax-30">High (30%)</label>
+                                <input type="radio" id="tax-30" name="tax-preset" value="15" tabindex="0">
+                                <label for="tax-30">High (15%)</label>
                                 <div class="mkt-tooltip" style="border-color: rgba(226,75,74,0.4);">
                                   <div class="mkt-tooltip-head" style="color: var(--danger-red);">Datum Intelligence</div>
                                   <div class="mkt-tooltip-body">Heavy tax drag. More portfolio withdrawal is needed to support the same spending.<br><br><strong>Plain English:</strong> Your Shape compresses because taxes take a bigger bite.</div>
@@ -1629,7 +1629,7 @@
                             </div>
                         </div>
                     </div>
-                    <input type="range" id="slider-tax" min="0" max="40" value="20" step="1">
+                    <input type="range" id="slider-tax" min="0" max="40" value="8" step="1">
                 </div>
             </div>
             
@@ -4703,7 +4703,8 @@
         document.getElementById('market-avg').checked = true;
         document.getElementById('infl-real').checked = true;
         document.getElementById('tax-20').checked = true;
-        slTax.value = 20;
+        slTax.value = 8;   // ⛔ A RESET THAT RESTORES A RETIRED DEFAULT IS F59 ALL OVER AGAIN — this
+                           //    must track the markup default at :1632, never the old 20.
 
         // ACTIVE SAVED SKETCH — CLEAR POINT. This is FRESH WORK, so we are no longer inside the sketch we
         // opened. If a stale id survived a reset, Save progress would silently overwrite a file the user
@@ -5274,9 +5275,12 @@
     });
 
     slTax.addEventListener('input', () => { triggerInteraction(); taxRadios.forEach(r => r.checked = false); touched.refined = true; updateTracker(); scheduleUpdate(); });
-    document.getElementById('tax-10').addEventListener('change', (e) => { if(e.target.checked) { triggerInteraction(); slTax.value = 10; touched.refined = true; updateTracker(); updateEngine(); }});
-    document.getElementById('tax-20').addEventListener('change', (e) => { if(e.target.checked) { triggerInteraction(); slTax.value = 20; touched.refined = true; updateTracker(); updateEngine(); }});
-    document.getElementById('tax-30').addEventListener('change', (e) => { if(e.target.checked) { triggerInteraction(); slTax.value = 30; touched.refined = true; updateTracker(); updateEngine(); }});
+    // ⚠️ IDS NO LONGER NAME THEIR VALUES (2026-09-07 re-derivation — see studio.html:3899 for the
+    //    540-run derivation). These three literals ARE the sketch's id->value table and must agree
+    //    with the `value=` attributes at :1607/:1615/:1623. Change both or neither.
+    document.getElementById('tax-10').addEventListener('change', (e) => { if(e.target.checked) { triggerInteraction(); slTax.value = 3; touched.refined = true; updateTracker(); updateEngine(); }});
+    document.getElementById('tax-20').addEventListener('change', (e) => { if(e.target.checked) { triggerInteraction(); slTax.value = 8; touched.refined = true; updateTracker(); updateEngine(); }});
+    document.getElementById('tax-30').addEventListener('change', (e) => { if(e.target.checked) { triggerInteraction(); slTax.value = 15; touched.refined = true; updateTracker(); updateEngine(); }});
 
     marketRadios.forEach(r => r.addEventListener('change', (e) => {
       var _mkt = e.target.value;

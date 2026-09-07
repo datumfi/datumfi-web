@@ -3895,29 +3895,51 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
               <div class="control-group" style="margin-top: 16px;">
                 <div class="control-header">
                   <label class="control-label" for="slider-tax">Effective Tax Drag</label>
-                  <span class="control-value" id="val-tax" style="font-size: 16px;">20%</span>
+                  <span class="control-value" id="val-tax" style="font-size: 16px;">8%</span>
                 </div>
+                <!-- ⭐⭐ THE PRESETS ARE MEASURED, NOT AUTHORED (2026-09-07, 540 engine runs across all
+                     FIVE filing statuses, quantity = federal_tax / total_withdrawal, which is what
+                     taxMult actually divides into). 3 / 8 / 15 are the pooled p50 / p75 / p90.
+                     ⛔ THE LADDER THIS REPLACED WAS 10 / 20 / 30 AND ALL THREE LABELS WERE WRONG IN THE
+                        SAME DIRECTION. ZERO of 540 households reached 20%; the highest was 19.35%.
+                        "Avg (20%)" was the 100th percentile wearing the word Avg, and "High (30%)"
+                        described a household we cannot construct. This was never a default that
+                        drifted — the whole ladder was authored above the distribution it describes.
+                     ⛔ "Avg" IS RETIRED ON PURPOSE. 8% is the 75th percentile, not the mean. TYPICAL
+                        describes an unremarkable household; AVERAGE asserts a statistic. Only one of
+                        those is defensible on a control the user can drag.
+                     ⚠️ THE IDS STILL SAY tax-10 / tax-20 / tax-30 AND NO LONGER MATCH THEIR VALUES.
+                        DELIBERATE, NOT AN OVERSIGHT — the rename reaches scripts/_gate_sketch_dirty_signal.js
+                        (which selects by #id), so it is its own batch. Everything that RESOLVES a preset
+                        does so by VALUE (:17086 querySelector [value=...]) or through the id->value table
+                        at :17459; those two must always agree. THE ID IS A NAME, THE VALUE IS THE TRUTH.
+                     ⛔ DO NOT ZERO ANY PRESET. 0% is inside the measured range but is the one value that
+                        can ONLY surprise a user downward at Measurement. Low is 3%, never 0%.
+                     ⚠️ TOOLTIP BODIES BELOW ARE UNCHANGED AND THE ARCHITECT OWES REPLACEMENTS — the Avg
+                        copy still says "a balanced estimate" and the High copy still describes a case
+                        that cannot occur. A right number with contradicting copy is the smaller defect
+                        of the two, so the numbers moved first and the copy follows. -->
                 <div class="toggle-wrapper" style="margin-bottom: 10px;">
                   <div class="toggle-container">
                     <div class="toggle-option">
-                      <input type="radio" id="tax-10" name="tax-preset" value="10" tabindex="0">
-                      <label for="tax-10">Low (10%)</label>
+                      <input type="radio" id="tax-10" name="tax-preset" value="3" tabindex="0">
+                      <label for="tax-10">Low (3%)</label>
                       <div class="mkt-tooltip">
                         <div class="mkt-tooltip-head" style="color: var(--teal-mid);">Datum Intelligence</div>
                         <div class="mkt-tooltip-body">Light tax drag. More of each withdrawal is available for spending.<br><br><strong>Plain English:</strong> Your Shape expands because taxes take a smaller bite.</div>
                       </div>
                     </div>
                     <div class="toggle-option">
-                      <input type="radio" id="tax-20" name="tax-preset" value="20" checked tabindex="0">
-                      <label for="tax-20">Avg (20%)</label>
+                      <input type="radio" id="tax-20" name="tax-preset" value="8" checked tabindex="0">
+                      <label for="tax-20">Typical (8%)</label>
                       <div class="mkt-tooltip">
                         <div class="mkt-tooltip-head" style="color: var(--teal-mid);">Datum Intelligence</div>
                         <div class="mkt-tooltip-body">Middle tax drag assumption. A simple planning haircut, not a tax projection.<br><br><strong>Plain English:</strong> A balanced estimate before Studio models your actual accounts.</div>
                       </div>
                     </div>
                     <div class="toggle-option">
-                      <input type="radio" id="tax-30" name="tax-preset" value="30" tabindex="0">
-                      <label for="tax-30">High (30%)</label>
+                      <input type="radio" id="tax-30" name="tax-preset" value="15" tabindex="0">
+                      <label for="tax-30">High (15%)</label>
                       <div class="mkt-tooltip" style="border-color: rgba(226,75,74,0.4);">
                         <div class="mkt-tooltip-head" style="color: var(--danger-red);">Datum Intelligence</div>
                         <div class="mkt-tooltip-body">Heavy tax drag. More portfolio withdrawal is needed to support the same spending.<br><br><strong>Plain English:</strong> Your Shape compresses because taxes take a bigger bite.</div>
@@ -3925,7 +3947,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                     </div>
                   </div>
                 </div>
-                <input type="range" id="slider-tax" min="0" max="40" value="20" step="1">
+                <input type="range" id="slider-tax" min="0" max="40" value="8" step="1">
               </div>
             </div>
           </div><!-- /04 dialogue-block -->
@@ -16158,7 +16180,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       out.yearsToGrow   = Math.max(1, out.activationAge - out.currentAge);
 
       // Tax (integer 0-40 percent)
-      var taxPct = ival('slider-tax', 20);
+      var taxPct = ival('slider-tax', 8);
       out.taxMult = Math.max(0, Math.min(1, 1.0 - taxPct / 100));
 
       // Market paradigm (sketch values: optimistic / average / stress)
@@ -17456,7 +17478,11 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         r.addEventListener('change', fireUpdate);
       });
       // Tax presets -- snap slider, mark preset checked, fire wave
-      [['tax-10', 10], ['tax-20', 20], ['tax-30', 30]].forEach(function (pair) {
+      // ⚠️ THE IDS NO LONGER NAME THEIR VALUES (2026-09-07 re-derivation, see :3899). This table and
+      //    the markup `value=` attributes are the SAME FACT WRITTEN TWICE — :17086 resolves a restored
+      //    slider back to its preset by VALUE, so if these two ever disagree the restore silently
+      //    lights the wrong button. Change both or neither.
+      [['tax-10', 3], ['tax-20', 8], ['tax-30', 15]].forEach(function (pair) {
         var el = $(pair[0]); var pct = pair[1];
         if (!el) return;
         el.addEventListener('change', function () {
@@ -17656,7 +17682,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       _prev.port = parseInt(($('slider-portfolio')  || {value: 61185}).value, 10);
       _prev.cont = parseInt(($('slider-contrib')    || {value: 82964}).value, 10);
       _prev.dat  = parseInt(($('slider-datum')      || {value: 41141}).value, 10);
-      _prev.tax  = parseInt(($('slider-tax')        || {value: 20}).value, 10);
+      _prev.tax  = parseInt(($('slider-tax')        || {value: 8}).value, 10);
 
       var _bpApplied = seedFromBlueprint();
 
