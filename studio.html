@@ -18631,6 +18631,26 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       }
       var base = window._buildStudioRequest();
       if (!base) return null; // custom_weights validation failed upstream
+      /* ⛔⛔ THE QUEUE IS THE AUTHORITY; `base` IS ONLY THE SHAPE. _buildStudioRequest aborts for
+         the reasons that predate it (dates, weights, co-architect) but RETURNS A PAYLOAD for the
+         filing-status refusal, which is queued AFTER that abort gate — so a truthy `base` is NOT
+         proof the household is answerable, and this surface read it as though it were.
+         ⛔ MEASURED 2026-09-06: an unanswered filing status POSTed to /api/ss-matrix/start with the
+            key ABSENT, and schemas.py:104 fills that blank with `mfj`. studio.html:15214 claimed the
+            refusal made that default "unreachable from the Studio"; it guarded ONE of the two doors.
+         🔑 §82.1968 — A GUARD ON ONE DOOR IS NOT A GUARD. Any input declared required is required
+            at EVERY egress to the engine. snapshotPlan is NOT an egress — it saves locally and never
+            sends, so it keeps the payload deliberately and stays unchanged.
+         ⭐ REUSE, NOT A SECOND REFUSAL (L48). The caller's `if (!req)` branch already renders these
+            singular globals WITH the Take-me-there door, so setting them and returning null IS the
+            whole fix: no new copy, no new UI. */
+      var _queued = window._buildRequestErrors || [];
+      if (_queued.length) {
+        window._buildRequestError       = _queued[0].message;
+        window._buildRequestErrorField  = _queued[0].field;
+        window._buildRequestErrorTarget = _queued[0].target || null;
+        return null;
+      }
 
       // Co-architect age (derive from co-dob if co-arch is enabled)
       var coToggle = document.getElementById('co-arch-toggle');
