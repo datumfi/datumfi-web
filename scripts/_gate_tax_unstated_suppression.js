@@ -59,7 +59,8 @@ const path = require('path');
 const { studioSource } = require('./_studio_source.cjs');
 const ROOT = path.resolve(__dirname, '..');
 
-const AUTHORED = 'Set a tax rate above and your monthly net appears here. Until then, this figure would be a guess.';
+const AUTHORED = 'What tax takes from your paycheck today is a different number from what it takes in retirement. This panel waits for the first one, and it is not collected yet.';
+const RETIRED  = 'Set a tax rate above and your monthly net appears here.';
 
 const fails = [];
 function check(name, cond, detail) {
@@ -74,25 +75,35 @@ try { src = studioSource(); } catch (e) {
   console.error('SOURCE UNAVAILABLE — ' + e.message + '. A gate that cannot read its subject is not a pass.');
   process.exit(1);
 }
-/* Comments stripped for every "is it gone" assertion: this gate's subject is discussed in prose
-   inside studio.html, and a naive grep would report a retired identifier as still live. */
+/* Comments stripped for every "is it gone" assertion. LOAD-BEARING, AND PROVEN THE HARD WAY ON
+   2026-09-07: a publish check reported the retired label still serving because it was matching THE
+   COMMENT THAT EXPLAINED THE RETIREMENT. studio.html discusses eff-tax-rate at length in prose.
+   🔑 A VERIFIER THAT GREPS A STRING CANNOT TELL PRODUCT FROM PROSE ABOUT THE PRODUCT. */
 const code = src.replace(/\/\*[\s\S]*?\*\//g, '');
 
 check('S0 · the source was read at all (a population of zero passes every leg below)',
   src.length > 100000, src.length + ' bytes');
 
-check('S1 · the authored line is present, BYTE-EXACT',
+check('S1 · the authored empty-state line is present, BYTE-EXACT',
   src.indexOf(AUTHORED) >= 0, src.indexOf(AUTHORED) >= 0 ? '' : 'not found verbatim');
 
-check('S2 · the suppression branch exists and is gated on the rate being STATED',
-  /if \(grossAnnual > 0 && !_taxStated\)/.test(code) && /_taxStated\s*=\s*isFinite\(/.test(code));
+check('S2 · the RETIRED line is gone — it pointed at a control that no longer exists',
+  src.indexOf(RETIRED) < 0, src.indexOf(RETIRED) < 0 ? '' : 'stale copy still present');
 
-check('S3 · the hidden default _TAX_WHEN_UNSET is gone from executable code',
-  code.indexOf('_TAX_WHEN_UNSET') < 0,
-  code.indexOf('_TAX_WHEN_UNSET') < 0 ? '' : 'still live');
+check('S3 · the control itself is ABSENT from the markup',
+  src.indexOf('id="eff-tax-rate"') < 0 && src.indexOf('id="eff-tax-rate-exact"') < 0);
 
-check('S4 · PAIRED PRESENCE — a stated rate still reports a figure ("suppress everything" must fail)',
-  /\} else if \(grossAnnual > 0\) \{/.test(code) && /net monthly income is estimated at/.test(code));
+check('S4 · ZERO EXECUTABLE DEREFS of the deleted control (comments stripped)',
+  !/getElementById\(.eff-tax-rate/.test(code) && !/\$\(.eff-tax-rate/.test(code),
+  'prose mentions are expected; code references are not');
+
+check('S5 · THE CHAIN IS SEVERED, NOT JUST THE FIGURE — no net income derived from a tax rate',
+  !/netAnnual\s*=/.test(code) && !/monthlyNetIncome/.test(code) && !/freeCashFlow/.test(code),
+  'net, free cash flow and the debt-acceleration advice go quiet together or not at all');
+
+check('S6 · PAIRED PRESENCE — the section still EXISTS ("delete the whole panel" must fail here)',
+  /CASH FLOW DIAGNOSTICS/.test(code) && /grossAnnual\s*=\s*priSal \+ coSal/.test(code),
+  'heading and the salary read both survive');
 
 console.log('\n' + (fails.length === 0 ? 'GREEN' : 'RED') + ' — ' + fails.length + ' failing');
 fails.forEach((f) => console.log('   RED · ' + f));

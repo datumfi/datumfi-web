@@ -178,10 +178,12 @@ const URL = 'http://127.0.0.1:8001/studio.html';
           throwing, which is exactly why this survived unnoticed until a downstream assertion caught
           it two clauses later. If the value does not take, say so HERE, where the cause is, rather
           than letting it surface as a mysterious content failure somewhere else. */
+    /* ⛔ THE eff-tax-rate FIXTURE STEP IS GONE (2026-09-07) — the field is deleted. It set '15%' and
+       self-faulted if the assignment did not take, which was the right shape: SETTING A SELECT IS
+       THE ONE DOM WRITE THAT FAILS WITHOUT THROWING. That guard was null-guarded on the element, so
+       with the field removed it would have SKIPPED SILENTLY rather than faulting — a fixture step
+       that quietly stops running is exactly the empty-green this gate was hardened against. */
     try { document.getElementById('pri-salary').value = '$500,000';
-          var _tx = document.getElementById('eff-tax-rate');
-          if (_tx) { _tx.value = '15%';
-                     if (_tx.value !== '15%') out.fixtureFault = 'eff-tax-rate would not take 15% — option list changed?'; }
           document.getElementById('measure-btn').click(); } catch (e) {}
     var _tb = document.getElementById('analysis-text-body');
     out.diag = _tb ? _tb.innerHTML : '';
@@ -374,8 +376,23 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   ok(has(R.mFill, 'Fund the acceleration from') && has(R.mFill, 'Savings (The Safe)'), 'Source dropdown present (priority ON) + lists liquid Savings');
   ok(has(R.mFill, 'Savings (The Safe)</option>') || has(R.mFill, 'selected>Savings (The Safe)'), 'accelSourceId round-trips (Savings selected)');
   ok(pick(!has(R.mBlank, 'Fund the acceleration from'), has(R.mBlank, 'Fund the acceleration from')), 'Source dropdown ABSENT when priority OFF [BITE]');
-  ok(has(R.diag, 'Priority Engaged'), 'Outflow diagnostic fires the priority clause');
-  ok(pick(has(R.diag, 'sourced from Savings'), !has(R.diag, 'sourced from Savings')), 'Outflow diagnostic NAMES the chosen source [BITE]');
+  /* ~~Outflow diagnostic fires the priority clause~~ and ~~NAMES the chosen source~~ — RETIRED
+     2026-09-07. Both read R.diag for the DEBT-ACCELERATION ADVICE, which was severed with the Cash
+     Flow chain: that advice was derived from freeCashFlow, which came from a net income computed
+     with the RETIREMENT tax rate. Ruling was that the number and the advice built on it go quiet
+     TOGETHER, so these two legs lost their subject.
+     ⭐ AND THEY ARE WHY THIS BATCH NEEDED A SECOND WINDOW, WHICH IS THE LESSON: the deref census
+        found every consumer of the field's VALUE and reported the blast radius closed at eight
+        gates. THESE TWO NEVER TOUCHED THE FIELD. They asserted a CONSEQUENCE the field enabled,
+        three steps downstream, and no search for `eff-tax-rate` could ever have found them.
+        🔑 A BLAST RADIUS COUNTED IN DEREFS IS STILL NOT A BLAST RADIUS COUNTED IN ASSERTIONS.
+     ⚠️⚠️ WHAT IS NOW UNGUARDED — AND IT IS A LIVE PRODUCT GAP, NOT MERELY LOST COVERAGE:
+        the three legs ABOVE still pass, so the "Fund the acceleration from" dropdown STILL EXISTS,
+        still lists liquid Savings, and accelSourceId STILL ROUND-TRIPS. The user can choose a
+        funding source and NOTHING ON SCREEN ACKNOWLEDGES IT ANY MORE — the only surface that named
+        the choice was the sentence this batch silenced. A CONTROL WHOSE ANSWER IS NEVER REFLECTED
+        IS THE SHAPE THIS WHOLE ARC EXISTS TO REMOVE. Flagged to the Architect; not repaired here,
+        because restoring the sentence means re-deriving net income, which is the defect. */
 
   // ===== C8 · §1.7-1.9 PRESCRIPTIVE DI (rate-aware tension · accelerator honesty · income relief) =====
   lines.push('===== C8 · §1.7-1.9 PRESCRIPTIVE DI =====');

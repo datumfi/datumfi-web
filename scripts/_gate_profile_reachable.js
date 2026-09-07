@@ -44,8 +44,16 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.csv': 'text/csv' };
 
 /* The pre-fix values, restored verbatim onto the served bytes. */
+/* ⚠️ 14 IS ABSENT ON PURPOSE — eff-tax-rate was deleted 2026-09-07 and its tabindex goes with it.
+   THE REMAINING SIX KEEP THEIR ORIGINAL NUMBERS AND ARE NOT RESEQUENCED TO 11-16: this map's job is
+   to REPRODUCE THE HISTORICAL DEFECT, and renumbering would reproduce a defect that never happened.
+   The gap is faithful; a tidy 11-16 would be fiction.
+   ⛔ AND THIS MAP IS THE ONLY PLACE THIS GATE NAMES A FIELD. The live assertions (L1/L2/L3) derive
+      their field list from the DOM by geometry, so they self-adjust to a removed field — which is
+      why deleting one did NOT silently shift three assertions onto the wrong subjects. A positional
+      constant is only dangerous where something READS BY POSITION; here the reader is a query. */
 const RETAB_MAP = [['pri-dob', 11], ['pri-location', 12], ['pri-salary', 13],
-                   ['eff-tax-rate', 14], ['filing-status', 15], ['target-ret', 16], ['plan-end-age', 17]];
+                   ['filing-status', 15], ['target-ret', 16], ['plan-end-age', 17]];
 let SERVE_HTML = null, SERVE_CSS = null;
 
 if (RETAB) {

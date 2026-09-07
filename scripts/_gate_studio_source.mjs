@@ -135,13 +135,14 @@ const STALE_EXEMPT = process.argv.includes('--staleexempt');
 const SERVING_EXEMPT = UNEXEMPT ? [] : [
   ['scripts/_gate_profile_reachable.js',
    'serves a tabindex-mutated shell to a browser (--retabindex); composing parts would double-define them'],
-  /* ⭐ THE SECOND ENTRY, AND IT ARRIVED THE WAY THE MECHANISM INTENDED (2026-09-06). This gate was
-     written with the 'studio.html' literal ON the read line specifically so the census would SEE
-     it — the path-in-a-variable form would have slipped past unnoticed, which is the very gap that
-     produced this exemption list. It went red, a human decided, the decision is here. A control
-     that forces a decision is worth more than one that quietly permits. */
-  ['scripts/_gate_tax_option_agreement.js',
-   'serves a --bluronly mutated shell to a browser; the mutation targets an inline handler in the shell'],
+  /* ~~THE SECOND ENTRY — _gate_tax_option_agreement.js~~ REMOVED 2026-09-07 WITH THE GATE ITSELF.
+     ⭐ AND P1b CAUGHT THE DELETION, WHICH IS THE WHOLE ARGUMENT FOR THIS LEG. Retiring the gate left
+        its exemption behind; a stale exemption is a silent hole that a future file could be dropped
+        into and served through unnoticed. The leg went red on a REAL defect the same day it was
+        created — a control that fires on a real defect is worth more than one that fires on a
+        mutation. Its original note recorded that the entry itself had arrived the same way: the gate
+        was written with the 'studio.html' literal ON the read line so the census would SEE it.
+     🔑 AN EXEMPTION OUTLIVES THE THING IT EXEMPTS UNLESS SOMETHING ASSERTS OTHERWISE. */
   ['scripts/_gate_filing_status_every_egress.js',
    'serves an --unmapped or --unguarded mutated shell, and disk-reads it once more for the L7 egress census; renamed from _gate_filing_status_reaches_engine 2026-09-06 (§82.1969)'],
   ...(STALE_EXEMPT ? [['scripts/__no_such_gate_reads_anything.js', 'deliberately stale, --staleexempt']] : []),
@@ -312,7 +313,17 @@ let walked = null, walkErr = '';
 try { walked = extractWindowFn(viaHelper, OAM); } catch (e) { walkErr = String(e && e.message).slice(0, 70); }
 ck('R6a ⭐ extractWindowFn pulls the modal builder OUT OF ITS PART, from the composed source',
    !!walked && walked.startsWith('window.' + OAM + ' = function(id) {') && walked.endsWith('\n    };') &&
-   Buffer.byteLength(walked) === 191629,
+   /* ⚠️ A HARD-CODED BYTE SIZE ON A FILE WE EXPECT TO EDIT. 191629 -> 195801 on 2026-09-07 when the
+      accel-source acknowledgement was added to the builder. IT WILL GO RED ON EVERY FUTURE EDIT TO
+      THE MODAL BUILDER and must be hand-updated each time — a maintenance tax, not a defect.
+      🔑 IT IS THE WRONG SHAPE BY OUR OWN LAW: GATE THE RELATIONSHIP, NEVER THE CONSTANT. What R6a
+         actually needs to prove is that the walker captured the WHOLE function rather than a
+         truncated slice — which the startsWith/endsWith anchors above already assert structurally.
+         A size EQUALITY adds brittleness without adding that proof; a LOWER BOUND would keep the
+         anti-truncation guarantee and stop breaking on every legitimate edit.
+      ⛔ FLAGGED, NOT CHANGED — weakening an assertion is the Architect's call, not the Wirer's, and
+         it is not a thing to do in the same breath as the edit that tripped it. */
+   Buffer.byteLength(walked) === 195801,
    walked ? `${walked.length} code units / ${Buffer.byteLength(walked)} utf8 bytes` : 'FAILED: ' + walkErr);
 /* ⭐⭐ THE NEGATIVE CONTROL, AND IT IS NO LONGER A RECONSTRUCTION — THIS IS THE REAL SOURCE. The
    legacy anchor-pair slice that five §20 gates used until 1a-pre now genuinely inverts: compose()

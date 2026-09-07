@@ -56,10 +56,11 @@ const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '..');
 const PORT = process.env.PW_PORT || 8663;
 const COLLIDE = process.argv.includes('--collide');
-/* --zerodrop restores the pre-Batch-1b capture guard (`_txr > 0`) on the served blueprint part.
-   MUST red L6 TRUTHY-ZERO and NOTHING ELSE — the non-zero honest half must stay green, which is
-   what proves the control reproduces a truthy-zero fault rather than breaking capture outright. */
-const ZERODROP = process.argv.includes('--zerodrop');
+/* ~~--zerodrop~~ RETIRED 2026-09-07 WITH THE FIELD AND ITS CAPTURE. It restored the pre-Batch-1b
+   guard (`_txr > 0`) on the served blueprint part to reproduce a truthy-zero fault. Its ANCHOR was
+   `if (isFinite(_txr) && _txr >= 0 && _txr < 100)` in scripts/studio-blueprint.js, and that capture
+   is gone — so the control would have ABORTED at exit 2 ("anchor found 0x"), which is the loud
+   failure it was built to give. A MUTATION CONTROL DIES WITH THE LINE IT MUTATES. */
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.csv': 'text/csv' };
@@ -78,15 +79,7 @@ if (COLLIDE) {
   }
   SERVE_BP = SERVE_BP.replace(A, "tax:     { filing: 'Married Filing Jointly', location: 'FL',");
 }
-if (ZERODROP) {
-  const f = path.join(ROOT, 'scripts', 'studio-blueprint.js');
-  SERVE_BP = fs.readFileSync(f, 'utf8');
-  const A = 'if (isFinite(_txr) && _txr >= 0 && _txr < 100)';
-  const B = 'if (isFinite(_txr) && _txr > 0 && _txr < 100)';
-  const n = SERVE_BP.split(A).length - 1;
-  if (n !== 1) { console.log(`ABORT — --zerodrop anchor found ${n}x, expected 1. A red-first that did not land proves nothing.`); process.exit(2); }
-  SERVE_BP = SERVE_BP.replace(A, B);
-}
+/* the --zerodrop mutation block retired here with its anchor — see the flag note above */
 
 const srv = http.createServer((q, s) => {
   let p = decodeURIComponent(q.url.split('?')[0]); if (p === '/') p = '/index.html';
@@ -120,10 +113,18 @@ const check = (l, c, d) => { const ok = !!c; if (!ok) fails++; out.push((ok ? 'P
       exactly that — IT MUST BE ADDED BACK HERE IN THE SAME COMMIT, or its default collision goes
       unmeasured. L1 below fails loudly if a listed control is missing; it CANNOT notice a control
       that exists and is not listed. */
+/* ⛔ eff-tax-rate / working_year_effective_rate WAS THE THIRD ROW AND IS REMOVED (2026-09-07) — the
+   control is deleted, so there is no answer left to survive a reload. Per the standing note above,
+   L1 fails loudly for a LISTED control that is missing, so leaving the row would have gone red for
+   the wrong reason: "the answer did not survive" rather than "the question is no longer asked".
+   ⚠️ WHAT IS NOW UNGUARDED, STATED PLAINLY: this gate no longer sweeps ANY option of that control
+      against the schema default, which is what it was extended to do. Nothing replaces that cover
+      because nothing needs it — the collision it hunted (a selectable answer byte-identical to a
+      silent default) requires a selectable answer, and there is none. The cover for the SLIDER's
+      default is a different instrument. */
 const FIELDS = [
   { sel: 'filing-status',   key: 'filing',                          kind: 'str' },
   { sel: 'pri-location',    key: 'location',                        kind: 'str' },
-  { sel: 'eff-tax-rate',    key: 'working_year_effective_rate',     kind: 'pct' },
 ];
 
 const enterDataRoom = async (P) => {
@@ -253,33 +254,18 @@ const enterDataRoom = async (P) => {
    *    different mechanism, and a general leg passing tells you nothing about this one.
    * ⚠️ AND IT NEEDS ITS OWN HONEST HALF: a non-zero band must survive the same trip, or a red here
    *    is indistinguishable from a round-trip that persists no rate at all. */
-  const setRateAndReload = async (optionValue) => {
-    await P.evaluate((v) => {
-      const e = document.getElementById('eff-tax-rate');
-      e.value = v;
-      e.dispatchEvent(new Event('change', { bubbles: true }));
-      const d = document.getElementById('pri-dob');
-      if (d) { d.value = '08/1982'; d.dispatchEvent(new Event('input', { bubbles: true })); d.dispatchEvent(new Event('change', { bubbles: true })); }
-    }, optionValue);
-    await P.waitForTimeout(900);
-    await P.reload({ waitUntil: 'load' });
-    await enterDataRoom(P);
-    return P.evaluate(() => ({
-      rate: String((document.getElementById('eff-tax-rate') || {}).value || ''),
-      dob:  String((document.getElementById('pri-dob') || {}).value || ''),
-    }));
-  };
-
-  const nonZero = await setRateAndReload('9%');
-  check('L6 HONEST HALF: a NON-ZERO band survives the reload (else a red below is a dead '
-    + 'round-trip, not a truthy-zero fault)',
-    nonZero.rate === '9%' && /1982/.test(nonZero.dob),
-    'eff-tax-rate=' + JSON.stringify(nonZero.rate) + ' pri-dob=' + JSON.stringify(nonZero.dob));
-
-  const zero = await setRateAndReload('0%');
-  check('L6 TRUTHY-ZERO: "Nothing at all" (0%) survives the reload — the most common measured '
-    + 'answer is storable [BITE zerodrop]',
-    zero.rate === '0%', 'eff-tax-rate=' + JSON.stringify(zero.rate));
+  /* ~~L6 HONEST HALF / L6 TRUTHY-ZERO~~ RETIRED 2026-09-07 WITH #eff-tax-rate. They set a rate,
+     reloaded, and asserted that "Nothing at all" (0%) survived — the truthy-zero defect, where a
+     real answer the language treats as falsy is dropped by a `> 0` capture guard.
+     ⛔ IT FAILED LOUD RATHER THAN QUIET WHEN THE FIELD WENT, AND THAT WAS THE RIGHT DESIGN: the
+        setter did `e.value = v` with NO null guard, so the whole gate FAULTED at exit 2 ("Cannot
+        set properties of null") instead of skipping a leg and reporting green over nothing.
+        A FIXTURE THAT DEREFERENCES ITS SUBJECT UNGUARDED IS AN EXISTENCE ASSERTION IN DISGUISE.
+     ⚠️ WHAT IS NOW UNGUARDED, STATED PLAINLY: nothing this gate still covers. The truthy-zero class
+        needs a control whose answer can be NUMERIC ZERO, and after this batch every field left in
+        FIELDS is 'str' kind — filing-status and pri-location cannot be zero. THE CLASS IS REAL AND
+        THE POPULATION IS EMPTY, which is a different statement from "the class is closed". The day
+        a numeric-answer field returns to this profile, THIS LEG COMES BACK WITH IT. */
 
   await b.close(); srv.close();
 
@@ -290,7 +276,8 @@ const enterDataRoom = async (P) => {
      reacts to SOMETHING. Two controls reddening non-overlapping legs prove it can tell the two
      defects APART — a default collision and a truthy-zero discard produce the same symptom on
      screen (an answer that vanishes) and must not produce the same verdict here. */
-  const BITE = COLLIDE ? ['L2 INVARIANT', 'L3 THE SYMPTOM'] : (ZERODROP ? ['L6 TRUTHY-ZERO'] : null);
+  /* the ZERODROP arm retired with L6 — see the flag note at the top of this file */
+  const BITE = COLLIDE ? ['L2 INVARIANT', 'L3 THE SYMPTOM'] : null;
   if (BITE) {
     const mode = COLLIDE ? '--collide' : '--zerodrop';
     const bit = BITE.filter((tag) => out.some((l) => l.startsWith('FAIL') && l.indexOf(tag) !== -1));

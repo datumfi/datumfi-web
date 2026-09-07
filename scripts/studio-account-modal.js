@@ -272,6 +272,49 @@
                          srcOpts += `<option value="${a.id}" ${acc.accelSourceId === a.id ? 'selected' : ''}>${a.name} (${aB.meta})</option>`;
                      }
                  });
+                 /* ⛔⛔ THIS SENTENCE MUST NEVER GAIN A DOLLAR FIGURE UNTIL NET INCOME IS DERIVED
+                    HONESTLY. If someone later wires an amount in here, they have rebuilt the defect
+                    this arc removed, WITH THE ARCHITECT'S COPY AS COVER — which is worse than the
+                    original, because the sentence will look ratified.
+                    ⭐ WHY IT EXISTS: the Outflow diagnostic used to name this choice, and that
+                    sentence was severed with the Cash Flow chain (it derived net income from a
+                    RETIREMENT tax rate applied to WAGES). The dropdown survived the severance, so a
+                    user could pick a funding source and NOTHING acknowledged it. A CONTROL THAT
+                    ACCEPTS INPUT AND SHOWS NO CONSEQUENCE TEACHES THE USER THEIR INPUT DOES NOTHING
+                    — the exact defect class this arc exists to remove, reintroduced as a side
+                    effect of removing another instance of it.
+                    🔑 SO THE ACKNOWLEDGEMENT IS OF THE *CHOICE*, NEVER OF ITS EFFECT: "will draw
+                    from" is ROUTING, which we know for certain; a figure would be MAGNITUDE, which
+                    we cannot currently derive. Architect-authored, byte-exact, do not reflow.
+                    ✅ RATIFIED — {SOURCE} is `a.name`, lower-cased in place. The <option> text is
+                    `name (meta)`, e.g. "Savings (The Safe)", but the meta describes the ARCHETYPE
+                    the account belongs to, not the thing the user named.
+                    🔑 WHEN COPY INTERPOLATES A USER'S OWN NOUN IT TAKES THE NOUN THE USER OWNS,
+                       NEVER THE DECORATION THE SYSTEM ADDED. The meta is our language about their
+                       account; the name is their language about their money. Brand voice uses theirs.
+                    ⛔⛔ THERE IS NO EMPTY STATE HERE, AND THE FIRST COPY FOR IT WAS RETIRED BECAUSE
+                       OF THAT. The placeholder option reads "All liquid cash (default)" — A REAL
+                       ROUTING ANSWER WEARING THE COSTUME OF A BLANK. Asking the user to "choose
+                       where the extra payment comes from" would instruct them to supply something
+                       the product has already supplied.
+                    🔑 A DEFAULT PRESENTED AS AN ABSENCE IS AN UNSTATED DECISION — the same species
+                       as the 20% tax default this arc removed, in a dropdown instead of a slider.
+                       The parenthetical "(default)" is the tell: the system admitting it chose, in
+                       the smallest available type. If the product has already answered, THE COPY
+                       SAYS THE ANSWER AND OFFERS THE OVERRIDE; it never asks the question.
+                    ⚠️ SO THE TWO STATES DIFFER BY EXACTLY ONE SENTENCE and share the second, which
+                       is deliberate: the panel keeps its character instead of changing shape when a
+                       source is picked.
+                    📋 RECORDED FOR THE NEXT MODAL TOUCH, NOT THIS BATCH: the option text should
+                       lose its parenthetical and read "All liquid cash" — the word "(default)" is
+                       doing the job this sentence now does, and doing it worse, inside a dropdown
+                       the user may never open. */
+                 const _accSrcAcc = acc.accelSourceId
+                     ? state.accounts.find(a => a.id === acc.accelSourceId) : null;
+                 const _accSrcSecond = `<div class="input-label" style="opacity:.72;">Datum will size the payment once your income picture is complete.</div>`;
+                 const _accSrcLines = _accSrcAcc
+                     ? `<div class="input-label" style="margin-top:8px;">Acceleration will draw from your ${String(_accSrcAcc.name || '').toLowerCase()}.</div>${_accSrcSecond}`
+                     : `<div class="input-label" style="margin-top:8px;">Acceleration will draw from all liquid cash unless you choose a source.</div>${_accSrcSecond}`;
                  html += `
              <div class="field-row modal-tt-wrap" style="grid-template-columns: 1fr; margin-top:12px;">
                  <div>
@@ -279,6 +322,7 @@
                      <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'accelSourceId', this.value)">
                          ${srcOpts}
                      </select>
+                     ${_accSrcLines}
                  </div>
                  <div class="modal-tt"><strong>Where the extra comes from</strong>Pick the account that will feed the faster payoff. We'll draw that pipe in Outflow Routing so you can see the tradeoff — every dollar sent here is a dollar not invested or held as buffer.</div>
              </div>`;

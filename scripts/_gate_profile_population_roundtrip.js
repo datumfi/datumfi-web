@@ -78,7 +78,14 @@ const DECLARED_OPEN = [];
    🔑 A CONTROL WITH A PRECONDITION MUST BE ARMED AND DISARMED WITH THE CONTROL IT DEPENDS ON.
       Enumerating the DOM finds every control; it cannot find which ones only mean something
       together. That relationship has to be declared, and this is the declaration. */
-const TAX_CONTROLS = ['pri-location', 'eff-tax-rate', 'eff-tax-rate-exact', 'filing-status'];
+/* ⛔ eff-tax-rate AND eff-tax-rate-exact ARE DELETED (2026-09-07), SO THE DEPENDENT PAIR IS GONE.
+   The declaration above explained why the typed box had to be armed and disarmed WITH its select;
+   with neither control present there is no precondition left to declare. This gate enumerates the
+   DOM, so both simply stop appearing in the population — it does not need to be told they are gone.
+   ⚠️ WHAT IS NOW UNGUARDED: nothing this gate covered. Its claim is that an UNANSWERED control comes
+      back blank, and a control that does not exist cannot be answered or come back. The two
+      survivors are the two that still ask a question. */
+const TAX_CONTROLS = ['pri-location', 'filing-status'];
 
 async function enter(page, BASE) {
   await page.goto(BASE + '/studio.html', { waitUntil: 'load' });
@@ -141,7 +148,9 @@ function valueFor(f, i) {
         only captured while #eff-tax-rate reads 'exact', and valueFor picks a select's LAST option,
         which is "I know my rate". If that option ever stops being last, THIS LEG GOES RED FOR A
         REASON THAT HAS NOTHING TO DO WITH THE RATE — check the option order before the plumbing. */
-  if (f.id === 'eff-tax-rate-exact') return '14.2%';
+  /* eff-tax-rate-exact's fixture value retired with the control (2026-09-07). Its note warned that
+     the leg depended on "I know my rate" staying the LAST option — a precondition met by luck. The
+     luck no longer matters, but the lesson does: A FIXTURE VALUE MUST BE A VALUE THE FIELD CAN HOLD. */
   if (f.id === 'plan-end-age') return PTA_FIXTURE;
   if (/^co-/.test(f.id) && /dob/.test(f.id)) return CO_DOB;
   if (/^co-/.test(f.id) && /ret/.test(f.id))  return CO_RET;

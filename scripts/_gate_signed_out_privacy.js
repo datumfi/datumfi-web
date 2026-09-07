@@ -313,7 +313,7 @@ const READ_STUDIO = `(() => {
     _signInVisible: (() => { const a = document.querySelector('.nav-login-btn'); return !!a && a.getClientRects().length > 0; })(),
     _topbar: !!document.getElementById('acct-topbar'),
     pri_dob: g('pri-dob'), target_ret: g('target-ret'), pri_salary: g('pri-salary'),
-    pri_location: g('pri-location'), eff_tax_rate: g('eff-tax-rate'),
+    pri_location: g('pri-location'),   // eff_tax_rate probe retired 2026-09-07 — control deleted
     co_dob: g('co-dob'), co_salary: g('co-salary'), co_ret: g('co-ret'),
     co_enabled: String(!!(document.getElementById('co-arch-toggle') || {}).checked),
     slider_tax: g('slider-tax'),

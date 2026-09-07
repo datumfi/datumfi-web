@@ -305,7 +305,16 @@ function mutate(src) {
         the 401k match) — and a browser census on 2026-09-06 confirms neither salary reaches the
         engine payload in EITHER household mode. Two fields, one standard, opposite verdicts.
         Either salary is noted or eff-tax-rate is not; today they disagree. */
-  const NOTED = ['pri-location', 'eff-tax-rate'];
+  /* ⭐ THE DECLARED DISAGREEMENT ABOVE IS NOW RESOLVED BY DELETION, NOT BY RULING (2026-09-07).
+     It read: "Either salary is noted or eff-tax-rate is not; today they disagree." eff-tax-rate no
+     longer exists, so the pair that disagreed is down to one member and the contradiction is gone.
+     ⚠️ SALARY'S SIDE IS UNCHANGED AND STILL OWED. It stays UNNOTED pending the browser witness of
+        the Cash Flow prose path — and note that path just got SHORTER, because the net-income,
+        free-cash-flow and debt-advice lines were severed from tax this same batch. Salary's
+        on-screen footprint changed today; RE-MEASURE IT, do not carry the old count forward.
+     ⛔ NOTED IS NOW A ONE-ELEMENT SET. It must never reach zero without this gate's legs being
+        re-read: a predicate over an empty set is true, and L9/L10 would both pass vacuously. */
+  const NOTED = ['pri-location'];
   const UNNOTED = ['pri-salary', 'co-salary'];
   const inv = await page.evaluate(([noted, unnoted]) => {
     const has = (id) => { const e = document.getElementById(id); if (!e) return null;
@@ -351,8 +360,7 @@ function mutate(src) {
         L10 checks the list against the WORLD in one direction only — it proves no noted field is
         secretly wired. It CANNOT prove an unnoted field is genuinely wired (that is the ladder, and
         the ladder runs on production). Two directions, two instruments, and only one is here. */
-  const KEY_OF = { 'eff-tax-rate': ['effective_tax_rate', 'eff_rate', 'tax_rate', 'effective_rate'],
-                   'pri-location': ['location', 'state', 'retirement_location'] };
+  const KEY_OF = { 'pri-location': ['location', 'state', 'retirement_location'] };
   const contra = await page.evaluate(async ([noted, keyOf]) => {
     /* The payload only builds once the date gates pass. Seeding them is a PRECONDITION of the
        measurement, not part of it — without this the probe below measures a null and the

@@ -3573,18 +3573,19 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                   <div class="salary-tooltip" id="co-salary-tt"></div>
                 </div>
 
-                <!-- ⛔ ONCE, ABOVE THE TAX BLOCK. Authored, bank-locked, verbatim.
-                     AN UNCONSUMED INPUT IS NOT A NEUTRAL PLACEHOLDER; IT IS A QUESTION THAT IMPLIES
-                     ITS OWN ANSWER MATTERS — and a person hands over a second human's private
-                     financial data only because they believe it does. -->
-                <!-- ⚠️ ARCHITECT-AUTHORED, VERBATIM, AND TRUE ONLY UNDER A CONDITION. The previous
-                     sentence ended "...driven by the dates and the capital." — false by our own
-                     progress: eff-tax-rate reaches _taxStated AND out.taxMult, which is the Shape's
-                     ceiling, floor and datum. Same disease as the markers it sits above, one level up
-                     and spanning the whole block.
-                     ⛔ THIS LINE IS TRUE ONLY WHILE eff-tax-rate REACHES taxMult AND THE OTHER SEVEN
-                        FIELDS DO NOT. If a further field wires into the Shape, this sentence is wrong
-                        again — IT GOES BACK TO THE ARCHITECT. Do not patch it here. -->
+                <!-- ~~THE TAX-BLOCK DISCLOSURE AND ITS TRUTH CONDITION~~ — STRUCK 2026-09-07.
+                     Two blocks stood here: one marking an authored sentence "ONCE, ABOVE THE TAX
+                     BLOCK", the other declaring it "TRUE ONLY WHILE eff-tax-rate REACHES taxMult AND
+                     THE OTHER SEVEN FIELDS DO NOT", with the standing order that a change to that
+                     condition GOES BACK TO THE ARCHITECT rather than being patched here.
+                     ⛔ THE CONDITION HAS NOW CHANGED, IN THE DIRECTION THE ORDER ANTICIPATED FROM THE
+                        OTHER SIDE: eff-tax-rate is deleted, so NO profile field reaches taxMult any
+                        more. The guard was written expecting a field to be ADDED to the Shape; what
+                        happened is the last one was REMOVED. Either way the sentence it guarded is
+                        no longer true for the stated reason, and the sentence itself has since moved
+                        out of this block, leaving these two comments describing markup that is not
+                        here. ⚠️ FLAGGED TO THE ARCHITECT, NOT REWORDED — copy is his (L47), and a
+                        truth condition is part of the copy. -->
 
                 <!-- ⭐⭐ THE HOUSEHOLD BAND — THESE ARE FACTS ABOUT A RETURN, NOT ABOUT A PERSON.
                      A joint return has ONE combined taxable income and ONE bracket schedule, so
@@ -3619,62 +3620,32 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                      ⚠️ COPY IS THE ARCHITECT'S AND THREE STRINGS HERE AWAIT RATIFICATION —
                         "Household taxes", "Effective rate in retirement", "Expected retirement
                         location" — plus the shortened "Select status" placeholder. -->
-                <!-- ⛔ THE SECTION BREAK IS NOW A RULE, NOT A PARAGRAPH, AND IT IS LOAD-BEARING IN
-                     SOLO ESPECIALLY. The deleted section note was carrying this separation as a
-                     side effect of its border-top. Removing it left the band running straight into
-                     Gross Annual Salary.
-                     🔑 IT MATTERS MORE IN SOLO THAN IN DUAL, WHICH IS THE OPPOSITE OF WHAT YOU WOULD
-                        GUESS. In dual the personal fields are visibly paired per architect, so a
-                        single-width item reads as a different KIND of thing on its own. In solo the
-                        co column is hidden and the personal fields reflow two-across — so without
-                        this rule the household questions look like four more personal fields in a
-                        uniform grid, with nothing saying they are asked once for the household.
-                     ⚠️ NO .architect-field-co AND NOT AN .architect-field: it must draw in BOTH
-                        modes, and solo-parity hides both of those. -->
-                <div class="architect-band-rule" aria-hidden="true"></div>
-                <div class="architect-field architect-field-household architect-household-kicker">
-                  <div class="workspace-kicker">Household taxes</div>
-                </div>
+                <!-- ⛔ THE TAX BAND IS GONE, AND WITH IT THE HAIRLINE, THE "Household taxes" KICKER AND
+                     THE BAND HELPER. STRUCK, NOT SILENTLY DELETED, SO NOBODY RE-DERIVES IT:
+                     eff-tax-rate ASKED THE USER TO PRE-COMPUTE THE THING THEY CAME HERE FOR. The engine
+                     derives it per year from real brackets and ships it as eff_rate_by_year; measured on
+                     the canonical fixture it runs 10.45%->5.52% single and 6.43%->0.18% MFJ, so ANY single
+                     figure the control displayed was wrong for 27 of the 28 years. It is an OUTPUT, and it
+                     is never asked. The Range Reveal draws it as a curve (Studio Mock #mcTaxSvg).
+                     ⭐ AND IT WAS ANSWERING TWO QUESTIONS AT ONCE. What tax takes from a PAYCHECK TODAY is
+                        a Tension fact; what it takes from WITHDRAWALS AT 90 is a Measurement output. One
+                        control cannot carry both, and the today-half is not collected anywhere yet -- see
+                        the Cash Flow panel, which now says so rather than computing from the wrong one.
+                     ⛔ D-DATA COLLECTS FACTS, NOT TAX-REGIME ASSUMPTIONS. The band-rule and kicker existed
+                        ONLY to group two tax questions under one roof; with one question left, a banner
+                        over a single control is a lie of implication. Six fields now stack unaided.
+                     ⚠️ THE HELPER COPY WENT WITH IT ("Most households pay little or nothing..."). It was
+                        decision support for a decision the user is no longer asked to make. -->
                 <div class="architect-field architect-field-household">
                   <label class="architect-household-label" for="filing-status">Filing status</label>
                   <select class="architect-select" id="filing-status"><option value="" selected>Select status</option><option>Single / Individual</option><option>Married Filing Jointly</option><option>Married Filing Separately</option><option>Head of Household</option><option>Qualifying Surviving Spouse</option></select>
                 </div>
-                <!-- ⭐⭐ THE BANDS ARE MEASURED, NOT AUTHORED (Batch 0). 210 households through the
-                     engine's own compute_year_tax: range 0-20.1%, median 2.1%, and 39% pay NOTHING.
-                     The list this replaced offered 12/22/24/32/35/37% — MARGINAL BRACKET values, of
-                     which the cheapest sat above the 80th percentile of what the engine computes.
-                     Four in five households had no honest answer available to them.
-                     ⛔ THE VALUES ARE BAND MIDPOINTS DERIVED FROM THE MEASURED BOUNDS, NEVER PICKED.
-                        0 / 2 / 5 / 9 / 15 / 19. THE TOP BAND IS 19%, NOT 20%, AND THAT IS LOAD-BEARING:
-                        working_year_effective_rate DEFAULTS to 0.20, and a selectable answer equal to
-                        a silent default is the exact defect this arc exists to remove — the restore
-                        guard cannot tell a decision from a default. 19 avoids the collision;
-                        scripts/_gate_answer_survives_reload.js sweeps every option against every
-                        default so a future edit cannot reintroduce it.
-                     ⛔ AND THE TYPED BOX CANNOT DODGE IT BY VALUE — someone typing exactly 20 hits the
-                        same hole, and no band value can fix that. That is what bp.tax.method='exact'
-                        is for: provenance, so the restore is unconditional for a rate the user typed.
-                        SCOPE FENCE — that key carries provenance for THIS FIELD ONLY. -->
-                <div class="architect-field architect-field-household architect-rate-field">
-                  <label class="architect-household-label" for="eff-tax-rate">Effective rate in retirement</label>
-                  <select class="architect-select" id="eff-tax-rate" onchange="_effRateExact(); updateAnalysisText();"><option value="" selected>Select tax rate</option><option value="0%">Nothing at all</option><option value="2%">Almost nothing</option><option value="5%">A small share</option><option value="9%">A notable share</option><option value="15%">A serious share</option><option value="19%">A large share</option><option value="exact">I know my rate</option></select>
-                  <input type="text" class="architect-input" id="eff-tax-rate-exact" style="display:none" placeholder="14.2%" inputmode="decimal" maxlength="6" aria-label="Your exact effective rate in retirement" oninput="_taxExactLive(this); updateAnalysisText();" onblur="_taxExactFormat(this);">
-                  <div class="architect-rate-source">These bands are measured from the plan&#39;s own tax model, not from a survey.</div>
-                  <div class="architect-nm-note">Recorded, not yet modelled.</div>
-                </div>
                 <div class="architect-field architect-field-household">
-                  <label class="architect-household-label" for="pri-location">Expected retirement location</label>
+                  <label class="architect-household-label" for="pri-location">Retirement location</label>
                   <select class="architect-select" id="pri-location"><option value="" selected>Select state</option><option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option></select>
                   <div class="architect-nm-note">Recorded, not yet modelled.</div>
                 </div>
 
-                <!-- ⛔ INLINE, NEVER HOVER (§82.1832). This is DECISION SUPPORT — it exists to stop
-                     someone answering wrongly, and THE USER WHO NEVER SEES IT IS THE USER IT WAS
-                     WRITTEN FOR. Hover explains a decision already made; this informs one being made.
-                     ⚠️ It spans the band rather than sitting in the rate column: at 161px it would run
-                        five lines and drag that cell's height away from its row-mate. Spanning keeps
-                        it beside the control it serves without deforming the 2x2. -->
-                <div class="architect-band-help">Most households pay little or nothing. Not sure? Leave it &mdash; the plan works out the real figure.</div>
 
                 <!-- ⭐ THE LAST-SURVIVOR DISCLOSURE IS HOVER COPY ON THIS BUTTON, DUAL ONLY (Captain-ruled).
                      It was a five-line paragraph sitting in the middle of the form between the
@@ -3926,7 +3897,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                       <label for="tax-10">Low (3%)</label>
                       <div class="mkt-tooltip">
                         <div class="mkt-tooltip-head" style="color: var(--teal-mid);">Datum Intelligence</div>
-                        <div class="mkt-tooltip-body">Light tax drag. More of each withdrawal is available for spending.<br><br><strong>Plain English:</strong> Your Shape expands because taxes take a smaller bite.</div>
+                        <div class="mkt-tooltip-body">Half of all households pay less than this. Common when most of the estate sits in Roth or taxable accounts, where withdrawals arrive already taxed or not taxed at all.</div>
                       </div>
                     </div>
                     <div class="toggle-option">
@@ -3934,7 +3905,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                       <label for="tax-20">Typical (8%)</label>
                       <div class="mkt-tooltip">
                         <div class="mkt-tooltip-head" style="color: var(--teal-mid);">Datum Intelligence</div>
-                        <div class="mkt-tooltip-body">Middle tax drag assumption. A simple planning haircut, not a tax projection.<br><br><strong>Plain English:</strong> A balanced estimate before Studio models your actual accounts.</div>
+                        <div class="mkt-tooltip-body">Three households in four pay less than this. A reasonable starting assumption for an estate built mostly from pre-tax accounts.</div>
                       </div>
                     </div>
                     <div class="toggle-option">
@@ -3942,7 +3913,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                       <label for="tax-30">High (15%)</label>
                       <div class="mkt-tooltip" style="border-color: rgba(226,75,74,0.4);">
                         <div class="mkt-tooltip-head" style="color: var(--danger-red);">Datum Intelligence</div>
-                        <div class="mkt-tooltip-body">Heavy tax drag. More portfolio withdrawal is needed to support the same spending.<br><br><strong>Plain English:</strong> Your Shape compresses because taxes take a bigger bite.</div>
+                        <div class="mkt-tooltip-body">Nine in ten pay less than this. Reached by large pre-tax balances drawn down hard, alongside substantial other income.</div>
                       </div>
                     </div>
                   </div>
@@ -5785,15 +5756,12 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     window._taxExactLive   = _taxExactLive;
     window._taxExactFormat = _taxExactFormat;
 
-    function _effRateExact() {
-      var _s = document.getElementById('eff-tax-rate');
-      var _i = document.getElementById('eff-tax-rate-exact');
-      if (!_s || !_i) return;
-      var _on = (_s.value === 'exact');
-      _i.style.display = _on ? '' : 'none';
-      if (!_on) _i.value = '';
-    }
-    window._effRateExact = _effRateExact;
+    /* ⛔ _effRateExact IS RETIRED WITH eff-tax-rate (2026-09-07). It toggled the "I know my rate"
+       typed box, and BOTH elements it touched are gone. Its two callers went with it: the select's
+       own onchange (markup, deleted) and the blueprint restore below.
+       ⚠️ IT WAS NULL-GUARDED, SO LEAVING IT WOULD NOT HAVE THROWN — it would have returned early
+          forever. THAT IS THE ARGUMENT FOR DELETING IT, NOT AGAINST: a function that can only
+          no-op still reads as live wiring to the next person, and a guard is not a tombstone. */
 
     window.addEventListener('pageshow', function () { _applyCoArchVisibility(); });
 
@@ -13815,63 +13783,41 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         // Cash Flow Physics Module
         let priSal = parseInt(document.getElementById('pri-salary').value.replace(/[^0-9.]/g, ''), 10) || 0;
         let coSal = document.getElementById('co-arch-toggle').checked ? (parseInt(document.getElementById('co-salary').value.replace(/[^0-9.]/g, ''), 10) || 0) : 0;
-        /* ⛔ THE UNSET RATE IS 22, NOT 0, AND THE `|| 0` IS WHY THIS LINE HAD TO MOVE WITH THE
-         * DROPDOWN. #eff-tax-rate now opens on "Select tax rate" (value="") so a cold visitor is no
-         * longer shown a bracket they never chose. `parseFloat('') || 0` is 0, which would make
-         * netAnnual = gross × 1.0 and OVERSTATE monthly net income for every cold visitor — a
-         * bigger lie than the one the placeholder removes.
-         *   🔑 CLAMP-TO-ZERO IS NOT A SAFE DEFAULT FOR A RATE THAT REDUCES A NUMBER. An absent tax
-         *      rate is unknown, not free.
-         * ⚠️ STOPGAP, AND NAMED AS ONE: the field now SAYS unset while the maths still ASSUMES 22 —
-         * a hidden default, which is exactly the species the cold-start arc (§14.2/§21.2) exists to
-         * kill. The honest end state is to suppress the derived figure until the user states a rate,
-         * and that needs authored empty-state copy which the Architect owes. This keeps every number
-         * on screen identical to what shipped while removing the false claim that the user picked
-         * 22% — it does not pretend to be the finished answer. */
-        /* ⭐ THE STOPGAP IS RETIRED. da229d4 made #eff-tax-rate open on "Select tax rate" so a cold
-         * visitor is no longer shown a bracket they never chose — but the maths still ASSUMED 22
-         * when unset (_TAX_WHEN_UNSET), so the field said unset while this section quietly computed
-         * as though it were 22%.
-         *   🔑 A HIDDEN DEFAULT IS THE SAME DEFECT AS A FABRICATED ONE, ONE LAYER DOWN: the
-         *      fabricated value invents an answer; the hidden default invents it AND hides where it
-         *      came from. Same family as Dossier.html's 1984-05, and the reason that one reached the
-         *      server is that nothing stopped an invented value being treated as data.
-         * Now: no stated rate, no derived figure — and the panel SAYS SO rather than going quiet,
-         * because an honest blank still reads as broken. */
-        let _taxStated = isFinite(parseFloat(document.getElementById('eff-tax-rate').value));
-        let effTax = _taxStated ? parseFloat(document.getElementById('eff-tax-rate').value) : 0;
-        
+        /* ~~THE UNSET-RATE STOPGAP AND ITS RETIREMENT~~ — SUPERSEDED 2026-09-07, STRUCK NOT DELETED.
+         * Both blocks that stood here described a net-income figure GATED on a user-stated rate:
+         * first the hidden `_TAX_WHEN_UNSET` default, then its removal in favour of suppress-until-
+         * stated. THE WHOLE COMPUTATION IS GONE, so their reasoning no longer describes this code
+         * and two contradictory comment blocks above one severance read worse than none.
+         * 🔑 THE ONE LAW WORTH CARRYING FORWARD, BECAUSE IT OUTLIVED THE CODE THAT TAUGHT IT:
+         *    A HIDDEN DEFAULT IS THE SAME DEFECT AS A FABRICATED ONE, ONE LAYER DOWN — the
+         *    fabricated value invents an answer; the hidden default invents it AND hides where it
+         *    came from. And CLAMP-TO-ZERO IS NOT A SAFE DEFAULT FOR A RATE THAT REDUCES A NUMBER:
+         *    an absent rate is unknown, not free. Both still bind everywhere else. */
+        /* ⛔⛔ THE CASH FLOW PANEL IS SEVERED FROM TAX, NOT REPOINTED (2026-09-07).
+         * WHAT IT USED TO DO, AND WHY IT WAS WRONG: it read #eff-tax-rate -- labelled "Effective
+         * rate in RETIREMENT" -- and applied it to CURRENT WAGES to report today's take-home pay.
+         * netAnnual = (pri-salary + co-salary) * (1 - retirementRate/100).
+         * 🔑 THAT IS THIS ARC'S FOUNDING DEFECT RUNNING BACKWARDS. The arc began because the tax
+         *    block asked about TODAY and silently applied it at NINETY. The screen was corrected;
+         *    THIS CONSUMER NEVER WAS. So it asked about ninety and applied it today.
+         *    CORRECTING A FIELD'S MEANING SILENTLY FALSIFIES EVERY CONSUMER THAT WAS RIGHT UNDER
+         *    THE OLD MEANING -- a label change is a contract change, and its blast radius is the
+         *    CONSUMER SET, not the markup.
+         * ⛔ MEASURED: a $200,000 household answering 2% -- close to the measured retirement median,
+         *    so an HONEST answer -- was told its net was $16,333/mo, asserting $4,000/yr of tax on
+         *    $200,000 of wages. THE MORE ACCURATE THE USER, THE MORE WRONG THE PANEL.
+         * ⛔ SEVERED, NEVER REPOINTED AT slider-tax. That would wire a RETIREMENT control to a TODAY
+         *    figure and re-commit the same defect deliberately, which is worse than shipping it by
+         *    accident. The two numbers have different mechanisms: payroll tax DIES at retirement,
+         *    income tax CONTINUES at a different rate. Today-tax is a TENSION fact and is not
+         *    collected anywhere yet.
+         * ⚠️ THE WHOLE CHAIN GOES, NOT JUST THE FIGURE -- net, free cash flow, AND the
+         *    debt-acceleration advice. Removing a number while keeping the RECOMMENDATION built on
+         *    it is worse than either alone. The heading stays: the section exists, it has nothing
+         *    honest to report yet. Copy below is Architect-authored, verbatim. */
         let grossAnnual = priSal + coSal;
-        let netAnnual = grossAnnual * (1 - (effTax / 100));
-        let monthlyNetIncome = Math.round(netAnnual / 12);
-        let totalUpkeep = upkeepItems.reduce((sum, i) => sum + _upkMo(i), 0);
-        let totalCharity = charityItems.reduce((sum, i) => sum + _upkMo(i), 0);
-        let freeCashFlow = monthlyNetIncome - totalUpkeep - totalCharity;
-
-        if (grossAnnual > 0 && !_taxStated) {
-            /* ⛔ THE WHOLE SECTION GOES, NOT JUST THE NUMBER. monthlyNetIncome feeds freeCashFlow,
-             * which feeds the debt-acceleration advice below. Suppressing only the printed figure
-             * would leave a RECOMMENDATION derived from a rate nobody stated — a number removed and
-             * the advice built on it kept, which is worse than either alone.
-             * The heading stays: the section still exists, it just has nothing honest to report yet.
-             * Copy is Architect-authored, verbatim. */
-            report += `<br><br><strong style="color:var(--gold);">CASH FLOW DIAGNOSTICS:</strong><br>Set a tax rate above and your monthly net appears here. Until then, this figure would be a guess.`;
-        } else if (grossAnnual > 0) {
-            report += `<br><br><strong style="color:var(--gold);">CASH FLOW DIAGNOSTICS:</strong><br>Your combined net monthly income is estimated at $${monthlyNetIncome.toLocaleString('en-US')}. After deducting Operating Overhead and Philanthropic Allocations, you possess <span style="color:var(--teal-mid); font-weight:bold;">$${freeCashFlow.toLocaleString('en-US')} in Free Cash Flow</span> every month. `;
-            
-            if (freeCashFlow > 0) {
-                if (biggestDebt && biggestDebt.isPriority) {
-                     let _accSrc = biggestDebt.accelSourceId ? state.accounts.find(a => a.id === biggestDebt.accelSourceId) : null;   // §5.3 — name the chosen funding source
-                     let _srcClause = _accSrc ? ` sourced from ${_accSrc.name}` : '';
-                     report += `Deploying excess velocity${_srcClause} to accelerate the demolition of ${biggestDebt.name} (Priority Engaged).`;
-                } else if (biggestDebt) {
-                     report += `Consider deploying this excess velocity to accelerate the demolition of ${biggestDebt.name || 'your largest debt'}.`;
-                } else if (smallestRoom) {
-                     report += `Consider deploying this excess velocity to expand restricted spaces like your ${smallestRoom.name || 'smallest account'}.`;
-                }
-            } else if (freeCashFlow < 0) {
-                report += `<span style="color:var(--danger);">Warning: You are running a monthly structural deficit.</span> Over-leverage detected.`;
-            }
+        if (grossAnnual > 0) {
+            report += `<br><br><strong style="color:var(--gold);">CASH FLOW DIAGNOSTICS:</strong><br>What tax takes from your paycheck today is a different number from what it takes in retirement. This panel waits for the first one, and it is not collected yet.`;
         }
 
         textBody.innerHTML = report;
@@ -14731,17 +14677,18 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
               value can prevent. The legacy vocabulary of that key was '', 'Blended estimate',
               'Effective paid', 'Marginal bracket', 'Custom' — all disjoint from 'exact', so a
               blueprint saved under its old meaning cannot be mistaken for provenance. */
-        if (typeof _tx.working_year_effective_rate === 'number' && _tx.working_year_effective_rate >= 0
-            && (_tx.method === 'exact' || _tx.working_year_effective_rate !== _defTax.working_year_effective_rate)) {
-          var _rv = Math.round(_tx.working_year_effective_rate * 100) + '%';
-          var _te = document.getElementById('eff-tax-rate');
-          var _tex = document.getElementById('eff-tax-rate-exact');
-          if (_tx.method === 'exact' && _te && _tex) {
-            _te.value = 'exact';
-            _tex.value = String(+(_tx.working_year_effective_rate * 100).toFixed(2)) + '%';
-          } else if (_optHas(_te, _rv)) { _te.value = _rv; }
-          if (typeof window._effRateExact === 'function') window._effRateExact();
-        }
+        /* ⛔ THE RATE'S RESTORE-INTO-THE-PROFILE IS RETIRED WITH THE FIELD (2026-09-07). It wrote
+           bp.tax.working_year_effective_rate into #eff-tax-rate and #eff-tax-rate-exact, and both
+           are gone. bp.tax.method's provenance role went with them: it existed so a TYPED rate could
+           be restored unconditionally, and there is no longer anywhere to type one.
+           ⛔⛔ THIS IS NOT THE PENDING RULING, AND THE TWO MUST NOT BE CONFUSED. What is still held
+              for the Captain is whether the STORED KEY seeds the Shape SLIDER on restore — that is a
+              DIFFERENT site (search `working_year_effective_rate` near slider-tax) and it is
+              DELIBERATELY UNTOUCHED. This block could not survive the field's removal either way:
+              it writes to elements that no longer exist. Retiring it decides nothing about the key.
+           ⚠️ SO THE LIVE ASYMMETRY SURVIVES ON PURPOSE: a cold Studio opens at the measured 8%, and
+              a saved blueprint carrying 0.20 still restores the slider to 20. Two tax assumptions in
+              one product, and which one you get depends on how you arrived. Recorded, not fixed. */
 
         /* ⛔ 1.1.0 — THE RESTORE SIDE OF THE EIGHT. The capture side is studio-blueprint.js;
            without both, a field that is written is still never read back.
@@ -16984,16 +16931,16 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     }
     window._commitPlanEndDate = _commitPlanEndDate;
     function syncPlanFromSketch() { _mirrorPlanEnd(); }
-    function syncTaxFromSketch() {
-      // eff-tax-rate is the Dossier-exact preset select; only mirror the slider
-      // when it lands exactly on a preset, otherwise leave the select untouched
-      // (assigning a non-option value would blank a <select>).
-      var sT = $('slider-tax'), pEl = $('eff-tax-rate');
-      if (!sT || !pEl) return;
-      var v = sT.value + '%';
-      var hasOpt = Array.prototype.some.call(pEl.options || [], function (o) { return o.value === v; });
-      if (hasOpt) pEl.value = v;
-    }
+    /* ⛔ syncTaxFromSketch IS RETIRED WITH eff-tax-rate (2026-09-07). It mirrored the Shape slider
+       into the profile select whenever the slider landed exactly on one of that select's options.
+       ⭐ AND ITS MEASURED HISTORY IS WORTH KEEPING, BECAUSE IT INVERTS THE OBVIOUS READING: with the
+          OLD presets (10/20/30) it matched ZERO options, so a preset click never wrote anything —
+          the mirror was dead code wearing the appearance of wiring. The 2026-09-07 re-derivation to
+          3/8/15 made ONE of them (15) an option, so the mirror got MORE active, not less. A ruling
+          written on the assumption it would "silently stop mirroring" was backwards.
+       🔑 THE LESSON IS ABOUT BRIDGES, NOT ABOUT TAX: neither end was wrong. The select was honest,
+          the slider was honest, and the defect lived on the wire between them — visible in neither
+          half's diff. Bridges need their own census. */
 
     /* ── Phase 1 — Sketch S2 carry-through (read-only WANT-shape reference) ──
        Source of truth = the SAVED localStorage blob only, normalized into
@@ -17084,12 +17031,25 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       window._studioCarriedAges = (bp.current && bp.current.age > 0)
         ? { age: bp.current.age, retire: bp.current.retire } : null;
 
-      var sTax = $('slider-tax');
-      if (sTax && bp.tax && typeof bp.tax.working_year_effective_rate === 'number' && bp._loadSource !== 'fresh+dossier') {
-        var pct = bp.tax.working_year_effective_rate;
-        if (pct <= 1) pct = pct * 100;
-        sTax.value = clampN(Math.round(pct), 0, 40);
-      }
+      /* ⛔⛔ THE STORED RATE NO LONGER SEEDS THE SHAPE SLIDER — CAPTAIN-RULED 2026-09-07: DROP IT.
+         This read bp.tax.working_year_effective_rate back into slider-tax on every restore, so a
+         saved plan carrying 0.20 REOPENED AT 20% while a cold Studio opened at the measured 8%.
+         ⛔ THAT WAS TWO TAX ASSUMPTIONS IN ONE PRODUCT, AND WHICH ONE YOU GOT DEPENDED ON HOW YOU
+            ARRIVED — invisible, because neither screen ever said which it was using.
+         🔑 WHY DROP RATHER THAN MIGRATE, AND IT IS THE FOUNDING ARGUMENT OF THIS ARC: the stored
+            value was collected by a field that asked about TODAY and applied it at NINETY. Carrying
+            it into the Shape would move the era-error into a new home under a name meaning the
+            opposite of what it holds. "NEVER DESTROY WORK ALREADY DONE" DOES NOT REACH WORK THAT
+            WAS NEVER VALID — and this destroys nothing: the key is still written in every saved
+            blueprint, it is simply no longer READ. Reversible by restoring these five lines.
+         ⛔ 20% WAS NEVER AN ANSWER ANYONE COULD DEFEND. Measured across 540 households and five
+            filing statuses, ZERO reach it; the highest is 19.35%. Every saved plan now opens on the
+            same measured default as a fresh one, and the Shape's floor and ceiling read ~15% higher
+            because a 0.92 multiplier leaves more spendable than 0.80.
+         ⚠️ THE SCHEMA STILL SHIPS working_year_effective_rate: 0.20 AND NOTHING READS IT NOW. It is
+            left declared on purpose — the codec is POSITIONAL, so removing a key is a data-shape
+            change with its own round-trip gate, not a tidy-up. FLAGGED AS AN UNREAD FIELD, which is
+            a species this product treats as a defect; it retires with a codec batch, not this one. */
 
       // Carry the global market + inflation assumptions onto the Have controls so
       // _scenarioFromInputs recomputes the boundaries under Sketch's settings (mirrors the
@@ -17104,6 +17064,15 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         var _ir = document.querySelector('input[name="inflation"][value="' + bp.inflation_mode + '"]');
         if (_ir) _ir.checked = true;
       }
+      /* ⚠️ THIS DECLARATION WAS COLLATERAL OF THE SEED REMOVAL ABOVE AND THE SUITE CAUGHT IT: `sTax`
+         was declared by the block that seeded the slider from the stored rate, and deleting that
+         block left THIS reader undeclared — `ReferenceError: sTax is not defined`, thrown at load,
+         on EVERY page that boots the Studio. 33 gates went red on one missing `var`.
+         🔑 A DELETION'S BLAST RADIUS INCLUDES THE NAMES IT DECLARED, NOT ONLY THE ONES IT USED.
+            The census asked "what reads the stored rate" and correctly answered "this block". It
+            never asked "what does this block DECLARE that outlives it", and a `var` shared by two
+            concerns belongs to the survivor. */
+      var sTax = $('slider-tax');
       if (sTax) {
         var _tp = document.querySelector('input[name="tax-preset"][value="' + sTax.value + '"]');
         if (_tp) _tp.checked = true;
@@ -17214,19 +17183,20 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       var salEl = $('pri-salary');
       var gross = parseFloat(pri.grossIncome);
       if (salEl && !salEl.value && gross > 0) salEl.value = '$' + Math.round(gross).toLocaleString('en-US');
-      var taxEl = $('eff-tax-rate');
-      var rate = parseFloat(def.effectiveTaxRate);
-      if (taxEl && rate > 0 && rate < 1) {
-        var rv = Math.round(rate * 100) + '%';
-        var hasOpt = Array.prototype.some.call(taxEl.options || [], function (o) { return o.value === rv; });
-        if (hasOpt) taxEl.value = rv;
-      }
-      // Dossier tax also seeds slider-tax (regardless of select-preset match)
-      // so the Profile tax and the Shape HUD agree without a manual touch.
-      if (rate > 0 && rate < 1) {
-        var sTx = $('slider-tax');
-        if (sTx) { sTx.value = clampN(Math.round(rate * 100), 0, 40); updateTaxLabel(); fireUpdate(); }
-      }
+      /* ⛔ THE DOSSIER TAX SEED IS RETIRED — BOTH HALVES (2026-09-07). The first wrote
+         def.effectiveTaxRate into #eff-tax-rate, which is gone. The second wrote it into slider-tax
+         "so the Profile tax and the Shape HUD agree without a manual touch".
+         ⛔⛔ THE SECOND HALF IS WHY BOTH GO, AND IT IS NOT COLLATERAL. It is a SILENT STAGED WRITE:
+            a value entering a control with no user act, surfacing later as though the system had
+            always known it. A wrong number that appears WHEN YOU CLICK is attributable; one that
+            appears three screens later has been laundered into an apparent fact. Deferred surfacing
+            removes the user's ability to attribute the change — the one thing that would let them
+            catch it — so a staged write ranks ABOVE a visible one, not below.
+         ⛔ AND THE VALUE ITSELF WAS THE CONFLATED ONE. A single stored rate cannot seed a RETIREMENT
+            control honestly, because what tax takes from a paycheck today and what it takes from
+            withdrawals at 90 are different numbers with different mechanisms. Seeding the Shape from
+            it would re-commit the exact defect this batch removes, silently, on a path nobody
+            touched. THE HUD NOW OPENS ON ITS MEASURED DEFAULT AND WAITS TO BE ASKED. */
       var locEl = $('pri-location');
       var loc = String(ho.location || '').trim();
       if (locEl && loc) {
@@ -17439,7 +17409,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         // Untick tax-preset radios when the slider drags away from a preset
         ['tax-10','tax-20','tax-30'].forEach(function (id) { var r = $(id); if (r) r.checked = false; });
         _prev.tax = n;
-        updateTaxLabel(); syncTaxFromSketch(); fireUpdate();
+        updateTaxLabel(); fireUpdate();   // syncTaxFromSketch retired with eff-tax-rate
       });
     }
 
@@ -17489,7 +17459,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           if (!el.checked) return;
           var sT = $('slider-tax'); if (!sT) return;
           sT.value = pct;
-          updateTaxLabel(); syncTaxFromSketch(); fireUpdate();
+          updateTaxLabel(); fireUpdate();   // syncTaxFromSketch retired with eff-tax-rate
         });
       });
     }
@@ -17559,33 +17529,16 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             That is the HUD's resolution, not a rounding of the user's answer.
          Gated by scripts/_gate_tax_option_agreement.js — every option must produce the number it
          names. Seen RED on these exact bytes (7 fails) before this edit existed. */
-      var taxProfEl = $('eff-tax-rate');
-      var taxExactEl = $('eff-tax-rate-exact');
-      /* The stated rate, or null. NULL IS NOT ZERO — "Nothing at all" is 0 and IS an answer; an
-         untouched select is null and is not. Separated by TYPE, never by magnitude. */
-      function _statedTaxPct() {
-        if (!taxProfEl) return null;
-        var raw = String(taxProfEl.value);
-        if (raw === '') return null;
-        var n = (raw === 'exact')
-          ? parseFloat(String(taxExactEl ? taxExactEl.value : '').replace('%', ''))
-          : parseFloat(raw.replace('%', ''));
-        return (isFinite(n) && n >= 0 && n < 100) ? n : null;
-      }
-      function _pushTaxToShape() {
-        var v = _statedTaxPct();
-        if (v === null) return;                     // unstated: answer nothing, move nothing
-        var sT = $('slider-tax');
-        if (sT) { sT.value = clampN(Math.round(v), 0, 40); updateTaxLabel(); }
-        fireUpdate();
-      }
-      if (taxProfEl) taxProfEl.addEventListener('change', _pushTaxToShape);
-      /* ⛔ THE TYPED BOX NEVER REACHED ANY CONSUMER — measured, both household modes: with "I know
-         my rate" chosen and 14.2 typed, the engine payload, the slider and the Shape were ALL
-         unchanged. The select's change event had already fired carrying the sentinel "exact", and
-         nothing listened to the input itself. The most precise answer the form accepts was the one
-         answer that reached nothing. */
-      if (taxExactEl) taxExactEl.addEventListener('input', _pushTaxToShape);
+      /* ⛔ THE PROFILE->SHAPE TAX BRIDGE IS RETIRED WITH THE FIELD (2026-09-07): _statedTaxPct,
+         _pushTaxToShape, and the two listeners on #eff-tax-rate / #eff-tax-rate-exact.
+         ⭐ WHAT IT SOLVED IS SOLVED A BETTER WAY AND MUST NOT BE REBUILT. This bridge existed to
+            kill `parseFloat(...) || 22` — the defect where "Nothing at all" (0%) and "I know my
+            rate" both set the Shape to 22%, because `0 || 22` is 22 and `NaN || 22` is 22. Its cure
+            was to separate "unstated" from "zero" BY TYPE rather than by magnitude, returning null
+            for an untouched control. THAT DISTINCTION IS NOW STRUCTURAL: there is no control to
+            leave untouched, so there is no unstated case to confuse with zero.
+         ⚠️ THE SHAPE'S TAX IS NOW ASKED IN EXACTLY ONE PLACE — the slider and its three measured
+            presets, in the room that owns the assumption. ONE QUESTION, ONE CONTROL, ONE ANSWER. */
     }
 
     /* ── 02/ Estate Drafting -> 00/ Sketch writeback ────────────────────────

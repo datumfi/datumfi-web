@@ -1695,12 +1695,19 @@
           control. Those are all disjoint from 'exact' so they cannot be mistaken for provenance,
           but they describe a field that no longer exists and can never be shown or edited again —
           so they are stale data with no owner, and this writes them out rather than preserving them. */
-    var _txSel   = String(v('eff-tax-rate'));
-    var _txExact = (_txSel === 'exact');
-    var _txr = _txExact ? parseFloat(String(v('eff-tax-rate-exact')).replace('%', ''))
-                        : parseFloat(_txSel.replace('%', ''));
-    if (isFinite(_txr) && _txr >= 0 && _txr < 100) bp.tax.working_year_effective_rate = _txr / 100;
-    bp.tax.method = _txExact ? 'exact' : '';
+    /* ⛔ THE RATE'S CAPTURE IS RETIRED WITH THE FIELD (2026-09-07). #eff-tax-rate and
+       #eff-tax-rate-exact are deleted, so there is nothing to read: v() would yield '' and
+       parseFloat('') is NaN, which means leaving this code would have SILENTLY STOPPED CAPTURING
+       rather than visibly stopping. Silence is the failure mode this file exists to prevent.
+       ⛔⛔ THIS WRITES NOTHING AND DELETES NOTHING, AND THAT IS THE POINT — IT LANDS NEITHER PATH.
+          Whether a STORED bp.tax.working_year_effective_rate should still seed the Shape slider on
+          restore is HELD FOR THE CAPTAIN and lives at a different site (studio.html, near the
+          slider-tax restore). Existing blueprints keep their stored value untouched; new saves
+          simply stop adding one, because there is no longer an answer to add.
+       ⚠️ bp.tax.method GOES WITH IT. Its whole job was PROVENANCE for a TYPED rate — recording that
+          the user typed a figure so the restore could be unconditional and rescue someone entering
+          exactly the schema default. There is nowhere left to type one, so the provenance has no
+          subject. A provenance flag for a field that cannot be answered is not a safeguard. */
 
     var portE = d.getElementById('bp-portfolio-total');
     if (portE) bp.portfolio_total = moneyToInt(portE.value);
