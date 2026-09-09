@@ -16136,6 +16136,20 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
          ⚠️ The three age callers below were never exposed (0 is not a reachable age on those
             sliders), but they are one slider-range edit away from the same fault, so the fix is
             made in the SHARED helper rather than at the one call site that was bleeding. */
+      /* ⛔⛔ THIS FUNCTION HAS A TWIN, AND THE TWIN CARRIED THE DEFECT FOR AN EXTRA COMMIT.
+         `_wantFromSliders` in scripts/studio-wantface.js:92 keeps its own `ival` over the d2-*
+         sliders. When the fix above was made HERE, that copy was left on `parseInt(...) || def`:
+         one site measured, repaired and commented; the other silently still wrong, with nothing
+         anywhere recording that a decision about it had been taken. Both are now Number.isFinite
+         (2026-09-09).
+         🔑 A FORK DOES NOT INHERIT ITS ORIGINAL'S FIXES; IT ONLY INHERITS ITS BUGS.
+         ⛔ WHY IT IS STILL TWO FUNCTIONS, DECLARED SO THE NEXT READER DOES NOT RE-DERIVE IT: this
+            one is CLOSURE-LOCAL INSIDE _scenarioFromInputs, not a global, so studio-wantface.js has
+            nothing to call. Sharing it means extracting a new script part for four lines — which is
+            the right eventual answer and is NOT done here. The Architect's ruled fallback is PATCH
+            BOTH AND CROSS-REFERENCE, and a cross-reference that points only one way is how the
+            divergence happened in the first place.
+         ⚠️ CHANGE ONE, CHANGE THE OTHER, IN THE SAME COMMIT. */
       function ival(id, def) {
         var el = $(id); if (!el) return def;
         var n = parseInt(el.value, 10);

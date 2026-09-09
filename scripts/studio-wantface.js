@@ -89,7 +89,32 @@
   /* ── want scenario from the d2-sliders (market/tax/infl inherited from Have) ── */
   function _wantFromSliders() {
     var sc = SC();
-    var ival = function (id, def) { var el = $(id); return el ? (parseInt(el.value, 10) || def) : def; };
+    /* ⛔⛔ THE FIFTH SITE OF THE ARC'S DEFECT CLASS, AND THE ONLY ONE THAT WAS A FORK RATHER THAN AN
+       ORIGINAL. STRUCK, NOT DELETED:
+         ~~ var ival = function (id, def) { var el = $(id); return el ? (parseInt(el.value, 10) || def) : def; }; ~~
+       `|| def` is the wrong operator for ANY number whose valid range includes zero: it cannot tell
+       "the slider reads 0" from "there is no slider", and it answers both with the default.
+       ⛔ ITS TWIN IN studio.html:16139 WAS FIXED AND THIS COPY WAS NOT, WHICH IS THE WHOLE HAZARD OF
+          A FORK: one site was measured, repaired and commented, and the other kept the defect with
+          no record that a decision had been made about it. A FORK DOES NOT INHERIT ITS ORIGINAL'S
+          FIXES; IT ONLY INHERITS ITS BUGS.
+       ⚠️ LATENT FOR THE UI, NOT FOR THE DATA, AND THE DIFFERENCE IS THE REASON THIS IS NOT COSMETIC:
+          the three d2 sliders have mins of 18/45/75, so a HUMAN cannot drag one to 0. But
+          _seedSliders can write '0' from a RESTORED scenario, and at that point the age silently
+          becomes 40, the activation 65 and the plan-through 93 — three fabricated personal facts,
+          each equal to a plausible default, on the surface that shapes the want-side number.
+       ⛔ IT CANNOT SHARE A HELPER, AND THAT IS MEASURED RATHER THAN ASSUMED: studio.html's ival is
+          CLOSURE-LOCAL INSIDE _scenarioFromInputs (:16139), not a global, so there is nothing for
+          this file to call. Extracting it would mean a new script part for a four-line function.
+          The Architect's ruled fallback for that case is PATCH BOTH AND CROSS-REFERENCE, which is
+          what this is.
+       ⚠️ IF YOU CHANGE THIS, CHANGE studio.html:16139 IN THE SAME COMMIT. The two are a declared
+          pair. A shared-helper problem outlives this commit — see the note at the twin. */
+    var ival = function (id, def) {
+      var el = $(id); if (!el) return def;
+      var n = parseInt(el.value, 10);
+      return Number.isFinite(n) ? n : def;
+    };
     var out = {
       currentAge: ival('d2-slider-age', 40), activationAge: ival('d2-slider-activation', 65),
       planThroughAge: ival('d2-slider-plan-through', 93),
