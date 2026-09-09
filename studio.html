@@ -14675,8 +14675,18 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         var _defTax = {};
         try { _defTax = (window.DatumBlueprint && typeof DatumBlueprint['new'] === 'function') ? (DatumBlueprint['new']().tax || {}) : {}; } catch (_e) { _defTax = {}; }
         var _optHas = function (el, val) { return !!el && Array.prototype.some.call(el.options || [], function (o) { return (o.value || o.text) === val; }); };
-        if (_tx.location && _tx.location !== _defTax.location) { var _lo = document.getElementById('pri-location'); if (_optHas(_lo, _tx.location)) _lo.value = _tx.location; }
-        if (_tx.filing   && _tx.filing   !== _defTax.filing)   { var _fi = document.getElementById('filing-status'); if (_optHas(_fi, _tx.filing))   _fi.value = _tx.filing; }
+        /* ⛔⛔ THESE SET _restoredAnything (2026-09-09). The flag is DECLARED at :14580 and was set at
+           only THREE sites — DOB, target-ret and one slider path — so a session that restored ONLY a
+           state, or only a salary, brought the data back and ANNOUNCED NOTHING.
+           🔑 THE NAME PROMISED "ANYTHING" AND THE CODE DELIVERED TWO FIELDS. Same species as the
+              stale tooltip note struck earlier today: A LABEL THAT OUTLIVED THE THING IT DESCRIBED.
+              The variable read as a general predicate, so every later author reasonably assumed new
+              restore lines joined it — and none of them did.
+           ⚠️ IT IS SET INSIDE THE GUARD, NEVER BESIDE IT. The restore is conditional on the value
+              differing from the schema default AND on the option existing; announcing outside that
+              would claim a restore the anti-fabrication guard had just refused to perform. */
+        if (_tx.location && _tx.location !== _defTax.location) { var _lo = document.getElementById('pri-location'); if (_optHas(_lo, _tx.location)) { _lo.value = _tx.location; _restoredAnything = true; } }
+        if (_tx.filing   && _tx.filing   !== _defTax.filing)   { var _fi = document.getElementById('filing-status'); if (_optHas(_fi, _tx.filing))   { _fi.value = _tx.filing;   _restoredAnything = true; } }
         /* ⛔ >= 0, NOT > 0 — "Nothing at all" IS AN ANSWER AND IT IS THE MOST COMMON ONE.
            82 of 210 measured households pay no federal tax on their withdrawal at all. A guard
            discarding zero would have accepted the answer on screen and dropped it on reload: the
@@ -14738,8 +14748,14 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
               how much of their retirement they can spend.
            SAME PATTERN AS bp.tax.method === EXACT forty lines up: a separate key recording that the
               user actually gave the answer, so a reply that happens to equal the default survives. */
-        if (prof.primary_salary_stated || prof.primary_salary)           { var _ps = document.getElementById('pri-salary'); if (_ps) _ps.value = _money(prof.primary_salary); }
-        if (prof.co_architect_salary_stated || prof.co_architect_salary) { var _cs = document.getElementById('co-salary');  if (_cs) _cs.value = _money(prof.co_architect_salary); }
+        /* ⚠️ AND THESE SET IT TOO, for the same reason as the tax pair above — a session restoring
+           only a salary announced nothing. ⛔ NOTE THE ASYMMETRY AND IT IS DELIBERATE: a salary of
+           ZERO is a genuine restored answer (that is this whole arc's point), so the announcement
+           must NOT be re-gated on the value being truthy. The flag follows the RESTORE, not the
+           magnitude — re-testing the number here would smuggle the truthy-zero defect back in
+           through the announcement path after it was removed from the persistence path. */
+        if (prof.primary_salary_stated || prof.primary_salary)           { var _ps = document.getElementById('pri-salary'); if (_ps) { _ps.value = _money(prof.primary_salary); _restoredAnything = true; } }
+        if (prof.co_architect_salary_stated || prof.co_architect_salary) { var _cs = document.getElementById('co-salary');  if (_cs) { _cs.value = _money(prof.co_architect_salary); _restoredAnything = true; } }
         if (prof.co_architect_plan_end_date) { var _cp = document.getElementById('co-plan-end'); if (_cp) _cp.value = prof.co_architect_plan_end_date; }
         /* ⛔ FOUR RESTORE LINES REMOVED IN BATCH 1a — method, co_method, co_filing, co_location.
            Their target elements no longer exist. They were null-safe (`_optHas` guards on !!el) so
