@@ -169,6 +169,28 @@ async function seedForReveal(page) {
     console.log('⛔ SEED FAILED — filing status could not be set: ' + filedAs);
     process.exit(2);
   }
+  /* ⛔ AND RETIREMENT LOCATION BECAME REQUIRED 2026-09-09 — THE SAME EVENT, THREE DAYS LATER, AND
+     THE SAME REPAIR. R4 went red over a product that had just become more honest; the fixture
+     predates the requirement. THE REPAIR IS THE FIXTURE, NOT THE GATE.
+     ⚠️ ASSERTED, NOT ASSUMED, for the reason written above filing status: assigning a <select> a
+        value it does not carry is SILENT — it takes '' — and this select's options are BARE, so
+        each option's value IS its visible label. A future re-wording of a state name would put
+        this fixture straight back where it was, refused, with nothing saying why.
+     ⚠️ THE VALUE IS IRRELEVANT AND MUST STAY SO: every jurisdiction resolves to zero state tax, so
+        no choice here can move anything R4 reads. It answers a question; it does not supply a rate. */
+  const locatedAt = await page.evaluate(() => {
+    const el = document.getElementById('pri-location');
+    if (!el) return '(no #pri-location)';
+    const opt = Array.prototype.find.call(el.options, (o) => String(o.value).trim() !== '');
+    if (!opt) return '(no answerable option)';
+    el.value = opt.value;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return el.value;
+  });
+  if (!locatedAt || locatedAt.charAt(0) === '(') {
+    console.log('⛔ SEED FAILED — retirement location could not be set: ' + locatedAt);
+    process.exit(2);
+  }
   await page.waitForTimeout(200);
 
   const room = await page.evaluate(() => {

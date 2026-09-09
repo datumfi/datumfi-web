@@ -251,6 +251,15 @@ const ok = (l, c, o) => { const g = !!c; if (!g) fails++;
     // The Matrix refuses on an empty SS benefit trio and on an empty estate, BEFORE it ever
     // builds a payload. Neither refusal is the one under test, so both are satisfied here.
     set('ss-pri-62', '2000'); set('ss-pri-67', '2900'); set('ss-pri-70', '3600');
+    // ⛔ AND SO IS RETIREMENT LOCATION, ADDED 2026-09-09 WHEN IT BECAME REQUIRED. Same rule as the
+    // two refusals above: SATISFY EVERY REFUSAL THAT IS NOT THE ONE UNDER TEST. Without it this
+    // household is UNANSWERED on a required question, buildStudioRequest refuses, nothing POSTs,
+    // and L9a reds — which is L9a doing exactly the job its header describes (catching a door that
+    // cannot POST at all), not a false alarm.
+    // ⚠️ THE VALUE IS IRRELEVANT AND MUST STAY THAT WAY: every jurisdiction resolves to zero state
+    // tax, so no choice here can move a number this gate reads. It is answering a question, not
+    // supplying a rate.
+    set('pri-location', 'Wyoming');
     let seeded = false;
     try { if (typeof state === 'object' && Array.isArray(state.accounts)) {
       state.accounts.push({ baseId: 'trad-401k', value: 1000000, inflow: 0, id: 'gate-egress' }); seeded = true; } } catch (e) {}
