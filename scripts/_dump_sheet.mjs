@@ -1,7 +1,54 @@
-/* DEV-ONLY. Dump a named sheet from an xlsx as TSV-ish rows. Reuses _spdr_parse readXlsx. */
+/* DEV-ONLY. Dump a named sheet from an xlsx as TSV-ish rows. Reuses _spdr_parse readXlsx.
+ *
+ * ⛔⛔ IT REFUSES A STALE WORKBOOK. Added 2026-09-09 after I read the Datumae/ subfolder copy and
+ * reported the Architect's State Tax Tiers sheet MISSING when it was present and complete in the
+ * live file. My own memory says "resolve the live workbook by LastWriteTime, NEVER by the name
+ * written here" — and a note I have to remember is not a control.
+ * 🔑 A STALE COPY OF A SHARED ARTEFACT IS A SECOND SOURCE OF TRUTH, and the failure is SILENT in
+ *    the worst way: the stale file PARSES CLEANLY and contains a correct-looking bank. Nothing is
+ *    broken. It is a VALID ARTEFACT FROM THE WRONG SOURCE, which is exactly the shape this tool is
+ *    used to investigate.
+ * ⚠️ THE SAME REASONING AS THE tier-governs-rate ASSERTION IN THE STATE-TAX IMPORTER: where a rule
+ *    can be mechanised it must be, or it decorates the mistake it forbids.
+ * ⛔ IT WARNS AND CONTINUES RATHER THAN EXITING, DELIBERATELY: reading an OLD workbook on purpose
+ *    (archaeology, a diff against a superseded bank) is legitimate. What is not legitimate is doing
+ *    it BY ACCIDENT. Pass --any-workbook to silence it when the staleness is the point.
+ */
 import {readXlsx} from './_spdr_parse.mjs';
+import {readdirSync, statSync} from 'node:fs';
+import {dirname, basename, join, resolve} from 'node:path';
 const FP = process.argv[2];
 const WANT = (process.argv[3]||'').toLowerCase();
+
+/* ── the freshness assertion ────────────────────────────────────────────────────────────────── */
+if (FP && !process.argv.includes('--any-workbook')) {
+  try {
+    const HOME = process.env.USERPROFILE || process.env.HOME || '';
+    const roots = [join(HOME, 'OneDrive'), dirname(resolve(FP))];
+    let newest = null;
+    for (const root of roots) {
+      let names = [];
+      try { names = readdirSync(root); } catch { continue; }
+      for (const n of names) {
+        if (!/\.xls[mx]$/i.test(n) || n.startsWith('~$')) continue;
+        const full = join(root, n);
+        let st; try { st = statSync(full); } catch { continue; }
+        if (!newest || st.mtimeMs > newest.mtimeMs) newest = {full, mtimeMs: st.mtimeMs, name: n};
+      }
+    }
+    const mine = statSync(resolve(FP));
+    if (newest && resolve(newest.full).toLowerCase() !== resolve(FP).toLowerCase()
+        && newest.mtimeMs > mine.mtimeMs) {
+      const ageH = ((newest.mtimeMs - mine.mtimeMs) / 3600000).toFixed(1);
+      console.log('⛔ STALE WORKBOOK — you are reading a copy that is ' + ageH + 'h OLDER than the newest one.');
+      console.log('   reading : ' + basename(FP) + '   (' + new Date(mine.mtimeMs).toISOString() + ')');
+      console.log('   NEWEST  : ' + newest.full + '   (' + new Date(newest.mtimeMs).toISOString() + ')');
+      console.log('   ⚠️ A STALE COPY PARSES CLEANLY AND LOOKS CORRECT. Resolve by LastWriteTime, never by name.');
+      console.log('   (pass --any-workbook if reading the older file is deliberate)\n');
+    }
+  } catch { /* the assertion must never be the reason the tool fails */ }
+}
+
 const f = readXlsx(FP);
 const dec = s => s.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#10;/g,'\n').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
 const ss = f['xl/sharedStrings.xml'] ? f['xl/sharedStrings.xml'].toString('utf8') : '';

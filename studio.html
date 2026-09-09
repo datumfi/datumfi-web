@@ -4239,6 +4239,42 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           
           <div class="climate-grid">
             
+            <!-- ⛔⛔ TWO MEASUREMENTS BANKED HERE 2026-09-09 — RECORDED, DELIBERATELY NOT REPAIRED.
+                 There is a PAUSED ARC on Monte Carlo / Market Climate whose planned change is to replace
+                 these four blend presets with the MODELS THEMSELVES carrying their own weights. A gate or a
+                 fix here would go red on purpose the week that lands and cost a window explaining itself.
+                 🗓️ EXPIRY: BOTH NOTES DIE WHEN THE CLIMATE PRESETS ARE REPLACED BY NAMED MODELS.
+
+                 (1) THE CONTROL IS A DEAD INPUT. test_input_reachability.py reports market_outlook as
+                     "user changes it, answer does not move", and that is PRE-EXISTING — reproduced at
+                     HEAD before any of this arc's work.
+                     ⚠️ AND THE CAUSE IS NOT WHAT IT LOOKS LIKE. The presets are NOT near-identical: their
+                     weight vectors differ by up to 0.20. MEASURED on a $2.5M household, 2,000 trials:
+                       per-MODEL tiers      bedrock 92,000..115,000   capstone 150,000..181,000
+                                            spread 23,000-31,000  (15.6%-20.0%)
+                       per-PRESET blends    spread 1,000-2,000    (tier rounding IS 1,000)
+                     ⇒ THE FOUR MODELS DISAGREE BY ~20%; REWEIGHTING THEM MOVES THE LADDER BY ~1%. Every
+                       preset is a near-centroid blend (min weight .15, max .40), so each lands close to
+                       the average of four disagreeing models. AVERAGING THINGS THAT DISAGREE, WITH MILDLY
+                       DIFFERENT WEIGHTS, GIVES YOU NEARLY THE SAME AVERAGE.
+                     ⭐ THAT IS AN ARGUMENT **FOR** THE PLANNED ARC, NOT JUST AGAINST THIS CONTROL:
+                       exposing the models directly is a REAL lever — CAPE vs regime is a $23,000
+                       difference at bedrock where Cautious vs Optimistic is $1,000.
+
+                 (2) ⛔ EVERY TOOLTIP BELOW STATES A WEIGHTING THE ENGINE DOES NOT USE. Four of four.
+                     displayed (para/boot/cape/regime)   vs   engine _resolve_weights at the default CAPE
+                       History Repeats     25/25/25/25   vs   25/30/20/25
+                       Valuations Matter   30/40/15/15   vs   15/15/40/30   ← the DEFAULT, and INVERTED
+                       Cautious            50/30/10/10   vs   20/20/35/25
+                       Optimistic          15/25/25/35   vs   25/25/25/25
+                     🔑 THE DEFAULT IS THE WORST AND IT CONTRADICTS ITS OWN DESCRIPTION TWO LINES BELOW
+                        IT: the tooltip shows CAPE at 15% — the LOWEST of its four — while the copy says
+                        "Trusts valuation-aware models more" and the engine actually weights CAPE at 40%,
+                        the HIGHEST. One of those three is a lie and it is the number.
+                     ⚠️ THIS IS A LIVE USER-FACING FALSEHOOD ABOUT OUR OWN METHOD, on a control whose
+                        value does not currently reach the answer — which is the only reason it is
+                        survivable enough to defer. IF THE PAUSED ARC SLIPS, THIS NOTE IS THE REASON TO
+                        FIX THE NUMBERS ANYWAY: a dead control that lies is still lying. -->
             <div class="climate-option" data-outlook="History Repeats">
               <div class="climate-tooltip">
                 <div class="tt-title">Active Methodology & Weighting</div>
@@ -15170,6 +15206,16 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           outlookValue  = 'custom';
           customWeights = { bootstrap: vals[0] / 100, parametric: vals[1] / 100, regime: vals[2] / 100, cape: vals[3] / 100 };
         } else {
+          /* ⚠️ THE `|| 'valuations_matter'` FALLBACK IS NOT THE TRUTHY-ZERO CLASS — the operand is a
+             STRING, and '' is genuinely absent rather than a meaningful answer. Left as-is deliberately.
+             ⛔ BUT NOTE THE TELL, because it is the same shape as the tax presets: THE DEFAULT AND THE
+                FALLBACK ARE THE SAME VALUE, so "the user chose Valuations Matter" and "we could not read
+                the control" are indistinguishable downstream — exactly as Avg-20 was both the checked
+                button and the slider default.
+             ⛔ AND THIS INPUT IS DEAD AT HEAD (pre-existing): changing the preset does not move the
+                answer. The measurement and its cause are banked at the climate markup (~:4242), with the
+                per-model and per-preset spreads. RECORDED, NOT REPAIRED — the paused Monte Carlo arc
+                replaces this control. 🗓️ This note dies with the presets. */
           outlookValue = OUTLOOK_MAP[climateLabel] || 'valuations_matter';
         }
 
@@ -15251,6 +15297,18 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         const _locRaw = (document.getElementById('pri-location')?.value || '').trim();
         const _locationCode = (typeof datumLocationCode === 'function') ? datumLocationCode(_locRaw) : null;
         if (_locationCode) body.location = _locationCode;
+        /* ⛔ THE REFUSAL, LANDING ONE COMMIT AFTER THE WIRING, AND THE NARROWING IS DECLARED RATHER
+           THAN ASSUMED. The standing rule is that a field becomes required in the SAME commit that
+           wires it — justified by "otherwise, for that interval, blank on screen still means
+           Florida in the maths". THAT INTERVAL CANNOT EXIST HERE: the engine now REQUIRES location
+           with no default and RAISES on an unknown one, so an unanswered select is a loud refusal,
+           never a silent Florida. THERE IS NO FLORIDA BRANCH LEFT TO FALL INTO.
+           ⚠️ SO THE GAP THIS CLOSES IS A COURTESY ONE, NOT A CORRECTNESS ONE: without it the user
+              meets a 422 instead of a sentence. The rule was right for its reason; the reason is
+              discharged, and the copy arrived on the Architect's clock rather than mine. */
+        if (!_locationCode) {
+          _errs.push({ field: 'Retirement Location', message: LOCATION_REQUIRED, target: 'pri-location' });
+        }
         /* ⛔⛔ FILING STATUS IS REQUIRED, AND IT BECAME REQUIRED IN THE SAME COMMIT THAT WIRED IT
            (§82.1893). Never before — requiring an answer we then discard is the old defect with a
            gate bolted on. And never the commit AFTER, because for that interval blank on screen
@@ -15749,6 +15807,18 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
          date"); this is a MISSING ANSWER WITH A STAKE, which is the accounts/co-architect
          family: name the absent thing, then the consequence. */
       var FILING_STATUS_REQUIRED = 'Your filing status — it changes the tax, and the tax changes the Range.';
+      /* ⭐ AUTHORED BY THE ARCHITECT 2026-09-09, SHIPPED VERBATIM. L47 — I do not write brand voice,
+         and this line was deliberately NOT invented when the field was wired the same day.
+         ⛔ AND COPYING ITS NEIGHBOUR WOULD HAVE ASSERTED SOMETHING FALSE. FILING_STATUS_REQUIRED
+            says "it changes the tax, and the tax changes the Range" — TRUE of filing status, and
+            NOT TRUE of location today: every jurisdiction resolves to zero state tax while the
+            rates are outstanding. The obvious reuse would have been a lie in the product's own
+            voice, on the screen that decides someone's spending.
+         🔑 THE SENTENCE IS BUILT TO SURVIVE THE CHANGE IT DESCRIBES: "we record it now" is true
+            today, "apply its rules as they are modelled" is true the day the rates land, and
+            "we will not guess one for you" is the promise the whole arc exists to keep. It
+            replaces nothing on screen — "Recorded, not yet modelled." STAYS. */
+      var LOCATION_REQUIRED = 'Choose your retirement state. We record it now and apply its rules as they are modelled — we will not guess one for you.';
       var TAKE_ME_THERE = 'Take me there';
       /* ⚠ RENDERED ONLY WHEN THE TARGET RESOLVES. A door onto an element that is not in the document
          is worse than no door — it promises and does nothing. An unresolvable target renders exactly
