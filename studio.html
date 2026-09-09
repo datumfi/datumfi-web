@@ -3118,6 +3118,14 @@ body.light-mode #studioOverlayWrap .dock-signin { color:#5e717a; }
        (Moat, Cellar, Yard) call these. ⛔ THIS TAG IS LOAD-BEARING AND ITS ABSENCE IS SILENT —
        scripts/_gate_parts_wired.mjs exists because deleting it leaves every sandbox gate GREEN. -->
   <script src="/scripts/studio-debt-cost.js"></script>
+  <!-- ⭐ RETIREMENT LOCATION — the label->code map (2026-09-09). HEAD-LOADED AND NOT DEFERRED for
+       the same reason as the two parts above: buildStudioRequest reads `datumLocationCode` from the
+       inline block below, which is parsed long before any deferred script runs.
+       ⛔ THIS TAG IS LOAD-BEARING AND ITS ABSENCE IS SILENT in the sandbox — scripts/_gate_parts_wired.mjs
+       is the control, because every source-reading gate composes the part from PARTS[] and would stay
+       GREEN with the tag deleted while the real page failed to send a location.
+       ⚠️ IT LIVES IN A PART RATHER THAN INLINE BY STANDING RULE: the shell is already 1,578KB. -->
+  <script src="/scripts/studio-state-tax.js"></script>
   <!-- ⭐ STEP 1 · the landing: four movements, seven phases, the completeness predicate and the
        ghost plan. Head-loaded and not deferred, like its siblings — the inline script below and the
        markup both reach these functions. -->
@@ -15224,6 +15232,25 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
 
         const body = { current_age: currentAge, retirement_age: retireAge, datum_spend: datumSpend, market_outlook: outlookValue, ss_strategy_primary: ssStrategy, accounts, plan_end_age: planEndAge };
         if (filingStatus) body.filing_status = filingStatus;
+        /* ⛔⛔ RETIREMENT LOCATION REACHES THE ENGINE (2026-09-09). `location: 'FL'` was DELETED from
+           this payload on 2026-09-05 as hygiene — the engine declared no such field and dropped it,
+           so the line read as wiring while changing nothing. THIS IS THE OTHER HALF: removing a
+           false implication was never the same act as supplying the truth it implied.
+           ⛔ THE MAP LIVES IN scripts/studio-state-tax.js AND RETURNS null FOR ANYTHING UNANSWERED
+              OR UNRECOGNISED — never 'FL', never a guess. Blank cannot become the Captain's own
+              state on the screen that decides someone's spending.
+           ⚠️⚠️ THE ENGINE NOW *REQUIRES* location AND HAS NO DEFAULT, so an unanswered select
+              produces a LOUD 422 rather than a silent Florida. That is why this ships without a
+              client-side refusal message: the "forbidden third thing" was an interval in which
+              blank on screen still meant Florida in the maths, and that interval CANNOT EXIST here
+              — there is no Florida branch left to fall into. The friendly refusal is one authored
+              line away and is flagged to the Architect; the engine's refusal is the guard until it
+              lands. See the note beside FILING_STATUS_REQUIRED.
+           ⚠️ SENT ONLY WHEN ANSWERED, mirroring filing_status directly above. A key sent as null
+              would be a caller asserting an answer it does not have. */
+        const _locRaw = (document.getElementById('pri-location')?.value || '').trim();
+        const _locationCode = (typeof datumLocationCode === 'function') ? datumLocationCode(_locRaw) : null;
+        if (_locationCode) body.location = _locationCode;
         /* ⛔⛔ FILING STATUS IS REQUIRED, AND IT BECAME REQUIRED IN THE SAME COMMIT THAT WIRED IT
            (§82.1893). Never before — requiring an answer we then discard is the old defect with a
            gate bolted on. And never the commit AFTER, because for that interval blank on screen

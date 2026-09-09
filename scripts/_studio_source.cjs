@@ -80,6 +80,12 @@ const PARTS = [
      out of studio.html so it can be consumed by the TENSION phase page after the split. The twelve
      sandbox gates that slice calcCarryTotal -> _canonUtil -> _propUpkeepAnnual resolve
      `_upkForScope` out of THIS concatenation — which is the entire reason the registry exists. */
+  /* ⭐ THE LOCATION LABEL->CODE MAP (2026-09-09). Registered so the composed studio source carries
+     `datumLocationCode` for any gate that resolves it, exactly as the upkeep catalogue is carried.
+     ⛔ IT LIVES IN A PART RATHER THAN IN studio.html BY STANDING RULE, not by preference: the shell
+     is 1,578KB and the account-modal builder already reads 76 names it does not own. New room data
+     starts life beside the shell. */
+  'scripts/studio-state-tax.js',
   'scripts/studio-upkeep.js',
   /* ⭐ THE SECOND PART, REGISTERED 2026-08-13 — STEP 2a, THE PROVING MOVE. calculateTotalPmt,
      calculateEscrowMonthly and hasEscrow: pure leaves (no callees, no DOM, no state) reached by
