@@ -85,7 +85,22 @@ function slimBlueprint(seed, n) {
       plan_end_date: '0' + ((seed % 9) + 1) + ' / 206' + (seed % 9),
       primary_salary: 120000 + seed * 1117,
       co_architect_salary: 90000 + seed * 913,
-      co_architect_plan_end_date: '1' + (seed % 2) + ' / 207' + (seed % 9) },
+      co_architect_plan_end_date: '1' + (seed % 2) + ' / 207' + (seed % 9),
+      /* SCHEMA 2026-09-09 -- the two salary PROVENANCE flags. This fixture is a HAND-WRITTEN MIRROR
+       * of the codec shape (see the note above), so a key the codec now emits and this object lacks
+       * fails the deep-equal, and the gate would have gone RED on a CORRECT codec. Added for that
+       * reason, not because this gate is where the completeness claim lives -- that is
+       * _gate_codec_roundtrip_complete.js, whose fixture is DERIVED.
+       * BOTH BOOLEAN VALUES ARE EXERCISED ACROSS SEEDS, on DIFFERENT parities, so a codec that
+       * swapped slots 12 and 13, or wrote one flag into both, cannot pass. A fixture holding the
+       * same value in both slots would be blind to exactly the mistake most likely here.
+       * KEY ORDER IS LOAD-BEARING IN THIS FILE AND IS NOT A STYLE CHOICE: eq() is JSON.stringify,
+       * so the fixture must list keys in the order dBlueprint() EMITS them. Placed after
+       * co_architect_plan_end_date for that reason -- grouping them beside the salaries they
+       * describe reads better and fails the gate. */
+      primary_salary_stated: (seed % 2 === 0),
+      co_architect_salary_stated: (seed % 3 !== 0),
+      },
     accounts: accts, contributions_total: Math.round(Math.abs(rnd(seed)) * 180000),
     portfolio_total: Math.round(Math.abs(rnd(seed * 2)) * 8000000),
     ss: { strategy_primary: ['early_62','full_67','optimal_70'][seed % 3], strategy_secondary: ['early_62','full_67','optimal_70'][(seed + 1) % 3],

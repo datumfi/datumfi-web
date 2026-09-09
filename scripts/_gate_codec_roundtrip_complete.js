@@ -96,15 +96,23 @@ function loadCodec(forceRegap) {
   let src = fs.readFileSync(CODEC_PATH, 'utf8').replace(/\r\n/g, '\n');
   if (regap) {
     /* post-fix text -> pre-fix text. Each must match EXACTLY ONCE. */
+    /* ANCHORS 4 AND 5 EXTENDED 2026-09-09 for P slots 12-13 (salary provenance). The BEFORE text is
+     * untouched -- regap still restores the pre-1.1.0 eight-slot P, which is the shape whose defect
+     * this gate reproduces. Only the AFTER text moved, because the AFTER text is nothing more than
+     * "whatever the codec says today", and the codec grew two slots.
+     * THIS EDIT WAS NOT OPTIONAL AND THE GATE MADE THAT PLAIN: with the anchor stale it matched ZERO
+     * times and the gate REFUSED TO RUN rather than quietly skip its own negative control. A
+     * mutation that silently fails to land is a green over an unmutated subject -- the exactly-once
+     * assertion is what turns that from a lie into an error message. */
     const swaps = [
       ['b: s.blueprint_id || 0, t: s.saved_at || 0, sv: s.version || 0,', 'b: s.blueprint_id || 0, t: s.saved_at || 0,'],
       ["T: [tx.filing || 0, tx.location || 0, tx.working_year_effective_rate || 0,\n          tx.method || 0, tx.co_method || 0, tx.co_filing || 0, tx.co_location || 0,\n          tx.co_working_year_effective_rate || 0],",
        "T: [tx.filing || 0, tx.location || 0, tx.working_year_effective_rate || 0],"],
       ["tax: { filing: c.T[0], location: c.T[1], working_year_effective_rate: c.T[2],\n             method: _uS(c.T[3]), co_method: _uS(c.T[4]), co_filing: _uS(c.T[5]),\n             co_location: _uS(c.T[6]), co_working_year_effective_rate: _uN(c.T[7]) },",
        "tax: { filing: c.T[0], location: c.T[1], working_year_effective_rate: c.T[2] },"],
-      ["p.co_architect_retirement_date || '', p.plan_end_age || 0, p.co_architect_enabled ? 1 : 0,\n          p.plan_end_date || '', p.primary_salary || 0, p.co_architect_salary || 0,\n          p.co_architect_plan_end_date || ''],",
+      ["p.co_architect_retirement_date || '', p.plan_end_age || 0, p.co_architect_enabled ? 1 : 0,\n          p.plan_end_date || '', p.primary_salary || 0, p.co_architect_salary || 0,\n          p.co_architect_plan_end_date || '',\n          p.primary_salary_stated ? 1 : 0, p.co_architect_salary_stated ? 1 : 0],",
        "p.co_architect_retirement_date || '', p.plan_end_age || 0, p.co_architect_enabled ? 1 : 0],"],
-      ["co_architect_retirement_date: c.P[5], plan_end_age: c.P[6], co_architect_enabled: !!c.P[7],\n        plan_end_date: _uS(c.P[8]), primary_salary: _uN(c.P[9]),\n        co_architect_salary: _uN(c.P[10]), co_architect_plan_end_date: _uS(c.P[11])",
+      ["co_architect_retirement_date: c.P[5], plan_end_age: c.P[6], co_architect_enabled: !!c.P[7],\n        plan_end_date: _uS(c.P[8]), primary_salary: _uN(c.P[9]),\n        co_architect_salary: _uN(c.P[10]), co_architect_plan_end_date: _uS(c.P[11]),\n        primary_salary_stated: _uB(c.P[12]), co_architect_salary_stated: _uB(c.P[13])",
        "co_architect_retirement_date: c.P[5], plan_end_age: c.P[6], co_architect_enabled: !!c.P[7]"]
     ];
     swaps.forEach(([after, before], i) => {
@@ -269,7 +277,19 @@ const CONTROL = ['profile.primary_name', 'profile.co_architect_dob', 'profile.pl
   const oldSlot = oldBack && oldBack.slot1;
   const APPENDED = ['profile.plan_end_date', 'profile.primary_salary', 'profile.co_architect_salary',
                     'profile.co_architect_plan_end_date', 'tax.method', 'tax.co_method',
-                    'tax.co_filing', 'tax.co_location', 'tax.co_working_year_effective_rate'];
+                    'tax.co_filing', 'tax.co_location', 'tax.co_working_year_effective_rate',
+  /* EXTENDED 2026-09-09 -- profile.primary_salary_stated / co_architect_salary_stated (P slots
+   * 12-13). ⛔ THIS LIST IS NOMINATED, NOT DERIVED, WHICH IS THE ONE FAULT THIS FILE'S OWN HEADER
+   *    NAMES, and it went stale the instant the codec grew: the two new paths round-tripped, L3
+   *    covered them, and L5b -- the leg that exists to catch a MANUFACTURED answer -- could not see
+   *    them at all. A GREEN FROM A LIST IS A GREEN ABOUT THE LIST.
+   * ⚠️ IT IS LEFT NOMINATED ON PURPOSE, and that is a real trade rather than an oversight: this
+   *    list means "paths appended AFTER the pre-1.1.0 baseline", and the baseline is a historical
+   *    fact about blobs already in the wild. Nothing in today's schema can derive it -- a derived
+   *    version would have to re-derive the past. So it is maintained BY HAND, and the maintenance
+   *    rule is written here rather than assumed: ANY NEW CODEC SLOT ADDS ITS PATH TO THIS LIST IN
+   *    THE SAME COMMIT. It caught nothing this time; it was caught by reading it. */
+                    'profile.primary_salary_stated', 'profile.co_architect_salary_stated'];
   if (ok(!!oldSlot, 'L5a a pre-1.1.0 blob still decodes to a slot (backward compatible)')) {
     const fabricated = APPENDED.filter((q) => get(oldSlot, q) !== undefined);
     ok(fabricated.length === 0,

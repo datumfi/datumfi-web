@@ -14705,14 +14705,41 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            ⚠️ GUARDED THE SAME WAY THE THREE ABOVE ARE: only restore a value that DIFFERS from the
               schema default, because the Studio cannot tell "the user chose Florida" from "the
               schema supplied Florida", and writing the second into a control the user never
-              touched answers a question they declined to answer. Salary and the co-rate default to
-              0, so truthiness is the same test.
+              touched answers a question they declined to answer.
+           STRUCK 2026-09-09, NOT DELETED: ~~"Salary and the co-rate default to 0, so truthiness is
+              the same test."~~ IT IS THE SAME TEST AND THAT IS EXACTLY THE DEFECT. For a SELECT the
+              schema default is an out-of-band string, so comparing against it separates answered
+              from unanswered cleanly. For SALARY the schema default is the NUMBER 0 -- which is also
+              a legitimate answer, and the one a non-earning spouse is compelled to give. The two
+              cases are not analogous; the sentence generalised from a control where the default sits
+              OUTSIDE the domain to one where it sits INSIDE it.
+           A DEFAULT THAT LIVES INSIDE THE ANSWER DOMAIN CANNOT BE USED TO DETECT ABSENCE. That is
+              the whole reason the provenance flags below exist.
            🔑 SALARY IS THE ONE THAT MATTERS: lost, upkeep load, needs%, wants%, charity % of gross
               and the 401k match narrative all recompute against ZERO and print a confident answer.
               THE FIELD PERSISTING IS NOT THE FIX -- THE READERS BEING RIGHT IS THE FIX. */
         var _money = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
-        if (prof.primary_salary)      { var _ps = document.getElementById('pri-salary'); if (_ps) _ps.value = _money(prof.primary_salary); }
-        if (prof.co_architect_salary) { var _cs = document.getElementById('co-salary');  if (_cs) _cs.value = _money(prof.co_architect_salary); }
+        /* THE RESTORE HALF OF THE SALARY-ZERO REPAIR (2026-09-09). STRUCK, NOT DELETED:
+             ~~ if (prof.primary_salary)      { ... } ~~
+             ~~ if (prof.co_architect_salary) { ... } ~~
+           MEASURED: type 150000, correct it to 0, reload -- the field read $150,000. The capture in
+           studio-blueprint.js was throwing the corrected zero away; this guard would have thrown it
+           away a second time on the way back in. BOTH HALVES HAD TO MOVE, and either alone is a
+           half-repair that still loses the answer.
+           THE FLAG IS READ FIRST AND THE VALUE IS THE FALLBACK, WHICH IS WHAT MAKES A LEGACY DRAFT
+              SAFE. A blueprint saved before today has no flag: primary_salary_stated decodes false,
+              the OR falls through to the old truthiness test, and that blueprint behaves exactly as
+              it does today -- a real salary restores, a stored 0 does not. Nothing that worked stops
+              working, and nothing new is fabricated for a user who never answered.
+           WHY NOT prof.primary_salary != null : because the SCHEMA DEFAULT IS 0, not null. Every
+              blueprint carries the key, so != null is true for everyone and the field would read
+              "$0" at users who never touched it. FABRICATION IS WORSE THAN LOSS -- a blank field
+              says "we do not know", and "$0" says "you earn nothing", on the screen that decides
+              how much of their retirement they can spend.
+           SAME PATTERN AS bp.tax.method === EXACT forty lines up: a separate key recording that the
+              user actually gave the answer, so a reply that happens to equal the default survives. */
+        if (prof.primary_salary_stated || prof.primary_salary)           { var _ps = document.getElementById('pri-salary'); if (_ps) _ps.value = _money(prof.primary_salary); }
+        if (prof.co_architect_salary_stated || prof.co_architect_salary) { var _cs = document.getElementById('co-salary');  if (_cs) _cs.value = _money(prof.co_architect_salary); }
         if (prof.co_architect_plan_end_date) { var _cp = document.getElementById('co-plan-end'); if (_cp) _cp.value = prof.co_architect_plan_end_date; }
         /* ⛔ FOUR RESTORE LINES REMOVED IN BATCH 1a — method, co_method, co_filing, co_location.
            Their target elements no longer exist. They were null-safe (`_optHas` guards on !!el) so

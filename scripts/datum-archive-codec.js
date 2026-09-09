@@ -117,6 +117,14 @@
    *    alter how EXISTING blobs decode, which is a different and much larger blast radius. */
   function _uN(v) { return v === undefined ? undefined : v; }
   function _uS(v) { return v === undefined ? undefined : (v === 0 ? '' : v); }
+  /* ADDED 2026-09-09 with P slots 12-13. The THIRD absent-preserving helper, and it exists for the
+     same reason as the other two: a slot an old blob never had must decode to ABSENT, never to a
+     value somebody could have meant. Double-bang alone would turn every pre-today blueprint into
+     an explicit "the user did not state a salary" -- which happens to be TRUE, but it is a claim
+     the blob does not make, and L5b of _gate_codec_roundtrip_complete.js is right to refuse it.
+     ABSENT AND FALSE BEING INTERCHANGEABLE TO TODAYS ONLY READER IS NOT A REASON TO CONFLATE THEM
+     IN THE STORE. The next reader is the one who gets hurt by that. */
+  function _uB(v) { return v === undefined ? undefined : !!v; }
 
   function cBlueprint(s) {
     if (!s) return 0;
@@ -144,11 +152,29 @@
       b: s.blueprint_id || 0, t: s.saved_at || 0, sv: s.version || 0,
       /* APPENDED for schema 1.1.0 (slots 8-11) — append-only, per the convention documented at
          cSketch below. Slots 0-7 must never be reordered: an old blob is read positionally. */
+      /* APPENDED 2026-09-09 (slots 12-13) -- SALARY PROVENANCE. Append-only: slots 0-11 keep their
+         meaning, and an old blob simply has no 12/13, which decodes to FALSE. THAT FALLBACK IS THE
+         CORRECT ONE -- the restore then takes its legacy truthiness path, so a pre-today blueprint
+         with a real salary still restores and one holding 0 is lost exactly as it is lost today.
+         NO SAVED BLUEPRINT CHANGES MEANING.
+         WHY THE CODEC HAD TO MOVE AT ALL, given the defect was measured on the DRAFT path (raw JSON
+         in localStorage, which carries any new key for free): without these two slots the flag would
+         survive a RELOAD and die on SAVE-then-LOAD. A repair that holds on one persistence path and
+         not the other is worse than none -- the surviving path is the one people test, and the dying
+         path is the one people trust.
+         AND THE INSTRUMENT DEMANDED THIS EDIT RATHER THAN IT BEING VOLUNTEERED:
+         _gate_codec_roundtrip_complete.js derives its fixture from DatumBlueprint.new(), so the two
+         schema keys ALONE would have turned it RED.
+         WARNING: THESE TWO LINES ARE INSIDE _gate_codec_roundtrip_complete.js REGAP ANCHOR 4. That
+         gate reproduces the pre-1.1.0 codec by literal text swap and REFUSES TO RUN if the anchor
+         does not match exactly once. Extend this array again and that anchor moves in the same
+         commit -- keep prose OUT of the array body, or the anchor becomes unmaintainable. */
       P: [p.primary_name || '', p.co_architect_name || '', p.primary_dob || '',
           p.co_architect_dob || '', p.target_retirement_date || '',
           p.co_architect_retirement_date || '', p.plan_end_age || 0, p.co_architect_enabled ? 1 : 0,
           p.plan_end_date || '', p.primary_salary || 0, p.co_architect_salary || 0,
-          p.co_architect_plan_end_date || ''],
+          p.co_architect_plan_end_date || '',
+          p.primary_salary_stated ? 1 : 0, p.co_architect_salary_stated ? 1 : 0],
       A: (s.accounts || []).map(cAcct),
       ct: s.contributions_total || 0, pt: s.portfolio_total || 0,
       S: [ss.strategy_primary || 0, ss.strategy_secondary || 0,
@@ -167,12 +193,17 @@
     if (!c) return null;
     return {
       schema: 'DatumFIBlueprintV1', blueprint_id: c.b || null, saved_at: c.t || null, version: _uS(c.sv),
+      /* _uB, NOT _uN AND NOT A BARE DOUBLE-BANG, ON SLOTS 12-13 -- these are booleans, and an absent slot on a
+         pre-2026-09-09 blob must decode to FALSE rather than undefined, so the restore guard reads a
+         real value and takes its documented legacy path instead of an accidental one.
+         WARNING: inside REGAP ANCHOR 5 -- see the note on the encoder above. */
       profile: {
         primary_name: c.P[0], co_architect_name: c.P[1], primary_dob: c.P[2],
         co_architect_dob: c.P[3], target_retirement_date: c.P[4],
         co_architect_retirement_date: c.P[5], plan_end_age: c.P[6], co_architect_enabled: !!c.P[7],
         plan_end_date: _uS(c.P[8]), primary_salary: _uN(c.P[9]),
-        co_architect_salary: _uN(c.P[10]), co_architect_plan_end_date: _uS(c.P[11])
+        co_architect_salary: _uN(c.P[10]), co_architect_plan_end_date: _uS(c.P[11]),
+        primary_salary_stated: _uB(c.P[12]), co_architect_salary_stated: _uB(c.P[13])
       },
       accounts: (c.A || []).map(dAcct),
       contributions_total: c.ct, portfolio_total: c.pt,

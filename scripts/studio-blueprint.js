@@ -107,6 +107,30 @@
               A FIELD'S BLAST RADIUS IS ITS READERS, NOT ITS ROOM. */
         primary_salary:               0,
         co_architect_salary:          0,
+        /* ⛔⛔ PROVENANCE, NOT A DUPLICATE OF THE VALUE. ADDED 2026-09-09 for the FOURTH instance
+           of this arc's defect class, and the first that OVERRULES A CORRECTION rather than filling
+           a blank. MEASURED in a real browser through the real autosave path: type 150000, correct it
+           to 0, reload -- the field reads $150,000 again. The product looks like it is remembering
+           when it is actually overruling.
+           ⛔ THE SCHEMA DEFAULT FOR THE VALUE **IS** 0, WHICH IS WHY A FLAG AND NOT A NULL. A bare
+              `!= null` test on primary_salary would print "$0" at every user who never answered -- FABRICATION,
+              strictly worse than the current LOSS. There is no in-band value left to mean "unstated":
+              the domain of a salary includes zero, and zero is the schema default. So the answer and
+              the fact-of-answering must be SEPARATE KEYS. Nothing else can carry it.
+           ⛔ THE AGGRAVATOR IS THE LEAD, NOT A FOOTNOTE: in JOINT mode _salaryStated() (studio.html)
+              requires BOTH salaries before ANY percentage renders, so a non-earning spouse is
+              COMPELLED to enter 0 -- the one value the product could not keep. Newly retired, partner
+              at home, between jobs: a life stage, not an edge case.
+           ⭐ THE PATTERN IS NOT NEW HERE, IT IS FORTY LINES AWAY. bp.tax.method = 'exact' already
+              records that a user TYPED a rate, so that someone entering exactly 20 -- byte-identical
+              to the schema default -- is not silently overwritten. IDENTICAL PROBLEM, ALREADY SOLVED
+              ONCE IN THIS FILE. This is that solution applied to the field it matters most on.
+           ⚠️ FALSE IS AN HONEST DEFAULT AND A LEGACY DRAFT IS SAFE: a blueprint saved before today
+              carries no flag, decodes to false, and the restore falls back to the old truthiness test
+              -- so a legacy NONZERO salary still restores and a legacy zero is lost exactly as it is
+              lost today. The fix adds a capability; it removes nothing that worked. */
+        primary_salary_stated:        false,
+        co_architect_salary_stated:   false,
         co_architect_plan_end_date:   ''
       },
       accounts: [],
@@ -1565,6 +1589,27 @@
   };
   var SS_LABEL_TO_ENUM = { '62': 'early_62', '67': 'full_67', '70': 'optimal_70' };
 
+  /* THE TYPE TEST moneyToInt CANNOT DO, AND THE REASON THE SALARY GUARD COULD NOT BE FIXED IN
+     PLACE. moneyToInt is parseInt(...) || 0 : it collapses the empty string and "0" to the SAME 0
+     before any caller sees them, so a guard written over its RESULT has no type-level way to tell
+     "left blank" from "answered zero" -- the information is already destroyed one line above the
+     guard.
+     KEY: A GUARD CANNOT SEPARATE TWO CASES ITS INPUT HAS ALREADY MERGED. That is why this reads the
+        RAW string and returns a boolean, rather than the value being made smarter.
+     THIS IS THE SAME EXPRESSION studio.html _salaryStated() (:5985) ALREADY APPLIES PER FIELD,
+        deliberately, so the DISPLAY predicate and the PERSISTENCE predicate cannot drift apart and
+        render a percentage over a value that will not survive a reload. That function is a COMBINED
+        household test (primary AND, when the toggle is on, co-architect) and lives in another file
+        and another scope, so it cannot be called from here -- L48 REUSE-DONT-FORK is satisfied by
+        the two sites sharing ONE expression and CROSS-REFERENCING each other, which is the ruled
+        fallback when a helper genuinely cannot be shared.
+     WARNING: IF YOU CHANGE THIS EXPRESSION, CHANGE studio.html:5985 IN THE SAME COMMIT. Divergence
+        here is silent: the screen renders a percentage, the draft keeps nothing, and the two only
+        disagree after a reload the developer did not perform. */
+  function moneyStated(v) {
+    return isFinite(parseFloat(String(v == null ? '' : v).replace(/[^0-9.]/g, '')));
+  }
+
   function moneyToInt(v) {
     return parseInt(String(v || '').replace(/[^\d]/g, ''), 10) || 0;
   }
@@ -1636,8 +1681,41 @@
           path that stores a value the user never gave LAUNDERS A DEFAULT INTO AN ANSWER, and after
           one round-trip nothing can tell them apart. mmYYYY() is used on the date for the same
           reason -- it returns '' for a half-typed date rather than storing half of one. */
-    var priSal = moneyToInt(v('pri-salary')); if (priSal) bp.profile.primary_salary = priSal;
-    var coSal  = moneyToInt(v('co-salary'));  if (coSal)  bp.profile.co_architect_salary = coSal;
+    /* >= 0, NOT > 0 -- AND HERE IT IS NOT A BLANK BEING FILLED, IT IS A CORRECTION BEING OVERRULED.
+       STRUCK, NOT DELETED:
+         ~~ var priSal = moneyToInt(v("pri-salary")); if (priSal) bp.profile.primary_salary = priSal; ~~
+         ~~ var coSal  = moneyToInt(v("co-salary"));  if (coSal)  bp.profile.co_architect_salary = coSal; ~~
+       MEASURED 2026-09-08 in a real browser through the real autosave path: type 150000, correct it
+       to 0, and the draft KEEPS 150000; reload and the field reads $150,000. The first three
+       instances of this defect class substituted into an EMPTY SPACE. THIS ONE CLIMBS BACK OVER AN
+       ANSWER THE USER ALREADY REPLACED, and it survives a reload -- so the product LOOKS LIKE IT IS
+       REMEMBERING WHEN IT IS ACTUALLY OVERRULING.
+       THE ELEMENTS PRESENCE AUTHORISES THE WRITE; ITS VALUE DECIDES THE ANSWER. Every sibling line
+          here is guarded on a truthy value so that captureDOM running against a DOM without the
+          profile rendered cannot clobber a stored answer with a blank. THAT PROTECTION IS KEPT --
+          it is moved onto the ELEMENT, where it belongs, instead of onto the VALUE, where it was
+          also silently discarding zero. Reading a control that EXISTS and finding it empty IS news.
+       SO THE FLAG IS WRITTEN IN BOTH DIRECTIONS, AND THAT HALF IS NOT OPTIONAL. A flag that only
+          ever goes TRUE rebuilds the identical defect one step over: type 150000, then CLEAR the
+          field, and a write-once flag would restore $150,000 into a box the user deliberately
+          emptied. CLEARING IS A CORRECTION TOO. The value is zeroed alongside it so no phantom is
+          left sitting behind the flag for a later reader to find.
+       WARNING: THE UNSTATED PATH WRITES 0, NOT undefined, because the schema default for the value
+          IS 0 and the codec slot is numeric. "Unstated" is carried by the FLAG and never by the
+          value -- that separation is the entire repair, and collapsing them again is how this
+          defect comes back. */
+    var _priSalEl = d.getElementById("pri-salary");
+    if (_priSalEl) {
+      var _priStated = moneyStated(_priSalEl.value);
+      bp.profile.primary_salary_stated = _priStated;
+      bp.profile.primary_salary        = _priStated ? moneyToInt(_priSalEl.value) : 0;
+    }
+    var _coSalEl = d.getElementById("co-salary");
+    if (_coSalEl) {
+      var _coStated = moneyStated(_coSalEl.value);
+      bp.profile.co_architect_salary_stated = _coStated;
+      bp.profile.co_architect_salary        = _coStated ? moneyToInt(_coSalEl.value) : 0;
+    }
     var coPlan = mmYYYY(v('co-plan-end'));    if (coPlan) bp.profile.co_architect_plan_end_date = coPlan;
 
     /* ⛔⛔ THE PROVENANCE GATE IS RETIRED BECAUSE ITS BRIDGE WAS DEMOLISHED (Batch 1a).
