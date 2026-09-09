@@ -27,10 +27,30 @@
  * 🔑 A RESTORE THAT CAN FABRICATE IS WORSE THAN ONE THAT LOSES DATA. Blank is honest; "Florida" is a
  *    lie about where somebody lives, on the screen that decides their tax burden.
  *
- * ⚠️ DECLARED OPEN — pri-salary and co-salary. They have NO schema slot anywhere and were ruled to
+ * ⚠️ ~~"DECLARED OPEN — pri-salary and co-salary. They have NO schema slot anywhere and were ruled to
  *    travel in their own commit. L2 asserts they are STILL open, so this gate goes RED the day they
- *    are fixed and forces this exemption to be deleted in that same commit.
- *    ⛔ THAT IS THE EXPIRY CONDITION. A gate that silently tolerates a fix has stopped measuring.
+ *    are fixed and forces this exemption to be deleted in that same commit."~~ STRUCK 2026-09-09.
+ *    Both now round-trip and DECLARED_OPEN is empty, so L2 has no subjects left. The expiry
+ *    condition worked exactly as written — and then the leg it governed became VACUOUS, which is a
+ *    second failure mode the note never anticipated.
+ *
+ * ⛔⛔ WHAT THE EMPTIED LIST ACTUALLY COST, AND IT IS THE REASON L5/L6 EXIST. The exemption was
+ *    cleared 2026-09-04 on the claim that "schema 1.1.0 now captures and restores both". That
+ *    round-trip had only ever been run WITH A NONZERO SALARY. Salary-zero — a value CORRECTED to 0
+ *    being discarded at capture and the SUPERSEDED number handed back on reload — shipped underneath
+ *    it, four days later, past a green.
+ * 🔑 TWO SEPARATE FAULTS, AND SEPARATING THEM IS THE POINT:
+ *    (1) A FIXTURE WITH A NONZERO VALUE PROVES NOTHING ABOUT A DEFECT THAT ONLY TOUCHES ZERO. The
+ *        evidence that lifted the exemption STRUCTURALLY COULD NOT SEE THE THING IT CERTIFIED.
+ *    (2) `DECLARED_OPEN = []` MADE L2 EVALUATE `0 === 0` — a predicate over an empty set: forever
+ *        true, forever green, and in a suite summary indistinguishable from a leg that checked
+ *        something. L2 now LABELS itself vacuous rather than passing quietly.
+ * ⭐ L5/L6 ARE THE REPLACEMENT AND THEY ARE STRICTLY STRONGER THAN THE EXEMPTION EVER WAS: they
+ *    CORRECT a real value to zero rather than typing zero into a blank, and they distinguish the two
+ *    ways it can fail — RESURRECTED (the superseded value returns) from LOST (it comes back blank).
+ *    MEASURED red-first 2026-09-09 on the pre-fix bytes: pri-salary came back "$209,000" RESURRECTED
+ *    and co-salary came back "" LOST, in one run, while L5 stayed green — so the red is about
+ *    persistence and not about a fixture that failed to type.
  */
 const http = require('http'), fs = require('fs'), path = require('path');
 const { chromium } = require('playwright');
@@ -66,7 +86,12 @@ function check(label, cond, detail) {
    ⚠️ WHY THEY WERE OPEN AT ALL, AND IT WAS NOT WHAT THE LIST BELIEVED: salary was never persisted
       by the product -- ZERO `.value =` writes anywhere -- so it survived reloads on BROWSER FORM
       RESTORATION, and this gate's green was manufactured by Chromium. Blueprint schema 1.1.0 now
-      captures and restores both, so the list is empty and all 19 rostered controls are asserted. */
+      captures and restores both, so the list is empty ~~"and all 19 rostered controls are
+      asserted"~~ — MEASURED 2026-09-09: the roster is THIRTEEN in the arm that runs, not nineteen.
+      The number was inherited from a different run and is exactly the kind of figure this gate's own
+      header forbids ("never the number 13, which is inherited"). It is struck rather than corrected
+      to 13, because ANY literal count here is wrong by construction: L1 prints the population it
+      actually enumerated, and that print is the only honest statement of the size. */
 const DECLARED_OPEN = [];
 /* The three tax controls, left UNANSWERED in the L3 arm. Named here only to decide which ARM they
    belong to — never to decide whether they are part of the population. */
@@ -211,6 +236,66 @@ async function arm(ctx, BASE, skip) {
   return { fields: fields, typed: typed, before: before, after: after };
 }
 
+/* ⛔⛔ THE ZERO ARM — THE HALF THE EXEMPTION WAS CLEARED WITHOUT.
+ *
+ * salary sat in DECLARED_OPEN with a written expiry condition. It was emptied 2026-09-04 on the
+ * claim that "schema 1.1.0 now captures and restores both". THAT ROUND-TRIP WAS ONLY EVER RUN WITH A
+ * NONZERO SALARY, and the defect only touches zero. The exemption came off on evidence that
+ * STRUCTURALLY COULD NOT SEE THE THING IT WAS CERTIFYING.
+ * 🔑 A FIXTURE WITH A NONZERO VALUE PROVES NOTHING ABOUT A DEFECT THAT ONLY TOUCHES ZERO. Same law
+ *    that governs the Sacred upkeep catalogue's one-fixture warning: a property with no upkeep lines
+ *    read the same number either way.
+ *
+ * ⭐ IT CORRECTS A REAL VALUE TO ZERO RATHER THAN TYPING ZERO INTO A BLANK, because that is the shape
+ *    that actually broke, and it is strictly the harder one. Typing 0 into an empty box risks
+ *    nothing: there is no prior answer to resurrect. Replacing 150000 with 0 is the case where a
+ *    truthy guard silently keeps the SUPERSEDED value and the reload hands it back — the product
+ *    looking like it is remembering when it is overruling.
+ *
+ * ⛔ THE POPULATION IS DERIVED FROM THE ROSTER, NOT LISTED HERE: a control is in the zero arm iff the
+ *    gate's OWN valueFor() already hands it a money fixture (a '$' string). So a new money field in
+ *    #sec-profile joins this arm the same way it joins L1 — by existing. If that set is ever EMPTY
+ *    the leg FAILS rather than passing over nothing; an arm with no subjects is the empty-green
+ *    species wearing a browser.
+ *
+ * ⚠️ DECLARED LIMITATION: this arm drives controls through the same fill() every other arm uses —
+ *    a value assignment plus input/change events, not real key presses. That proves the HANDLER
+ *    chain, not the keyboard. The keyboard-level measurement of this exact defect was taken
+ *    separately in a real browser (2026-09-09: type 150000, correct to 0, reload -> $0; type 90000,
+ *    clear, reload -> blank). This leg is the cheap standing form of that, not a substitute for it. */
+async function zeroArm(ctx, BASE) {
+  const page = await ctx.newPage();
+  await enter(page, BASE);
+  const fields = await roster(page);
+  const money = [];
+  for (let i = 0; i < fields.length; i++) {
+    const f = fields[i];
+    const v = valueFor(f, i);
+    if (v === null) continue;
+    await fill(page, f, v);
+    if (f.kind === 'text' && String(v).charAt(0) === '$') money.push(f);
+    await page.waitForTimeout(90);
+  }
+  await page.waitForTimeout(2000);
+  const ids = money.map((f) => f.id);
+  const nonzero = await readAll(page, ids);
+  for (const f of money) { await fill(page, f, '0'); await page.waitForTimeout(140); }
+  await page.waitForTimeout(2000);                 // the 400ms-debounced autosave must land
+  const onScreen = await readAll(page, ids);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(3200);
+  await page.evaluate(() => { const x = document.getElementById('studioCloseIntro'); if (x) x.click(); });
+  await page.waitForTimeout(1200);
+  await page.evaluate(() => { if (typeof window._studioEnterRoom === 'function') window._studioEnterRoom('data'); });
+  await page.waitForTimeout(900);
+  const after = await readAll(page, ids);
+  await page.close();
+  return { ids: ids, nonzero: nonzero, onScreen: onScreen, after: after };
+}
+
+/* zero-the-answer, read off a formatted control: '$0' and '0' are zero, '' is NOT. */
+const numOf = (s) => { const t = String(s == null ? '' : s).replace(/[^0-9.]/g, ''); return t === '' ? NaN : parseFloat(t); };
+
 (async () => {
   await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
   const browser = await chromium.launch();
@@ -243,12 +328,23 @@ async function arm(ctx, BASE, skip) {
     + '\n          ' + expected.map((i) => i + '=' + JSON.stringify(full.after[i]) + (norm(full.after[i]) === norm(full.typed[i]) ? '' : '  WANTED ' + JSON.stringify(full.typed[i]))).join('\n          '));
 
   /* ── L2 — THE DECLARED-OPEN SET, WITH ITS EXPIRY CONDITION. These must STILL be open. The day
-        they are fixed this leg goes RED and the exemption above must be deleted in that commit. */
+        they are fixed this leg goes RED and the exemption above must be deleted in that commit.
+     ⛔⛔ AND WHEN THE LIST IS EMPTY THIS LEG SAYS SO OUT LOUD, BECAUSE IT IS THEN MEASURING NOTHING.
+        `0 === 0` is a predicate over an empty set: permanently true, permanently green, and
+        indistinguishable in a suite summary from a leg that checked something and liked it. That is
+        the empty-green species, and it is not hypothetical here — this list was emptied 2026-09-04
+        and salary-zero shipped afterwards under a leg that had stopped being able to fail.
+     🔑 THE LEG IS NOT DELETED WHEN THE LIST EMPTIES, BECAUSE THE LIST CAN FILL AGAIN. It is LABELLED,
+        the way _gate_codec_roundtrip_complete.js labels its own vacuous exclusion leg — a green whose
+        report states that it asserts nothing today is honest; the same green unlabelled is not. */
   const stillOpen = DECLARED_OPEN.filter((i) => ids.indexOf(i) !== -1 && norm(full.after[i]) !== norm(full.typed[i]));
-  check('L2 EXPIRY: the declared-open fields are STILL open — fix them and this leg reds on purpose',
+  check('L2 EXPIRY: the declared-open fields are STILL open — fix them and this leg reds on purpose'
+    + (DECLARED_OPEN.length === 0 ? '  [VACUOUS: the declared-open set is empty, so this leg asserts nothing today — L5/L6 carry the zero case it used to hold]' : ''),
     stillOpen.length === DECLARED_OPEN.length,
-    DECLARED_OPEN.map((i) => i + ' after=' + JSON.stringify(full.after[i]) + ' typed=' + JSON.stringify(full.typed[i])).join(' · ')
-    + (stillOpen.length === DECLARED_OPEN.length ? '' : '  <- NOW RESTORING: delete it from DECLARED_OPEN'));
+    DECLARED_OPEN.length === 0
+      ? 'DECLARED_OPEN = [] — every rostered control is asserted by L1'
+      : DECLARED_OPEN.map((i) => i + ' after=' + JSON.stringify(full.after[i]) + ' typed=' + JSON.stringify(full.typed[i])).join(' · ')
+        + (stillOpen.length === DECLARED_OPEN.length ? '' : '  <- NOW RESTORING: delete it from DECLARED_OPEN'));
 
   /* ── L3 — THE ANTI-FABRICATION HALF. Leave the tax controls UNANSWERED. They must come back
         BLANK. The schema ships FL / Married Filing Jointly / 0.20 and the draft carries them, so an
@@ -268,6 +364,31 @@ async function arm(ctx, BASE, skip) {
   check('L4 HONEST HALF: in that same arm, every control that WAS answered still round-trips',
     blankLost.length === 0,
     'asserted ' + alsoExpected.length + (blankLost.length ? ' · LOST: ' + blankLost.map((i) => i + '=' + JSON.stringify(blank.after[i])).join(' · ') : ' · all restored'));
+
+  /* ── L5 / L6 — THE ZERO ARM. See the block above zeroArm() for why this exists. */
+  const zero = await zeroArm(ctx, BASE);
+
+  /* L5 INSTRUMENT: there ARE money controls, they held a real value first, and the product accepted
+     the correction on screen. Without this, L6 is a claim about an empty set — and worse, a claim
+     that could pass because the zero never landed rather than because it survived. */
+  const startedNonzero = zero.ids.filter((i) => numOf(zero.nonzero[i]) > 0);
+  const acceptedZero   = zero.ids.filter((i) => numOf(zero.onScreen[i]) === 0);
+  check('L5 INSTRUMENT: money controls exist, held a NONZERO value, and accepted the correction to zero on screen',
+    zero.ids.length > 0 && startedNonzero.length === zero.ids.length && acceptedZero.length === zero.ids.length,
+    'zero-arm population ' + zero.ids.length + ': ' + zero.ids.join(' · ')
+    + (zero.ids.length === 0 ? '  ⛔ EMPTY — valueFor() hands no control a money fixture, so L6 would assert nothing' : '')
+    + '\n          before: ' + zero.ids.map((i) => i + '=' + JSON.stringify(zero.nonzero[i])).join(' · ')
+    + '\n          after correction: ' + zero.ids.map((i) => i + '=' + JSON.stringify(zero.onScreen[i])).join(' · '));
+
+  /* L6 THE CLAIM: a value CORRECTED to zero survives the reload as zero. Not as blank (loss), and
+     above all not as the superseded number (resurrection). */
+  const resurrected = zero.ids.filter((i) => numOf(zero.after[i]) > 0);
+  const zeroLost    = zero.ids.filter((i) => String(zero.after[i] || '').trim() === '');
+  check('L6 ZERO SURVIVES: a salary CORRECTED to zero reloads as zero — not blank, and never as the superseded value',
+    resurrected.length === 0 && zeroLost.length === 0 && zero.ids.length > 0,
+    zero.ids.map((i) => i + ' typed=0  after=' + JSON.stringify(zero.after[i])
+      + (numOf(zero.after[i]) > 0 ? '  ⛔ RESURRECTED (was ' + JSON.stringify(zero.nonzero[i]) + ')'
+        : (String(zero.after[i] || '').trim() === '' ? '  ⛔ LOST' : ''))).join('\n          '));
 
   await ctx.close(); await browser.close(); server.close();
   results.forEach((r) => console.log('  ' + r));
