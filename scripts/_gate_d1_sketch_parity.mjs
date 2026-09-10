@@ -129,9 +129,31 @@ const { default: DatumD1 } = await import('../scripts/datum-d1.js');
 
   const foundationFail = lines.filter(l => l.startsWith('FAIL') && !l.includes('[BITE-wiring]')).length;
   const overall = fail === 0 ? 'GREEN' : (foundationFail === 0 ? 'FOUNDATION-GREEN (wiring pending)' : 'RED');
+  /* GATE-HEALTH SWEEP 2026-09-09 — THIS GATE WAS THE ONLY ONE OF 271 WITH NO PATH TO A NON-ZERO
+     EXIT, AND IT HAD A THIRD VERDICT STATE THE RUNNER CANNOT READ. Both halves are repaired here.
+
+     ⛔ THE FALSE-PASS SHAPE, WRITTEN OUT. `overall` has three values, and the runner's verdict
+        reader matches /^OVERALL:\s*(GREEN|RED)/ — so 'FOUNDATION-GREEN (wiring pending)' matches
+        NOTHING. Combined with the unconditional process.exit(0) below, the state
+        `fail > 0 && foundationFail === 0` reported to the suite as A CLEAN PASS WITH NO VERDICT,
+        while this gate was printing FAIL lines. And that state is REACHABLE BY DESIGN: any
+        [BITE-wiring] leg failing produces it.
+     ⚠️ THE HOLD ITSELF IS LEGITIMATE — pending wiring should not red the suite. What was wrong was
+        that the hold was INVISIBLE. A deliberate hold and an unnoticed failure printed the same
+        thing to the runner.
+     ⭐ SO IT IS DECLARED, NOT SILENCED. '[QUARANTINED]' is the runner's own third class — counted as
+        NEITHER green nor red, and printed even at zero. That is exactly what a wiring hold IS.
+     🔑 A GATE WITH A THIRD OUTCOME MUST TELL THE RUNNER ABOUT THE THIRD OUTCOME. Inventing a verdict
+        word the reader has never heard of is indistinguishable from saying nothing. */
+  const HELD = fail > 0 && foundationFail === 0;
+  if (HELD) lines.push('[QUARANTINED] wiring pending — ' + fail + ' [BITE-wiring] leg(s) failing, foundation intact');
   lines.push('-------------------------------------');
   lines.push('MODE: ' + (RF ? 'RED-FIRST self-test' : 'NORMAL — FOUNDATION+DATA must be GREEN; [BITE-wiring] RED until the HTML unit'));
   lines.push('OVERALL: ' + overall + '   (' + pass + ' pass / ' + fail + ' fail)');
   console.log('[' + (process.argv[2] && process.argv[2] !== '--redfirst' ? process.argv[2] : 'RUN') + '] D1 SKETCH PARITY GATE — ' + overall + '\n' + lines.join('\n'));
-  process.exit(0);
+  /* ⛔ CONDITIONAL, NOT BARE. The bare exit(0) meant CHANNEL TWO was mute as well: a foundation
+     failure printed OVERALL: RED and still returned success, which the runner can only classify as
+     INCOHERENT. Now a real failure fails on both channels and the wiring hold exits 0 having
+     DECLARED itself quarantined. */
+  process.exit(foundationFail === 0 ? 0 : 1);
 })();
