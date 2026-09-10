@@ -28,6 +28,7 @@
  */
 const http = require('http'), fs = require('fs'), path = require('path');
 const { chromium } = require('playwright');
+const { seedCompleteHousehold } = require('./_seed_household.cjs');
 /* ⛔ studioSource() COMPOSES THE SHELL **PLUS THE FIVE PART FILES**. A bare readFileSync of
    studio.html would census the shell alone — so a forked derivation living in a part
    (studio-account-modal.js and its 53 helpers, for instance) would be INVISIBLE to L3, which is
@@ -92,10 +93,25 @@ const payload = (page) => page.evaluate(() => {
   await page.evaluate(() => window._studioEnterRoom('data'));
   await page.waitForTimeout(800);
 
-  /* A coherent primary: age 52, retiring at 68. No value here implies a slider default. */
+  /* A coherent primary: age 52, retiring at 68. No value here implies a slider default.
+     ⛔ AND EVERY OTHER REQUIRED CONTROL IS ANSWERED BY THE SHARED SEEDER (2026-09-09). This gate
+        used to name two controls by hand and was therefore 2 of 4 on the required set — green only
+        because it stops at the payload builder rather than a POST. The gate-health sweep measured
+        25 of 32 seeding fixtures in that state, so THE NEXT REQUIRED FIELD REDS AN UNPREDICTABLE
+        SUBSET, discoverable only by a 15-minute suite.
+     ⭐ THE SEEDER DERIVES THE REQUIRED SET FROM THE PRODUCT'S OWN REFUSALS rather than holding a
+        list, so a new required field is answered here WITHOUT ANYONE EDITING THIS FILE. That is the
+        entire point: a new requirement must cost ONE edit, not an unknown number found by failure.
+     ⚠️ THE TWO DATES STAY EXPLICIT because THIS gate's claims depend on their exact values (age 52 /
+        retiring 68 feed the co-architect age arithmetic it asserts). The seeder answers what is left
+        and would not overwrite them — it only ever answers a control the product is REFUSING on. */
   await set(page, 'pri-dob', '03 / 1974');
   await set(page, 'target-ret', '07 / 2042');
   await page.waitForTimeout(250);
+  const _seeded = await seedCompleteHousehold(page);
+  check('L0b INSTRUMENT: every control the product requires is answered — the fixture cannot lag a new required field',
+    _seeded.complete, 'rounds=' + _seeded.rounds + ' answered=' + JSON.stringify(_seeded.answered)
+    + (_seeded.complete ? '' : '  STILL REFUSING: ' + _seeded.refusing.map((r) => r.target).join(',')));
 
   /* ── L0 INSTRUMENT + HONEST HALF: a SOLO household must send no co-architect at all, and the
         payload must still be a real payload. Without this, "absent" below proves nothing — a

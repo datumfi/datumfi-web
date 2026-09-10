@@ -36,6 +36,7 @@
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
+const { seedCompleteHousehold } = require('./_seed_household.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8531; const BASE = 'http://127.0.0.1:' + PORT;
 
@@ -134,6 +135,15 @@ const server = http.createServer((req, res) => {
 
   await typeInto('#pri-dob', '08/1982');
   await typeInto('#target-ret', '08/2046');
+  /* ⛔ EVERY OTHER REQUIRED CONTROL IS ANSWERED BY THE SHARED SEEDER (2026-09-09), which DERIVES the
+     required set from the product's own refusals rather than holding a list. This fixture named its
+     controls by hand and was 2 of 4 on that set — green only because it reads specific payload
+     fields rather than needing a complete one. The sweep measured 25 of 32 seeding fixtures in that
+     state, so THE NEXT REQUIRED FIELD REDS AN UNPREDICTABLE SUBSET. A new requirement must cost ONE
+     edit, not an unknown number discovered by failure.
+     ⚠️ The dates above stay explicit — THIS gate's claims depend on their exact values. The seeder
+     only ever answers a control the product is actively REFUSING on, so it cannot overwrite them. */
+  await seedCompleteHousehold(page);
   const base = await state();
 
   /* ── L2 · A TYPED VALID DATE REACHES EVERY SURFACE THAT CLAIMS TO HOLD IT ────────────────────

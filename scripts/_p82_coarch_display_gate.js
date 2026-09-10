@@ -20,6 +20,7 @@
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
+const { seedCompleteHousehold } = require('./_seed_household.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const OUT = path.resolve(ROOT, '_eyeson'); if (!fs.existsSync(OUT)) fs.mkdirSync(OUT);
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
@@ -71,6 +72,15 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
   // wired to that reconcile (wireProfileBindings only binds pri-dob/target-ret/plan-end-age).
   await page.fill('#pri-dob', '06/1980');
   await page.fill('#target-ret', '01/2042');
+  /* ⛔ EVERY OTHER REQUIRED CONTROL IS ANSWERED BY THE SHARED SEEDER (2026-09-09), which DERIVES the
+     required set from the product's own refusals rather than holding a list. This fixture named its
+     controls by hand and was 2 of 4 on that set — green only because it reads specific payload
+     fields rather than needing a complete one. The sweep measured 25 of 32 seeding fixtures in that
+     state, so THE NEXT REQUIRED FIELD REDS AN UNPREDICTABLE SUBSET. A new requirement must cost ONE
+     edit, not an unknown number discovered by failure.
+     ⚠️ The dates above stay explicit — THIS gate's claims depend on their exact values. The seeder
+     only ever answers a control the product is actively REFUSING on, so it cannot overwrite them. */
+  await seedCompleteHousehold(page);
   await page.evaluate(() => { ['pri-dob','target-ret'].forEach(function(id){ var e=document.getElementById(id); if(e) e.dispatchEvent(new Event('change')); }); });
   await page.waitForTimeout(400);
 

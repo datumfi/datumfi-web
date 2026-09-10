@@ -208,6 +208,18 @@ const HELPERS = new Set(['_gate_extract.mjs']);
        @gate-status: quarantined  (optional; omit for a normal gate)
    Inference REMAINS as a fallback so nothing breaks on day one — but it WARNS, loudly and by name.
    An undeclared gate is not an error; an undeclared gate nobody is told about is. */
+/* ⛔⛔ IF YOU ARE READING A GATE'S EXIT CODE BY HAND, DO NOT PIPE IT.
+ *     node scripts/_gate_x.js | tail -3 ; echo $?           <-- reports TAIL's status, always 0
+ *     node scripts/_gate_x.js > /tmp/x.txt 2>&1 ; echo $?   <-- reports the GATE's status
+ * MEASURED 2026-09-09, and it nearly cost a real repair: the fix that gave _gate_d1_sketch_parity a
+ * non-zero exit path was verified through a pipe, read as exit=0, and almost filed as ineffective.
+ * A PIPELINE LAUNDERS THE EXIT CODE YOU ARE TRYING TO MEASURE.
+ * 🔑 SECOND INSTANCE IN ONE WEEK OF THE MEASURING APPARATUS CORRUPTING THE MEASUREMENT -- the first
+ *    was a publish marker that appeared in BOTH the fix and the comment describing the fix. Different
+ *    mechanism, same family, and both were caught only because a result looked implausible.
+ * WARNING: THIS RUNNER IS NOT AFFECTED -- it spawns children and reads their codes directly. The
+ *    hazard lives entirely in the hand-verification a human does beside it, which is the part with
+ *    nothing watching it. */
 const POOL_RE   = /@gate-pool:\s*(browser|node)\b/;
 const STATUS_RE = /@gate-status:\s*([a-z-]+)\b/;
 /* ══ §13.87 · A KNOWN FLAKE LEFT IN PLACE STOPS BEING A BUG AND BECOMES A TAX ══════════════════════

@@ -17,6 +17,7 @@
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
+const { seedCompleteHousehold } = require('./_seed_household.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
 const server = http.createServer((req, res) => {
@@ -102,6 +103,14 @@ const read = (page) => page.evaluate(() => ({
   const expectedAge = (new Date().getMonth() + 1 < 6) ? 44 : 45;
   editProfile(page, 'pri-dob', goodDob); await page.waitForTimeout(150);
   editProfile(page, 'target-ret', goodRet); await page.waitForTimeout(150);
+  /* ⛔ THE REST OF THE REQUIRED SET, ANSWERED BY THE SHARED SEEDER (2026-09-09). This fixture named
+     its controls by hand and was 2 of 4; leg (e) below READS THE PAYLOAD, so it is exposed to any
+     future required field that makes the builder refuse. The seeder DERIVES the set from the
+     product's own refusals, so that field is answered here without anyone editing this file.
+     ⚠️ IT CANNOT DISTURB THE DATE WORK THIS GATE EXISTS FOR: the seeder only ever answers a control
+     the product is actively REFUSING on, and the two dates above have just been set validly. The
+     garbage-date legs below run after this and overwrite them deliberately. */
+  await seedCompleteHousehold(page);
   let r = await read(page);
   check('(d) valid DOB commits + moves slider-age', r.dob.replace(/\s/g, '') === goodDob.replace(/\s/g, '') && r.age === 45, r.dob + ' age=' + r.age);
   check('(d) valid Target Retirement commits + moves slider-activation', r.ret === 65, 'ret=' + r.ret);

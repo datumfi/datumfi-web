@@ -1,6 +1,17 @@
 'use strict';
 /* _gate_reveal_refusal_speaks.js — STANDING GATE (FINDING 72)
  *
+ * ⛔⛔ THIS GATE MUST NOT CALL scripts/_seed_household.cjs, AND THAT IS A DECLARATION, NOT AN OVERSIGHT.
+ * The shared seeder answers every control the Studio refuses on, until it refuses on nothing.
+ * AN INCOMPLETE HOUSEHOLD IS THIS GATE'S ENTIRE SUBJECT: it exists to prove that a refusal SAYS WHY.
+ * Seeding completeness here would remove the refusals and leave every leg asserting over a state
+ * that cannot occur — a full green over a measurement that never happened.
+ * 🔑 COMPLETENESS IS NOT A UNIVERSAL GOOD FOR A FIXTURE. It is correct for the gates that reach the
+ *    engine door and NOISE for the rest — and noise that LOOKS LIKE COVERAGE is worse than absence.
+ * ⚠️ IF THIS GATE EVER DOES NEED THE SEEDER, it must pass `except: {...}` naming each control it
+ *    deliberately leaves unanswered WITH A REASON, and assert `asDeclared` rather than `complete`.
+ *    The seeder's `except` is a MAP precisely so a skip cannot be taken without stating why.
+ *
  * THE INVARIANT:
  *
  *      A REFUSAL MUST SAY WHY, IN ONE VOICE, AND STAY UNTIL THE CONDITION CHANGES.
