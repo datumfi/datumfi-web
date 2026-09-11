@@ -57,6 +57,19 @@ const RET_ANSWER  = '07 / 2042';   // age 68 — not the 65 the activation slide
 const PLAN_ANSWER = '09 / 2064';   // age 90 — not the 93 the plan-through slider ships
 const CO_DOB      = '11 / 1976';
 const CO_RET      = '05 / 2044';
+/* ⭐ SOCIAL SECURITY BECAME REQUIRED 2026-09-10, the day engine/income.py stopped answering it
+   from one household's hardcoded PIA table. The derived loop LEARNED the new refusal without an
+   edit -- exactly as this file's header promised -- but it could not SATISFY it, because the
+   generic text answerer writes 'Seeded by _seed_household' and a currency field strips that to
+   nothing. So the loop is untouched and only the VALUE MAP grows, which is the designed seam.
+   ⛔ MONTHLY, NOT ANNUAL. The Studio annualises (x12) on the way to the engine; a yearly figure
+      here would seed a household with a $28,800/MONTH benefit and every ladder above it would be
+      nonsense that still looked like a number.
+   ⚠️ AND NEITHER VALUE MAY BE ZERO. Zero is now a MEANINGFUL answer ("I expect none"), so a
+      zero-seeded fixture would silently test the no-Social-Security path while reading as a
+      normal household -- the same default-equals-fallback shape this arc exists to remove. */
+const SS_PRI_67   = '2,400';       // monthly at FRA — a plausible single earner
+const SS_SEC_67   = '1,900';       // monthly at FRA — the co-architect, deliberately different
 
 const MAX_ROUNDS = 10;   // the loop must terminate even if a refusal cannot be satisfied
 
@@ -105,6 +118,7 @@ async function seedCompleteHousehold(page, opts) {
   await page.evaluate((vals) => { window.__SEED_VALUES__ = vals; }, {
     'pri-dob': DOB_ANSWER, 'target-ret': RET_ANSWER, 'plan-end-age': PLAN_ANSWER,
     'co-dob': CO_DOB, 'co-ret': CO_RET, 'co-plan-end': PLAN_ANSWER,
+    'ss-pri-67': SS_PRI_67, 'ss-sec-67': SS_SEC_67,
   });
 
   let rounds = 0;

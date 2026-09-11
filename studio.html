@@ -15020,16 +15020,32 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       // state: 'full' | 'fra_only' | 'partial' | 'empty'
       // Inputs are annual — no ×12 conversion needed (engine is annual-native)
       function _readSSOverride(prefix) {
-        function _pa(id) { var el = document.getElementById(id); return parseInt(((el && el.value) || '').replace(/[^\d.]/g, ''), 10) || 0; }
+        /* ⛔⛔ BLANK AND ZERO USED TO BE THE SAME ANSWER, AND THAT IS THE SHAPE WE HAVE BEEN
+           HUNTING ALL ARC (§3). This read `parseInt(...) || 0`, so a field nobody touched and a
+           field holding a deliberate 0 both came back 0, both scored n=0, and both returned
+           `dict: null` -- which the engine then answered from ITS OWN hardcoded table.
+           ⛔ SO THE ONE USER WHO HONESTLY EXPECTS NO SOCIAL SECURITY WAS INDISTINGUISHABLE FROM
+              THE USER WHO HAD NOT REACHED THE FIELD YET, and both were handed a stranger's
+              benefit. A DEFAULT THAT IS ALSO A FALLBACK PRINTS BOTH CASES IDENTICALLY.
+           ⭐ null NOW MEANS UNANSWERED AND 0 MEANS ZERO. The engine's guard is built on the same
+              distinction (it tests PRESENCE, never truthiness), so the two halves agree: this
+              file decides whether the user spoke, and the engine decides whether it was told. */
+        function _pa(id) {
+          var el  = document.getElementById(id);
+          var raw = ((el && el.value) || '').replace(/[^\d.]/g, '');
+          if (raw === '') return null;
+          var n = parseInt(raw, 10);
+          return isNaN(n) ? null : n;
+        }
         var v62 = _pa(prefix + '-62');
         var v67 = _pa(prefix + '-67');
         var v70 = _pa(prefix + '-70');
-        var n   = (v62 > 0 ? 1 : 0) + (v67 > 0 ? 1 : 0) + (v70 > 0 ? 1 : 0);
+        var n   = (v62 !== null ? 1 : 0) + (v67 !== null ? 1 : 0) + (v70 !== null ? 1 : 0);
 
         // Plausibility check — calibrated for monthly benefit amounts ($300–$6,000/mo is the realistic range)
         var warnEl = document.getElementById('ss-plausibility-warn');
         if (warnEl) {
-          var vals = [v62, v67, v70].filter(function(v) { return v > 0; });
+          var vals = [v62, v67, v70].filter(function(v) { return v !== null && v > 0; });
           var tooHigh = vals.some(function(v) { return v > 6000; });
           var tooLow  = vals.some(function(v) { return v > 0 && v < 300; });
           if (tooHigh) {
@@ -15046,7 +15062,11 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         if (n === 0) return { state: 'empty',    dict: null };
         // Multiply by 12: UI captures monthly benefit; engine expects annual values
         if (n === 3) return { state: 'full',     dict: { early_62: v62 * 12, full_67: v67 * 12, optimal_70: v70 * 12 } };
-        if (n === 1 && v67 > 0) return { state: 'fra_only', dict: { early_62: Math.round(v67 * 0.70) * 12, full_67: v67 * 12, optimal_70: Math.round(v67 * 1.24) * 12 } };
+        /* ⚠ `v67 !== null`, NOT `v67 > 0`. A user who types 0 at Full Retirement Age is stating
+           they expect nothing, and the derived 62/70 legs correctly come out 0 too. Under the old
+           truthiness test that person fell through to 'partial' -> dict null -> the engine's
+           table, which is the precise inversion of what they asked for. */
+        if (n === 1 && v67 !== null) return { state: 'fra_only', dict: { early_62: Math.round(v67 * 0.70) * 12, full_67: v67 * 12, optimal_70: Math.round(v67 * 1.24) * 12 } };
         return { state: 'partial', dict: null };
       }
       window._readSSOverride = _readSSOverride;
@@ -15150,6 +15170,64 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                        message: _coDobRaw ? CO_ARCH_DOB_UNREADABLE : CO_ARCH_DOB_MISSING,
                        target: 'co-dob' });
         }
+        /* ── F80 — EVERY REASON IN ONE BREATH, INCLUDING THE THREE THAT USED TO ARRIVE LATE ──
+           ⛔⛔ THE RATIONING DEFECT, SECOND INSTANCE. F77 made this function report every reason
+              at once instead of returning on the first -- and then location, filing status and
+              (today) Social Security were added SEVENTY LINES BELOW THE ABORT GATE. So a cold
+              Studio reported three reasons, the user fixed all three, clicked again, and only
+              THEN discovered two more the code had known about the whole time.
+           ⭐ MEASURED 2026-09-10, the Captain's own smoke path: a cold Studio listed account +
+              DOB + retirement date and said NOTHING about the blank state, while the very same
+              call already had `pri-location` in front of it. The sentence was wired, authored
+              and correct -- and unreachable.
+           🔑 THIS FILE ALREADY KNEW: seventy lines up it says "A VALIDATION THAT RUNS AFTER THE
+              ABORT GATE IS NOT A VALIDATION, IT IS A CAPTION." The co-architect check was moved
+              up for exactly this reason and these three were not.
+           ⚠️ THE READS MOVED, THE PAYLOAD ASSEMBLY DID NOT. filingStatus / _locationCode / the SS
+              dicts are computed HERE and CONSUMED where they always were, so there is one source
+              for each and no second copy to drift. */
+        const FILING_STATUS_MAP = {
+          'Single / Individual':         'single',
+          'Married Filing Jointly':      'mfj',
+          'Married Filing Separately':   'mfs',
+          'Head of Household':           'hoh',
+          'Qualifying Surviving Spouse': 'qss',
+        };
+        const _filingRaw = (document.getElementById('filing-status')?.value || '').trim();
+        const filingStatus = FILING_STATUS_MAP[_filingRaw] || null;
+        const _locRaw = (document.getElementById('pri-location')?.value || '').trim();
+        const _locationCode = (typeof datumLocationCode === 'function') ? datumLocationCode(_locRaw) : null;
+
+        if (!_locationCode) {
+          _errs.push({ field: 'Retirement Location', message: LOCATION_REQUIRED, target: 'pri-location' });
+        }
+        if (!filingStatus) {
+          _errs.push({ field: 'Filing Status', message: FILING_STATUS_REQUIRED, target: 'filing-status' });
+        }
+
+        /* ⛔⛔ SOCIAL SECURITY IS REQUIRED FROM 2026-09-10, IN THE SAME COMMIT THE ENGINE STOPPED
+           SUBSTITUTING IT. Until today engine/income.py answered a blank field from a hardcoded
+           PIA table belonging to ONE REAL HOUSEHOLD -- measured, that handed an unrelated
+           30-year-old a Floor $25,000/yr higher than their own numbers support.
+           ⚠️ THE ENGINE'S REFUSAL IS THE GUARD; THIS IS THE COURTESY. Without this the user meets
+              a 422 instead of a sentence and a door. Same division as the location pair.
+           ⚠️ 'partial' REFUSES TOO, AND THAT IS NOT PEDANTRY: a partly-filled set produced
+              `dict: null`, which reached the engine as "unanswered" -- so a user who typed two of
+              three boxes got the hardcoded table while looking at their own numbers on screen.
+           ⭐ THE CO-ARCHITECT LEG IS GATED ON A PERSON, NEVER ON A STRATEGY. Same law the engine
+              states for co_architect_present: a claiming choice is not a human being. */
+        var _ssPri = _readSSOverride('ss-pri');
+        if (!_ssPri.dict) {
+          _errs.push({ field: 'Social Security', message: SS_BENEFIT_REQUIRED, target: 'ss-pri-67' });
+        }
+        var _ssCoTog = document.getElementById('co-arch-toggle');
+        if (_ssCoTog && _ssCoTog.checked) {
+          var _ssSec = _readSSOverride('ss-sec');
+          if (!_ssSec.dict) {
+            _errs.push({ field: 'Social Security', message: SS_BENEFIT_REQUIRED_CO, target: 'ss-sec-67' });
+          }
+        }
+
         window._buildRequestErrors = _errs;
         if (_errs.length) {
           window._buildRequestError = _errs[0].message;
@@ -15266,16 +15344,6 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            ⛔ AN UNMAPPED OR UNANSWERED STATUS SENDS NOTHING — it must never guess. The engine
               still defaults to mfj for a request that omits the key, and that default is a
               DATED TRANSITION OBJECT (see the staleness register), not a resting state. */
-        const FILING_STATUS_MAP = {
-          'Single / Individual':         'single',
-          'Married Filing Jointly':      'mfj',
-          'Married Filing Separately':   'mfs',
-          'Head of Household':           'hoh',
-          'Qualifying Surviving Spouse': 'qss',
-        };
-        const _filingRaw = (document.getElementById('filing-status')?.value || '').trim();
-        const filingStatus = FILING_STATUS_MAP[_filingRaw] || null;
-
         const body = { current_age: currentAge, retirement_age: retireAge, datum_spend: datumSpend, market_outlook: outlookValue, ss_strategy_primary: ssStrategy, accounts, plan_end_age: planEndAge };
         if (filingStatus) body.filing_status = filingStatus;
         /* ⛔⛔ RETIREMENT LOCATION REACHES THE ENGINE (2026-09-09). `location: 'FL'` was DELETED from
@@ -15294,8 +15362,6 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
               lands. See the note beside FILING_STATUS_REQUIRED.
            ⚠️ SENT ONLY WHEN ANSWERED, mirroring filing_status directly above. A key sent as null
               would be a caller asserting an answer it does not have. */
-        const _locRaw = (document.getElementById('pri-location')?.value || '').trim();
-        const _locationCode = (typeof datumLocationCode === 'function') ? datumLocationCode(_locRaw) : null;
         if (_locationCode) body.location = _locationCode;
         /* ⛔ THE REFUSAL, LANDING ONE COMMIT AFTER THE WIRING, AND THE NARROWING IS DECLARED RATHER
            THAN ASSUMED. The standing rule is that a field becomes required in the SAME commit that
@@ -15306,9 +15372,6 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            ⚠️ SO THE GAP THIS CLOSES IS A COURTESY ONE, NOT A CORRECTNESS ONE: without it the user
               meets a 422 instead of a sentence. The rule was right for its reason; the reason is
               discharged, and the copy arrived on the Architect's clock rather than mine. */
-        if (!_locationCode) {
-          _errs.push({ field: 'Retirement Location', message: LOCATION_REQUIRED, target: 'pri-location' });
-        }
         /* ⛔⛔ FILING STATUS IS REQUIRED, AND IT BECAME REQUIRED IN THE SAME COMMIT THAT WIRED IT
            (§82.1893). Never before — requiring an answer we then discard is the old defect with a
            gate bolted on. And never the commit AFTER, because for that interval blank on screen
@@ -15320,9 +15383,6 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            ⚠️ NO DOOR STRING IS AUTHORED HERE AND NONE IS NEEDED: TAKE_ME_THERE is a single shared
               constant every queue entry reuses — the label never varies. This entry supplies only
               a target id. Read the mechanism, not the five entries, before asking for a sixth. */
-        if (!filingStatus) {
-          _errs.push({ field: 'Filing Status', message: FILING_STATUS_REQUIRED, target: 'filing-status' });
-        }
         if (customWeights) body.custom_weights = customWeights;
         /* ⛔ FINDING 67 — tell the engine who actually lives here. Without these keys
            `co_architect_age = None` makes the engine model a SINGLE household while still taxing it
@@ -15819,6 +15879,18 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             "we will not guess one for you" is the promise the whole arc exists to keep. It
             replaces nothing on screen — "Recorded, not yet modelled." STAYS. */
       var LOCATION_REQUIRED = 'Choose your retirement state. We record it now and apply its rules as they are modelled — we will not guess one for you.';
+      /* ⚠️⚠️ PLACEHOLDER COPY — WRITTEN BY THE WIRER, NOT THE ARCHITECT, AND FLAGGED AS SUCH.
+         L47 says I do not author brand voice, and I have not pretended otherwise: these two
+         sentences exist because the refusal shipped in the same commit that made the field
+         required, and a refusal that says nothing is the defect we spent today removing.
+         ⭐ THEY ARE MODELLED ON LOCATION_REQUIRED ABOVE, DELIBERATELY, so the voice is at least
+            consistent while it waits: name the absent thing, say where to get it, and promise
+            not to guess. The last clause is the one that matters and it is literally true today
+            -- the engine now refuses rather than substituting.
+         🗓️ REPLACE OR RATIFY. If the Architect rewrites these, nothing else changes: they are
+            two string literals with one reader each. */
+      var SS_BENEFIT_REQUIRED    = 'Your Social Security estimate — copy the monthly amount from your SSA.gov statement. We will not put a number on it for you.';
+      var SS_BENEFIT_REQUIRED_CO = "Your co-architect's Social Security estimate — the monthly amount from their SSA.gov statement. We will not put a number on it for you.";
       var TAKE_ME_THERE = 'Take me there';
       /* ⚠ RENDERED ONLY WHEN THE TARGET RESOLVES. A door onto an element that is not in the document
          is worse than no door — it promises and does nothing. An unresolvable target renders exactly

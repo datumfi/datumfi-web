@@ -41,9 +41,23 @@ const URL = 'http://127.0.0.1:8001/studio.html';
       recalcPortfolio(roll); roll.value = 108000;
       out.rollId = roll.id;
 
-      // minimal fields so buildStudioRequest() doesn't null out
+      /* ⚠️ MINIMAL FIELDS SO buildStudioRequest() DOESN'T NULL OUT — and "minimal" grew twice.
+         Hand-typing three ids here was correct when written and went stale on 2026-09-09
+         (location) and again on 2026-09-10 (Social Security, filing status). It did not red the
+         first time, because the builder used to return a TRUTHY BODY while holding unresolved
+         refusals -- so this fixture measured a request the engine would have refused.
+         🔑 THE SUMS BELOW ARE THE SUBJECT; THE HOUSEHOLD IS SCENERY. Scenery still has to be
+            complete, or the subject is measured over a null. */
       const setV = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; } };
       setV('pri-dob', '01 / 1980'); setV('target-ret', '01 / 2040'); setV('spend-input', '$100,000');
+      setV('ss-pri-67', '2,400');
+      const _sel = (id, match) => {
+        const e = document.getElementById(id); if (!e) return;
+        const o = Array.prototype.find.call(e.options, (x) => String(x.value).trim() !== ''
+          && (!match || match.test(String(x.value))));
+        if (o) { e.value = o.value; e.dispatchEvent(new Event('change', { bubbles: true })); }
+      };
+      _sel('pri-location'); _sel('filing-status');
 
       const sumPretax = () => {
         const body = (typeof window.buildStudioRequest === 'function') ? window.buildStudioRequest() : null;

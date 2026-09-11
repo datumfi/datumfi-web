@@ -58,6 +58,7 @@
  */
 const http = require('http'), fs = require('fs'), path = require('path');
 const { chromium } = require('playwright');
+const { seedCompleteHousehold } = require('./_seed_household.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8238;
@@ -121,14 +122,21 @@ const ok = (l, c, o) => { const g = !!c; if (!g) fails++;
   await P.evaluate(() => window._studioEnterRoom('data'));
   await P.waitForTimeout(800);
 
-  /* The payload only builds once the date gates pass — seed them, or every leg below would be
-     measuring a null payload rather than the field under test. */
-  await P.evaluate(async () => {
-    const set = (id, v) => { const e = document.getElementById(id); if (!e) return;
-      e.value = v; ['input','change','blur'].forEach(ev => e.dispatchEvent(new Event(ev, { bubbles: true }))); };
-    set('pri-dob', '05/1975'); set('target-ret', '06/2040');
-    await new Promise(r => setTimeout(r, 900));
-  });
+  /* The payload only builds once EVERY required control is answered, or every leg below would be
+     measuring a null payload rather than the field under test.
+     ⛔⛔ THIS USED TO SEED TWO FIELDS BY HAND (pri-dob, target-ret) AND IT WENT STALE TWICE —
+        silently on 2026-09-09 when location became required, and loudly on 2026-09-10 when Social
+        Security did. The first time it did NOT red, and that is the more interesting failure:
+        buildStudioRequest returned a TRUTHY BODY while holding unresolved refusals, so `!!payload`
+        was true and this precondition passed over a request the engine would have 422'd.
+     🔑 A HAND-TYPED FIXTURE IS A SECOND COPY OF THE REQUIRED SET THAT NO BUILD STEP COMPARES TO
+        THE FIRST. The shared seeder asks the PRODUCT what it refuses and answers that, so the next
+        required field costs zero edits here.
+     ⚠️ IT ANSWERS filing-status TOO, AND THAT IS CORRECT RATHER THAN CONTAMINATING: every leg
+        below SETS the control itself, and L4/L6 deliberately blank it again. A starting value is a
+        precondition, not the subject. */
+  await seedCompleteHousehold(P, { quiet: true });
+  await P.evaluate(() => new Promise(r => setTimeout(r, 400)));
   const built = await P.evaluate(() => { try { return !!window._buildStudioRequest(); } catch (e) { return false; } });
   if (!built) { console.log('⛔ MISSING PRECONDITION — the payload will not build; every leg would measure nothing.');
     console.log('OVERALL: MISSING PRECONDITION   (0 legs evaluated)'); await b.close(); srv.close(); process.exit(2); }
@@ -177,10 +185,14 @@ const ok = (l, c, o) => { const g = !!c; if (!g) fails++;
      §82.1893: a field joins the required list in the SAME COMMIT that wires it. Without this leg
      the browser sends no key and the ENGINE quietly defaults to mfj — blank on screen, married in
      the maths, which is the forbidden third thing this whole arc exists to remove.
-     ⚠️ L6b IS NOT DECORATION. The refusal is pushed onto `_errs` AFTER that array has already been
-        assigned to window._buildRequestErrors, so it only works because both names point at the
-        SAME array object. That is subtle enough to be broken by a well-meaning tidy-up, so the
-        gate asserts the reason reaches the queue rather than trusting the reference. */
+     ⚠️ L6b IS NOT DECORATION, THOUGH ITS ORIGINAL REASON IS GONE. It used to read: ~~"the refusal
+        is pushed onto `_errs` AFTER that array has already been assigned to
+        window._buildRequestErrors, so it only works because both names point at the SAME array
+        object"~~ — TRUE WHEN WRITTEN AND RETIRED 2026-09-10, when the filing, location and Social
+        Security checks were hoisted ABOVE the abort gate. The aliasing is no longer load-bearing.
+        ⭐ THE LEG STAYS, ON A BETTER REASON THAN THE ONE IT WAS BORN WITH: it asserts the refusal
+           REACHES THE QUEUE, which is the property a user experiences, rather than the mechanism
+           that happened to deliver it. A leg tied to a mechanism dies with the mechanism. */
   const req = await P.evaluate(async () => {
     const el = document.getElementById('filing-status');
     el.value = ''; el.dispatchEvent(new Event('change', { bubbles: true }));

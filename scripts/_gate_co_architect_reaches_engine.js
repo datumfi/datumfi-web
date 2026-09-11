@@ -154,6 +154,16 @@ const payload = (page) => page.evaluate(() => {
   await set(page, 'co-dob', '11 / 1976');
   await set(page, 'co-ret', '05 / 2044');
   await page.waitForTimeout(300);
+  /* ⛔⛔ RE-SEED, BECAUSE THE REQUIRED SET IS A FUNCTION OF HOUSEHOLD SHAPE (2026-09-10).
+     The seeder at :111 converged on the household that existed THEN -- a solo one. Adding a
+     co-architect ADDS A REQUIREMENT (their Social Security), so the earlier convergence is stale
+     the instant the toggle flips. It is not that the seeder missed something; it answered the
+     question it was asked, and then the question changed.
+     🔑 "COMPLETE" IS NOT A PROPERTY OF A FIXTURE, IT IS A PROPERTY OF A FIXTURE AT A MOMENT.
+        Any gate that changes the household after seeding must seed again, or it is asserting
+        against a household the product would refuse. */
+  await seedCompleteHousehold(page, { quiet: true });
+  await page.waitForTimeout(200);
   const dual = await payload(page);
   const wantAge = (() => { const n = new Date(); let a = n.getFullYear() - 1976; if (n.getMonth() + 1 < 11) a--; return a; })();
   const wantRet = 2044 - (new Date().getFullYear() - wantAge);

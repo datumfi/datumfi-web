@@ -37,6 +37,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
+const { seedCompleteHousehold } = require('./_seed_household.cjs');
 const { STUDIO_PATH } = require('./_studio_source.cjs');   // Phase 0: the helper owns where the shell lives
 
 const REFAB = process.argv.includes('--refab');
@@ -361,22 +362,50 @@ function mutate(src) {
         secretly wired. It CANNOT prove an unnoted field is genuinely wired (that is the ladder, and
         the ladder runs on production). Two directions, two instruments, and only one is here. */
   const KEY_OF = { 'pri-location': ['location', 'state', 'retirement_location'] };
-  const contra = await page.evaluate(async ([noted, keyOf]) => {
+  /* ⛔⛔ A DECLARED EXCEPTION, WITH A REASON AND AN EXPIRY — NOT A WEAKENED ASSERTION (2026-09-10).
+     L10 asks "is any NOTED field secretly wired?" and answers it by looking for the field's key in
+     the payload. That was a sound proxy until 2026-09-09, when `location` began reaching the engine
+     WHILE STILL MOVING NOTHING — every one of the 51 jurisdictions resolves to zero state tax until
+     the Architect's rate tables land.
+     ⛔ SO KEY-PRESENCE AND WIRED-NESS CAME APART, and this file's own paragraph above had already
+        predicted exactly that: "a field that reaches the engine but is ignored by a module constant
+        is still unmodelled, which is why 'reaches the engine' was rejected as the predicate. The
+        operational test is the ladder." L10 was still using the rejected predicate.
+     ⭐ pri-location THEREFORE STAYS NOTED, and correctly: the on-screen sentence "Recorded, not yet
+        modelled." is TRUE, and removing the marker would tell the user a field shapes their Range
+        when it cannot. The marker is retired by the LADDER moving, never by a key appearing.
+     ⚠️ THE EXCEPTION IS A MAP SO A SKIP CANNOT BE TAKEN WITHOUT SAYING WHY, and undeclared hits
+        still fail. 🗓️ SELF-EXPIRING: the day a state rate moves a dollar, location leaves NOTED
+        entirely and this entry goes with it. test_input_reachability.py carries the mirror of this
+        declaration on the engine side; they must be retired together. */
+  const DECLARED_INERT = {
+    'pri-location': 'reaches the payload since 2026-09-09 but moves NO number — all 51 '
+                  + 'jurisdictions resolve to $0 state tax until the rate tables land',
+  };
+  await seedCompleteHousehold(page, { quiet: true });
+  const contra = await page.evaluate(async ([noted, keyOf, inertDecl]) => {
     /* The payload only builds once the date gates pass. Seeding them is a PRECONDITION of the
        measurement, not part of it — without this the probe below measures a null and the
        existence leg (correctly) refuses to score. */
     const set = (id, v) => { const e = document.getElementById(id); if (!e) return;
       e.value = v; ['input', 'change', 'blur'].forEach((ev) => e.dispatchEvent(new Event(ev, { bubbles: true }))); };
-    set('pri-dob', '05 / 1975'); set('target-ret', '06 / 2040');
-    await new Promise((r) => setTimeout(r, 900));
+    /* ⚠️ SEEDED BY THE CALLER FROM 2026-09-10 — see the seedCompleteHousehold() call immediately
+       before this evaluate. Hand-typing two fields here went stale twice (location, then Social
+       Security) and the FIRST time it did not even red, because the builder used to hand back a
+       truthy body while holding unresolved refusals. */
+    await new Promise((r) => setTimeout(r, 300));
     let pay = null; try { pay = window._buildStudioRequest && window._buildStudioRequest(); } catch (e) {}
     if (!pay) return { built: false };
     const hits = [];
+    const declaredHits = [];
     noted.forEach((id) => (keyOf[id] || []).forEach((k) => {
-      if (Object.prototype.hasOwnProperty.call(pay, k)) hits.push(id + ' -> ' + k + '=' + JSON.stringify(pay[k]));
+      if (!Object.prototype.hasOwnProperty.call(pay, k)) return;
+      const line = id + ' -> ' + k + '=' + JSON.stringify(pay[k]);
+      if (inertDecl[id]) declaredHits.push(line + '   [DECLARED: ' + inertDecl[id] + ']');
+      else hits.push(line);
     }));
-    return { built: true, keys: Object.keys(pay).length, hits };
-  }, [NOTED, KEY_OF]);
+    return { built: true, keys: Object.keys(pay).length, hits, declaredHits };
+  }, [NOTED, KEY_OF, DECLARED_INERT]);
   /* EXISTENCE FIRST — an absence assertion over a payload that never built passes trivially,
      which is exactly how the first SS-matrix rig fooled its author (§82.1980). */
   ok(contra.built === true,

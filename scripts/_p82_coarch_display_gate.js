@@ -116,6 +116,14 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
   await page.evaluate(() => { var e = document.getElementById('co-dob');
     if (e) { e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); } });
   await page.waitForTimeout(250);
+  /* ⛔ RE-SEED — THE REQUIRED SET IS A FUNCTION OF HOUSEHOLD SHAPE (2026-09-10). The seed at :83
+     converged on a SOLO household; adding a co-architect adds THEIR Social Security to what the
+     product requires, so the earlier convergence went stale the moment the toggle flipped.
+     🔑 "COMPLETE" IS A PROPERTY OF A FIXTURE AT A MOMENT, NOT OF A FIXTURE. Without this, leg 1a
+        asserts a payload the product is entitled to refuse — and would read as a co-architect
+        wiring regression rather than a fixture that changed the question after it was answered. */
+  await seedCompleteHousehold(page, { quiet: true });
+  await page.waitForTimeout(200);
   const onReadable = await snap();
 
 

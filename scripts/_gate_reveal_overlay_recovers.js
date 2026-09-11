@@ -191,6 +191,30 @@ async function seedForReveal(page) {
     console.log('⛔ SEED FAILED — retirement location could not be set: ' + locatedAt);
     process.exit(2);
   }
+  /* ⛔ AND SOCIAL SECURITY BECAME REQUIRED 2026-09-10 — THE THIRD INSTANCE OF THIS EXACT EVENT IN
+     FIVE DAYS, AND THE THIRD TIME THE REPAIR IS THE FIXTURE RATHER THAN THE GATE. The engine
+     stopped answering a blank benefit from one household's hardcoded PIA table, so a seed that
+     omits it is now refused at the reveal — correctly, and R4 went red over a product that had
+     just become more honest.
+     🔑 THREE REPAIRS, ONE SHAPE, AND THAT IS THE ARGUMENT FOR THE SHARED SEEDER. Each of these
+        paragraphs was written by someone who had just been surprised. scripts/_seed_household.cjs
+        derives the required set from the product's own refusals precisely so the fourth one costs
+        nobody an afternoon. This gate stays hand-rolled ONLY because its seed is asserted
+        field-by-field with its own failure messages, which the shared helper reports differently.
+     ⚠️ A TEXT FIELD, SO THE SILENT-ASSIGNMENT TRAP ABOVE DOES NOT APPLY — but it is still READ BACK,
+        because a currency mask that rejects the input would otherwise leave this blank with nothing
+        saying why. MONTHLY, NOT ANNUAL: the Studio multiplies by 12 on the way to the engine. */
+  const claimedSS = await page.evaluate(() => {
+    const el = document.getElementById('ss-pri-67');
+    if (!el) return '(no #ss-pri-67)';
+    el.value = '2,400';
+    ['input', 'change', 'blur'].forEach((ev) => el.dispatchEvent(new Event(ev, { bubbles: true })));
+    return el.value;
+  });
+  if (!claimedSS || claimedSS.charAt(0) === '(' || !/\d/.test(claimedSS)) {
+    console.log('⛔ SEED FAILED — Social Security estimate could not be set: ' + claimedSS);
+    process.exit(2);
+  }
   await page.waitForTimeout(200);
 
   const room = await page.evaluate(() => {
