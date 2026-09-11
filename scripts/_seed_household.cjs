@@ -70,6 +70,11 @@ const CO_RET      = '05 / 2044';
       normal household -- the same default-equals-fallback shape this arc exists to remove. */
 const SS_PRI_67   = '2,400';       // monthly at FRA — a plausible single earner
 const SS_SEC_67   = '1,900';       // monthly at FRA — the co-architect, deliberately different
+/* ⚠️ NOT 1,150. The field SHIPS pre-filled with 1,150 as a visible default, so seeding that exact
+   number would make "the fixture answered" and "the fixture never touched it" produce identical
+   payloads — and no leg could tell them apart. A FIXTURE VALUE MUST NEVER EQUAL THE DEFAULT IT IS
+   TESTING AROUND; this file's own header says so about age 40, activation 65 and plan-through 93. */
+const HC_PRE65    = '1,325';       // monthly before Medicare — deliberately not the shipped default
 
 const MAX_ROUNDS = 10;   // the loop must terminate even if a refusal cannot be satisfied
 
@@ -118,7 +123,7 @@ async function seedCompleteHousehold(page, opts) {
   await page.evaluate((vals) => { window.__SEED_VALUES__ = vals; }, {
     'pri-dob': DOB_ANSWER, 'target-ret': RET_ANSWER, 'plan-end-age': PLAN_ANSWER,
     'co-dob': CO_DOB, 'co-ret': CO_RET, 'co-plan-end': PLAN_ANSWER,
-    'ss-pri-67': SS_PRI_67, 'ss-sec-67': SS_SEC_67,
+    'ss-pri-67': SS_PRI_67, 'ss-sec-67': SS_SEC_67, 'hc-pre65-monthly': HC_PRE65,
   });
 
   let rounds = 0;

@@ -4183,6 +4183,46 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
               </div>
             </div>
 
+            <!-- ── HEALTHCARE BEFORE MEDICARE ──────────────────────────────────────────────
+                 ⛔⛔ THE SMALL VERSION OF A DESIGNED PANEL, ON PURPOSE (2026-09-10). The Mock's
+                 Healthcare Drainage carries eleven controls; the engine consumes ONE of them today,
+                 and shipping the other ten would put controls on screen that cannot move the answer
+                 — which is precisely the market_outlook defect this arc exists to remove. When the
+                 Mock ports, this field moves into it and NOTHING about the wiring below changes.
+                 ⭐ COPY IS THE DESIGNER'S, CARRIED VERBATIM ON THE CAPTAIN'S RULING. The label, the
+                 help sentence and the default caption are lifted unaltered from the Mock's
+                 `hc_pre65_monthly` field. L47 — the wirer authored none of it.
+                 ⛔ TWO MOCK LINES DELIBERATELY NOT CARRIED, AND THE OMISSION IS THE POINT:
+                   · "...then what changes when Medicare starts" — promises a control we are not
+                     shipping. Copy that describes an absent feature is a lie in the brand voice.
+                   · "...lives in the Family Room and is not double-counted here" — MEASURED: the
+                     string "Family Room" appears ZERO times in this file. It would have pointed the
+                     user at a room that does not exist.
+                 ⚠️ THE DEFAULT IS VISIBLE AND EDITABLE, WHICH IS THE WHOLE DIFFERENCE. A hidden
+                 constant and a pre-filled box produce the same number and are not the same act: the
+                 caption below states that it IS a default, so the user can see what we assumed and
+                 overrule it. That is what the nine deleted healthcare constants never allowed.
+                 ⚠️ BLANK STILL REFUSES. Clearing the box does not fall back to the suggestion —
+                 the engine has no healthcare default and neither does this file. -->
+            <div style="margin-bottom:16px;" id="hc-pre65-block">
+              <!-- ⚠️ STACKED, NOT SIDE-BY-SIDE, AND THAT WAS MEASURED RATHER THAN CHOSEN. A
+                   `1fr 2fr` grid was tried first: this panel is ~278px wide, so the label broke
+                   across THREE lines ("COST OF / THAT / COVERAGE / MO") and the help sentence
+                   clipped at the right edge. The Social Security block directly above solves the
+                   same problem the same way — intro copy full width, short labels over inputs —
+                   so this follows its shape rather than inventing a second one. -->
+              <div class="input-label" style="margin-bottom:4px;">Healthcare before Medicare</div>
+              <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);margin-bottom:10px;line-height:1.5;">The years between your last paycheck and age 65 are the ones you pay for yourself. Premium plus what you typically spend out of pocket. A benchmark unsubsidised Marketplace plan for a couple in their fifties runs near this. Change it if you have a real quote.</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+                <div>
+                  <div class="input-label">Cost /mo</div>
+                  <input type="text" id="hc-pre65-monthly" class="small-field curr-format" value="$1,150" placeholder="e.g. 1,150" onfocus="this.select()">
+                </div>
+              </div>
+              <div id="hc-pre65-warn" style="display:none;font-size:9px;color:var(--gold);font-family:var(--font-mono);margin-top:6px;line-height:1.5;"></div>
+              <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);margin-top:6px;line-height:1.5;">Datum default &mdash; change it if you have a real number.</div>
+            </div>
+
             <!-- A310-g2: matrix + path intelligence — side-by-side on desktop, stacked on mobile -->
             <div class="ss-matrix-layout">
               <!-- A310-e: Compare by strip — shown after grid populates -->
@@ -15071,6 +15111,22 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       }
       window._readSSOverride = _readSSOverride;
 
+      /* Monthly healthcare cost before Medicare, or null when the box is empty.
+         ⚠️ NO FALLBACK TO THE ON-SCREEN SUGGESTION. The markup ships $1,150 as a VISIBLE,
+            EDITABLE default and the caption says so — but once a user clears it, clearing is an
+            ACTION and must not be silently undone. A reader that re-supplied the suggestion would
+            rebuild the exact shape this arc removed: "they accepted our number" and "we could not
+            read theirs" printing identically. */
+      function _readHealthcareMonthly() {
+        var el  = document.getElementById('hc-pre65-monthly');
+        if (!el) return null;
+        var raw = (el.value || '').replace(/[^\d.]/g, '');
+        if (raw === '') return null;
+        var n = parseFloat(raw);
+        return (isNaN(n) || n < 0) ? null : Math.round(n);
+      }
+      window._readHealthcareMonthly = _readHealthcareMonthly;
+
       // Live plausibility — fire on input so warnings appear before Test Claiming Paths
       (function() {
         ['ss-pri-62','ss-pri-67','ss-pri-70'].forEach(function(id) {
@@ -15220,6 +15276,19 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         if (!_ssPri.dict) {
           _errs.push({ field: 'Social Security', message: SS_BENEFIT_REQUIRED, target: 'ss-pri-67' });
         }
+        /* ⛔⛔ HEALTHCARE BEFORE MEDICARE — REQUIRED IN THE SAME COMMIT THE FIELD SHIPS.
+           The engine deleted a nine-constant cost schedule belonging to one household on
+           2026-09-10 and now REFUSES rather than substituting, so this is the courtesy half:
+           a sentence and a door instead of a 422.
+           ⚠️ MONTHLY ON SCREEN, ANNUAL ON THE WIRE, mirroring the Social Security boxes directly
+              above — the x12 lives in ONE place (the payload assembly) so the two readings cannot
+              drift apart.
+           ⚠️ PRESENCE, NOT TRUTH, FOR THE THIRD TIME TODAY. `null` means the box is empty; `0`
+              would mean somebody genuinely expects no cost. The engine's guard tests the same way. */
+        var _hcMonthly = _readHealthcareMonthly();
+        if (_hcMonthly === null) {
+          _errs.push({ field: 'Healthcare', message: HEALTHCARE_REQUIRED, target: 'hc-pre65-monthly' });
+        }
         var _ssCoTog = document.getElementById('co-arch-toggle');
         if (_ssCoTog && _ssCoTog.checked) {
           var _ssSec = _readSSOverride('ss-sec');
@@ -15363,6 +15432,9 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            ⚠️ SENT ONLY WHEN ANSWERED, mirroring filing_status directly above. A key sent as null
               would be a caller asserting an answer it does not have. */
         if (_locationCode) body.location = _locationCode;
+        /* ⭐ ANNUALISED HERE, ONCE. The screen asks monthly because that is how a premium is
+           quoted; the engine models annual real dollars. One multiplication, one home. */
+        if (_hcMonthly !== null) body.healthcare_annual = _hcMonthly * 12;
         /* ⛔ THE REFUSAL, LANDING ONE COMMIT AFTER THE WIRING, AND THE NARROWING IS DECLARED RATHER
            THAN ASSUMED. The standing rule is that a field becomes required in the SAME commit that
            wires it — justified by "otherwise, for that interval, blank on screen still means
@@ -15793,9 +15865,16 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            either take the user to the wrong field or force them to guess. Each sentence carries its
            own door; the label never varies, so three of them read as three doors, not three
            instructions. Reasons with no target render exactly as before. */
+        /* ⚠️ ONE BLOCK PER REASON, NOT `<br>`-JOINED INLINE — AND SEVEN REASONS IS WHY.
+           F77 joined sentences with line breaks while a cold Studio raised THREE; at SEVEN
+           (2026-09-10) the inline-block doors began flowing into the end of each sentence and the
+           list stopped reading as a list. Measured in a browser, not guessed.
+           🔑 STILL PRESENTATION, NOT COPY — the strings are untouched and unreordered. A container
+              per reason is the same presentation decision `<br>` was, made again at a size the
+              original choice was never tested at. */
         var body  = errs.map(function (e) {
-          return e.message + _takeMeThereHtml(e.target);
-        }).join('<br>');
+          return '<div style="margin-bottom:12px;">' + e.message + _takeMeThereHtml(e.target) + '</div>';
+        }).join('');
         _revealPaint(title, body);
       }
       function _revealStatus(err, field, fallbackTitle, fallbackBody) {
@@ -15891,6 +15970,10 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             two string literals with one reader each. */
       var SS_BENEFIT_REQUIRED    = 'Your Social Security estimate — copy the monthly amount from your SSA.gov statement. We will not put a number on it for you.';
       var SS_BENEFIT_REQUIRED_CO = "Your co-architect's Social Security estimate — the monthly amount from their SSA.gov statement. We will not put a number on it for you.";
+      /* ⚠️ PLACEHOLDER COPY — WIRER, NOT ARCHITECT, FLAGGED LIKE ITS TWO SIBLINGS ABOVE. The
+         FIELD's copy is the designer's and is carried verbatim in the markup; this REFUSAL
+         sentence had no source, so it is modelled on LOCATION_REQUIRED and awaits ratification. */
+      var HEALTHCARE_REQUIRED = 'What health cover costs you before Medicare — it is one of the largest line items in an early retirement, and we will not put a number on it for you.';
       var TAKE_ME_THERE = 'Take me there';
       /* ⚠ RENDERED ONLY WHEN THE TARGET RESOLVES. A door onto an element that is not in the document
          is worse than no door — it promises and does nothing. An unresolvable target renders exactly
