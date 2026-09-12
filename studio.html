@@ -15374,11 +15374,22 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            clears .active it would move the user from 67 to 70 without a word. */
         const ssStrategy = SS_AGE_MAP[activeSS?.textContent?.trim()] || 'full_67';
 
+        /* ⛔ THE ADMISSION TEST IS NAMED BECAUSE IT NOW HAS TWO READERS, NOT ONE. `accounts` below
+           and the pension-COLA blend further down must agree EXACTLY on which rooms reach the
+           engine: `has_pension` is derived server-side from the rooms that ARRIVE, so a room this
+           payload drops must not vote on the rate. Expressed once, it cannot drift; expressed
+           twice, the day somebody adds a fourth condition to one copy is the day a $0 pension
+           starts pulling a household's adjustment toward zero with every gate green.
+           ⚠️ THE THREE CONDITIONS ARE VERBATIM FROM THE CHAIN THIS REPLACES — no clause added,
+              removed or reordered. This is a naming, not a rule change. */
+        const _reachesEngine = a =>
+             !FILTERED_TYPES.has(a.baseId)
+          && !_conduitIsInformational(a)   // §7.5 count-once guard — an informational Rollover 401(k)'s dollars are counted inside its destination plan, never twice (bank R91; safe-by-default per Captain Fork A)
+          && ((a.value || 0) > 0 || (a.inflow || 0) > 0);
+
         // STU-010: filter Group 4, remap to engine enums, warn on unmapped future additions
         const accounts = state.accounts
-          .filter(a => !FILTERED_TYPES.has(a.baseId))
-          .filter(a => !_conduitIsInformational(a))   // §7.5 count-once guard — an informational Rollover 401(k)'s dollars are counted inside its destination plan, never twice (bank R91; safe-by-default per Captain Fork A)
-          .filter(a => (a.value || 0) > 0 || (a.inflow || 0) > 0)
+          .filter(_reachesEngine)
           .map(a => {
             if (!ACCOUNT_TYPE_MAP[a.baseId]) console.warn('[DATUM FI] Unmapped account type:', a.baseId);
             return { type: ACCOUNT_TYPE_MAP[a.baseId] || a.baseId, balance: a.value || 0, annual_contribution: a.inflow || 0 };
@@ -15435,6 +15446,68 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         /* ⭐ ANNUALISED HERE, ONCE. The screen asks monthly because that is how a premium is
            quoted; the engine models annual real dollars. One multiplication, one home. */
         if (_hcMonthly !== null) body.healthcare_annual = _hcMonthly * 12;
+        /* ⛔⛔ THE PENSION'S COLA REACHES THE ENGINE (2026-09-12). Until this line the Studio
+           COLLECTED it — scripts/studio-account-modal.js:1417 renders the field on EVERY pension
+           room, has since long before the engine could receive it — stored it, and round-tripped
+           it through the archive codec. It never left the browser. The engine now REQUIRES it for
+           any household that owns a pension and has NO DEFAULT, so until this key exists every
+           pension household meets a 422.
+           🔑 THE CONTROL WAS NEVER THE MISSING HALF. A field the user fills in and nothing reads
+              is the same defect as a field that does not exist, wearing better clothes.
+           ⚠️⚠️ UNIT CONVERSION, AND IT IS THE SILENT KIND. The control asks for PERCENT ("Cost of
+              Living Adjustment (COLA) %" — a user types 2 for 2%); the engine's field is a
+              FRACTION (0.0063 = 0.63%) bounded ge=0 le=0.2. Sending the raw control value reads
+              2 as 200%, which the bound REFUSES loudly — but a 0.2% adjustment sent unconverted
+              arrives as 20%, sits exactly ON the bound, and PASSES. The wrong unit that survives
+              validation is the one that reaches a screen, so the divide is load-bearing precisely
+              where it looks harmless.
+           ⚠️ ONE SCALAR, N PENSIONS. The engine SUMS every pension room into a single
+              `pension_base` and applies ONE rate to the total (engine/income.py:609), so two
+              pensions with different adjustments have exactly one correct answer: the blend
+              weighted by the dollars each contributes. $30k at 2% and $10k at 0% is 1.5% on the
+              $40k — NOT 1%. For the single-pension household, which is nearly all of them, this
+              degenerates to that pension's own number and adds nothing.
+           ⛔ THE WEIGHT IS THE ANNUAL AMOUNT, NOT THE BALANCE, because `annual_contribution` is
+              what the engine sums. Weighting by `value` would blend the right rates in the wrong
+              proportion and would never once throw.
+           ⚠️⚠️ BLANK IS SENT AS ZERO. THAT IS A STATED GAP, NOT AN OVERSIGHT, AND IT IS NOT
+              CLOSEABLE FROM THIS LINE. The engine draws a hard line between 0 ("this pension does
+              not rise" — a complete answer, and the commonest kind) and ABSENCE ("we were never
+              told"), and `require_pension_cola` tests presence, not truthiness, on purpose.
+              THE STUDIO CANNOT DRAW THAT LINE TODAY: `cola` is initialised to 0 at account
+              creation, and datum-archive-codec.js:86 writes `a.cola || 0` into positional slot 6
+              while :94 restores only truthy values — so a DELIBERATELY TYPED 0 and an untouched
+              field are already indistinguishable one save-and-reload away. Closing it is a codec
+              migration against a pinned positional contract, not a line here. FILED, NOT FIXED.
+           🔑 WHAT MAKES SHIPPING IT HONEST RATHER THAN MERELY CONVENIENT, AND THE THREE REASONS
+              ARE THE WHOLE ARGUMENT: the number is the USER'S OWN and nothing is invented; the
+              field sits in the SAME MODAL as the pension amount they must have typed to get a
+              pension here at all, so it is not a question they were never shown; and the error
+              runs CONSERVATIVE — assuming no adjustment understates their pension income and
+              LOWERS their Floor. That is the opposite of the FDACS defect, which put ONE
+              household's 0.63% onto strangers who had never seen a field and raised their Floor
+              on a number that was never theirs. */
+        const _pensionRooms = state.accounts
+          .filter(_reachesEngine)
+          .filter(a => ACCOUNT_TYPE_MAP[a.baseId] === 'pension');
+        if (_pensionRooms.length) {
+          let _colaWeight = 0, _colaWeighted = 0;
+          for (const p of _pensionRooms) {
+            const w = p.inflow || 0;
+            _colaWeight   += w;
+            _colaWeighted += w * (p.cola || 0);
+          }
+          /* ⚠️ NO WEIGHTS MEANS EVERY PENSION ROOM IS $0/yr, WHICH THE ENGINE REFUSES ON THE
+             AMOUNT (`pension_amount_not_supplied`) BEFORE IT EVER ASKS FOR THE RATE — but a
+             /0 here would produce NaN, and `NaN` serialises to `null`, which reads to the
+             engine as "never told" rather than as a broken client. The unweighted mean keeps
+             the expression finite WITHOUT inventing a figure: it is still only the user's own
+             entries, and for one pension it is that pension's number either way. */
+          const _colaPct = _colaWeight > 0
+            ? (_colaWeighted / _colaWeight)
+            : (_pensionRooms.reduce((s, p) => s + (p.cola || 0), 0) / _pensionRooms.length);
+          body.pension_cola = _colaPct / 100;
+        }
         /* ⛔ THE REFUSAL, LANDING ONE COMMIT AFTER THE WIRING, AND THE NARROWING IS DECLARED RATHER
            THAN ASSUMED. The standing rule is that a field becomes required in the SAME commit that
            wires it — justified by "otherwise, for that interval, blank on screen still means
