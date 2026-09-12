@@ -36,6 +36,13 @@
  */
 const http = require('http'), fs = require('fs'), path = require('path');
 const { chromium } = require('playwright');
+/* ⛔ studioSource() IS THE ONLY DOOR TO THE SHELL, AND _gate_studio_source ENFORCES IT — this file
+   read studio.html off disk and that meta-gate went RED on it, correctly. A bare readFileSync
+   censuses the SHELL ALONE, so the day the Measurement markup moves into a part file these legs
+   would assert about a file that no longer contains what they name. They would not crash; they
+   would go red in bulk for a reason unrelated to the room they guard.
+   🔑 90 GATES AT RISK BECAME ONE HELPER. Reading around it puts this file back in the 90. */
+const { studioSource } = require('./_studio_source.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8219;
 
@@ -303,7 +310,7 @@ const REQUEST = { retirement_age: 52.6, plan_end_age: 93, datum_spend: TARGET };
      went green on the whole panel and stayed green when the distribution face was reverted to
      "10,000 futures" — the exact regression it exists to catch. Caught by its own red-first run.
      🔑 A SCOPE BUG IN AN INSTRUMENT DOES NOT LOOK LIKE A BUG. IT LOOKS LIKE GOOD NEWS. */
-  const shell = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+  const shell = studioSource();
   const start = shell.indexOf('<section class="mc-overlay"');
   let depth = 0, end = start;
   for (const m of shell.slice(start).matchAll(/<section\b|<\/section>/g)) {
@@ -453,7 +460,7 @@ const REQUEST = { retirement_age: 52.6, plan_end_age: 93, datum_spend: TARGET };
     + '\n          ⛔ aria-selected is asserted separately: a face that switches while the tab still'
     + ' reads unselected is a screen reader announcing the wrong view');
 
-  const shellSrc = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+  const shellSrc = studioSource();
   check('L9f the tax tile is keyboard-reachable, not mouse-only',
     /data-mc-tax-tile/.test(shellSrc) && /role="button"[^>]*data-mc-tax-tile|data-mc-tax-tile[\s\S]{0,200}?tabindex="0"|tabindex="0"[^>]*data-mc-tax-tile/.test(shellSrc),
     'tile present=' + /data-mc-tax-tile/.test(shellSrc)
