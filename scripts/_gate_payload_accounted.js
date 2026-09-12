@@ -307,6 +307,75 @@ const FROM_CONTROL = {
     + '\n          ⛔ a one-item list under "a few things" is how a collected refusal starts reading'
     + ' like a form validator');
 
+  /* ── L9 — THE ENGINE IS SENT THE NUMBER ON THE SCREEN. Swept, not sampled.
+        ⛔ THE DEFECT THIS REPLACES: the payload rounded the slider position to the DOLLAR while the
+           spend box rounded it to the THOUSAND, so a user looking at $100,000 had 100001 priced.
+           Nothing on the page could show it — both numbers were "right" on their own line.
+        🔑 A SINGLE POSITION IS NOT A MEASUREMENT HERE. The two spellings agree by luck wherever the
+           log curve happens to land near a round thousand, so one sample is a coin toss; the sweep
+           is what makes the leg able to fail. The old code disagreed at 11 of these 12 positions. */
+  const agree = await page.evaluate(() => {
+    const sDat = document.getElementById('slider-datum');
+    const box  = document.getElementById('spend-input');
+    if (!sDat || !box || !window._buildStudioRequest) return { ok: false };
+    const keepPos = sDat.value, keepEx = sDat.dataset.exactVal, keepBox = box.value;
+    const rows = [];
+    for (let i = 0; i < 12; i++) {
+      const pos = 20000 + Math.round(i * (95000 - 20000) / 11);
+      delete sDat.dataset.exactVal;        // a POSITION, never a typed fact
+      sDat.value = String(pos);
+      sDat.dispatchEvent(new Event('input', { bubbles: true }));
+      const shown = parseInt(String(box.value).replace(/[^0-9]/g, ''), 10);
+      /* ⛔⛔ THE SECOND DELETE IS THE WHOLE LEG, AND ITS FIRST RED-FIRST RUN PROVED IT.
+         Dispatching 'input' makes the drag handler WRITE dataset.exactVal — and the payload reads
+         exactVal BEFORE it reads the position. So a sweep that stops here measures the typed-fact
+         branch, while the defect lives on the POSITION branch, which is the only one a COLD Studio
+         has: nobody has dragged anything, so there is no exactVal to read. M37 restored the real
+         100001 arithmetic and this leg stayed GREEN until the delete below was added.
+         🔑 THE FIXTURE HAD SUPPLIED THE PRECONDITION THAT HIDES THE BUG — the same shape as the
+            refusal walk that seeded an account and then reported no account requirement. */
+      delete sDat.dataset.exactVal;
+      let sent = null;
+      try { const r = window._buildStudioRequest(); sent = r && r.datum_spend; } catch (e) {}
+      rows.push({ pos, shown, sent });
+    }
+    sDat.value = keepPos;
+    if (keepEx === undefined) delete sDat.dataset.exactVal; else sDat.dataset.exactVal = keepEx;
+    sDat.dispatchEvent(new Event('input', { bubbles: true }));
+    box.value = keepBox;
+    return { ok: true, rows };
+  });
+  const bad = agree.ok ? agree.rows.filter((r) => !(r.shown > 0 && r.shown === r.sent)) : [];
+  check('L9 THE ENGINE IS SENT THE NUMBER ON THE SCREEN — swept across the datum slider, not sampled',
+    agree.ok && bad.length === 0,
+    (agree.ok
+      ? 'positions swept: ' + agree.rows.length + ' · disagreements: ' + bad.length
+        + (bad.length ? '\n          ' + bad.map((r) => 'pos ' + r.pos + ': screen ' + r.shown + ' vs sent ' + r.sent).join('\n          ')
+                      : ' · e.g. pos ' + agree.rows[0].pos + ' -> screen and payload both ' + agree.rows[0].sent)
+      : 'COULD NOT READ THE SLIDER OR THE BOX — not a pass')
+    + '\n          ⛔ THE SCREEN AND THE PAYLOAD DISAGREEING IS THE WORST PAIRING THERE IS: the page'
+    + ' agrees with the user while the model does not, so no surface can reveal it.');
+
+  /* ── L10 — ENUMERATING, NOT NOMINATING: there is ONE place that converts a datum slider position.
+        ⛔ THE HISTORY IS THE ARGUMENT. This exact arithmetic was found and fixed LOCALLY at least
+           TWICE before today — a comment at the spend box naming "$100,001", and another at the
+           Drafting-header mirror naming "$750,006". Both were correct. Both fixed the line the
+           reader was looking at. Six other sites kept the old spelling, and one of them was the
+           payload. 🔑 A DEFECT THAT KEEPS BEING RE-FOUND IS NOT BEING FIXED; IT IS BEING VISITED.
+        This leg does not ask "is site N still correct?" — it asks whether a SECOND conversion has
+        appeared anywhere, which is the only question that stays true as the file changes.
+        ⚠️ ITS LIMIT, STATED: it reads the call by name, so a destructured or aliased binding would
+           slip past. It catches the copy-paste that has actually happened here, twice. */
+  const srcAll = studioSource();
+  const REGION = /\/\* ⛔⛔ ONE CONVERSION FROM SLIDER POSITION[\s\S]*?\n    \};\n/;
+  const hasRegion = REGION.test(srcAll);
+  const outside = srcAll.replace(REGION, '').split('datumPosToVal').length - 1;
+  check('L10 ONE CONVERSION EXISTS: no second place turns a datum slider position into money',
+    hasRegion && outside === 0,
+    'shared conversion present=' + hasRegion + ' · datumPosToVal references outside it: ' + outside
+    + '\n          ⛔ every spelling of this formula that has ever existed in this file was correct'
+    + ' on its own line and wrong against its neighbours');
+
   results.forEach((r) => console.log('  ' + r));
   console.log('\nSCORE ' + passes + ' / ' + (passes + fails) + ' ' + (fails === 0 ? 'GREEN' : 'RED'));
   console.log('METHOD: walked the product\'s own refusals from an empty Studio, then enumerated the'

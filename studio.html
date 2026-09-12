@@ -15498,14 +15498,18 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           return null;
         }
 
-        // Read the SAME slider-datum/exactVal source as _scenarioFromInputs so the
-        // engine request, HUD, and canvas always agree (spend-input is a mirror only).
+        /* Reads the SAME slider-datum/exactVal source as _scenarioFromInputs so the engine request,
+           HUD and canvas always agree (spend-input is a mirror only).
+           ⛔ THAT SENTENCE WAS ALREADY HERE ON 2026-09-12 AND IT WAS FALSE IN EVERY PAIRING —
+              request 100001, box 100000, HUD 100000.747, canvas 100.00074. Both halves now go
+              through _datumSnapDollars, which is what makes the claim true rather than aspirational. */
         const datumSpend = (() => {
           const sDat = document.getElementById('slider-datum');
           if (sDat) {
             const ex = sDat.dataset.exactVal;
             if (ex !== undefined && ex !== '') return Math.round(parseFloat(ex)) || 100000;
-            if (window.DatumShape && DatumShape.scales) return Math.round(DatumShape.scales.datumPosToVal(parseInt(sDat.value, 10)) * 1000);
+            var _snapped = window._datumSnapDollars(parseInt(sDat.value, 10));
+            if (Number.isFinite(_snapped)) return _snapped;
           }
           return parseInt(spendVal.replace(/[^\d.]/g, ''), 10) || 100000;
         })();
@@ -16715,6 +16719,39 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       }
     })();
 
+    /* ⛔⛔ ONE CONVERSION FROM SLIDER POSITION TO DOLLARS, BECAUSE SIX SPELLINGS PRODUCED FOUR
+       DIFFERENT ANSWERS. Censused 2026-09-12 — the datum slider's position was converted at SIX
+       sites in FOUR resolutions:
+           Math.round(v * 1000)   -> to the DOLLAR    100001   (the payload, the edit box, exactVal)
+           Math.round(v) * 1000   -> to the THOUSAND  100000   (the visible spend box)
+           v * 1000               -> unrounded        100000.747 (the HUD label)
+           v                      -> unrounded $k     100.00074 (the canvas scenario)
+       So the panel read $100,000 while the engine received 100001. THE SAME FORMULA, WRITTEN SIX
+       TIMES, WITH THE PARENTHESIS IN A DIFFERENT PLACE.
+       ⚠️ AND IT HAD ALREADY BEEN FOUND ONCE. The comment above the spend-box site names it exactly
+          — "pos->val carries log-scale noise ($100,001); snap to $1k" — and the fix was applied to
+          THAT LINE ONLY, where the wrong number had been SEEN. The payload kept dollar rounding.
+          🔑 A FIX APPLIED WHERE THE SYMPTOM APPEARED IS NOT A FIX APPLIED WHERE THE VALUE IS
+             PRODUCED. One door guarded, five open — the same shape as every finding this month.
+       ⚠️ AND buildStudioRequest ALREADY CLAIMED THIS CONTRACT IN PROSE: "Read the SAME
+          slider-datum/exactVal source as _scenarioFromInputs so the engine request, HUD, and canvas
+          always agree." They did not agree. THEY DISAGREED IN EVERY PAIRING. A comment is not an
+          enforcement mechanism; this function is, because there is now nowhere else to compute it.
+       ⚠️ THE NOISE IS THE LOG SCALE WORKING, NOT A BUG IN IT. datumPosToVal(41141) = 100.00074722…,
+          and a log slider must land on non-round values to stay smooth across its range. The
+          RESOLUTION is the decision, and $1,000 is it: the engine's own spend tiers round to $1,000,
+          so nothing analytical is lost and the user is sent the number they were shown.
+       ⛔ TYPED VALUES ARE NEVER SNAPPED. This converts a POSITION. A figure the user typed is a
+          FACT, lives in dataset.exactVal, and every caller below reads that FIRST and untouched. */
+    window._datumSnapDollars = function (pos) {
+      var S = (window.DatumShape && DatumShape.scales) || null;
+      if (!S || typeof S.datumPosToVal !== 'function') return NaN;
+      var n = Number(pos);
+      if (!Number.isFinite(n)) return NaN;
+      var k = S.datumPosToVal(n);
+      return Number.isFinite(k) ? Math.round(k) * 1000 : NaN;
+    };
+
     // ── SHAPE VIEW: Estate<->Shape flip (deterministic FV only, no Monte Carlo) ──
     //
     // Mounts the shared DatumShape S1 module (/scripts/datum-shape.js) on the
@@ -16802,7 +16839,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         if (exD !== undefined && exD !== '') {
           out.targetSpend = (parseFloat(exD) || 0) / 1000;
         } else if (SC) {
-          out.targetSpend = SC.datumPosToVal(parseInt(sDat.value, 10));
+          out.targetSpend = window._datumSnapDollars(parseInt(sDat.value, 10)) / 1000;
         }
       }
 
@@ -17246,7 +17283,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     function updateDatumLabel() {
       var sl = $('slider-datum'); var lbl = $('val-datum'); if (!sl || !lbl || !SC) return;
       var ex = sl.dataset.exactVal;
-      var dollars = (ex !== undefined && ex !== '') ? (parseFloat(ex) || 0) : SC.datumPosToVal(parseInt(sl.value,10)) * 1000;
+      var dollars = (ex !== undefined && ex !== '') ? (parseFloat(ex) || 0) : window._datumSnapDollars(parseInt(sl.value,10));
       if (ex === undefined || ex === '') sl.dataset.exactVal = String(Math.round(dollars));
       var k = Math.round(dollars / 1000);
       lbl.textContent = (k >= 1000 ? '$' + (k/1000).toFixed(2).replace(/\.00$/,'') + 'M' : '$' + k + 'k') + ' / yr';
@@ -17839,8 +17876,10 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       if (!spendEl || !sDat) return;
       var ex = sDat.dataset.exactVal, n = 0;
       if (ex !== undefined && ex !== '') n = Math.round(parseFloat(ex));
-      // pos->val carries log-scale noise ($100,001); snap to $1k -- typed exactVal stays exact
-      else if (SC) n = Math.round(SC.datumPosToVal(parseInt(sDat.value, 10))) * 1000;
+      /* The snap this line used to describe by itself now lives in _datumSnapDollars, because the
+         note was RIGHT and LOCAL: it named $100,001 exactly, fixed the box the reader was looking at,
+         and five other sites kept the old arithmetic — including the one that talks to the engine. */
+      else if (SC) n = window._datumSnapDollars(parseInt(sDat.value, 10));
       if (n > 0) spendEl.value = '$' + n.toLocaleString('en-US');
     }
 
@@ -17956,7 +17995,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           validate: function (v) { return v >= 0 && v <= 200000; },
           toSlider: function (v) { return SC.contribValToPos(v); } },
         { valId: 'val-datum',       slider: slDat,  w: '140px', isCurrency: true,
-          getEditVal: function () { return '$' + Math.round(SC.datumPosToVal(parseInt(slDat.value,10)) * 1000).toLocaleString('en-US'); },
+          getEditVal: function () { return '$' + window._datumSnapDollars(parseInt(slDat.value,10)).toLocaleString('en-US'); },
           clean: function (s) { return s.replace(/[^0-9.]/g, ''); },
           validate: function (v) { return v >= 20000 && v <= 1000000; },
           toSlider: function (v) { return SC.datumValToPos(v / 1000); } }
@@ -18080,7 +18119,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       var sDat = $('slider-datum');
       if (sDat) sDat.addEventListener('input', function () {
         var n = parseInt(sDat.value, 10);
-        sDat.dataset.exactVal = String(Math.round(SC.datumPosToVal(n) * 1000));
+        sDat.dataset.exactVal = String(window._datumSnapDollars(n));
         if (!isNaN(_prev.dat)) {
           if (n > _prev.dat) impulse(WAVE_IMP_DATUM, 0, +1, null, WAVE_LEAN_MAG, null);
           else if (n < _prev.dat) impulse(0, WAVE_IMP_DATUM, null, -1, null, -WAVE_LEAN_MAG);
