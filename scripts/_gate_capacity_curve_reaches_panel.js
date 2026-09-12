@@ -332,7 +332,11 @@ const REQUEST = { retirement_age: 52.6, plan_end_age: 93, datum_spend: TARGET };
         ⛔ L9d: A COMPUTED ZERO IS A RESULT. An all-zero series must show the Architect's zero-state
            sentence, NOT the empty state — the bridge years genuinely pay 0% federal, and routing
            that into an absence would tell a user we could not answer when we did. */
-  const TAXY = (r, base) => base - (r * 100) * ((206 - 28) / 25);
+  /* The axis is now computed per household, so the gate computes the SAME way and checks the
+     labels agree with the line. ⛔ IT DOES NOT HARDCODE 25 ANY MORE — a leg pinned to the old
+     constant would have gone red on the correct rescale and green on a rescale that forgot to
+     move the labels, which is precisely backwards. */
+  const TAXY = (r, ceiling) => 206 - ((r * 100) / ceiling) * (206 - 28);
   const tax = await page.evaluate((a) => {
     const M = window.DatumMeasurement;
     const withBand = Object.assign({}, a[0], {
@@ -343,7 +347,19 @@ const REQUEST = { retirement_age: 52.6, plan_end_age: 93, datum_spend: TARGET };
     M.render(M.fromEngine(withBand, a[1]));
     const band = (document.getElementById('mcTaxBand') || {}).getAttribute
       ? document.getElementById('mcTaxBand').getAttribute('d') : null;
+    const I = M._internal;
+    const labels = [...document.querySelectorAll('#mcTaxYLabels text')];
+    const grid = [...document.querySelectorAll('#mcTaxGrid line')];
     const out = {
+      // the ceiling chooser, probed directly at three shapes of household
+      ceilingLow:  I.taxCeiling([0.002, 0.001], null),
+      ceilingMid:  I.taxCeiling([0.02, 0.04, 0.06], [0.03, 0.05, 0.07]),
+      ceilingHigh: I.taxCeiling([0.30, 0.22], null),
+      overCapY: I.taxY(0.30, I.taxCeiling([0.30, 0.22], null)),
+      topLabel: labels.length ? labels[0].textContent : null,
+      lowestLabel: labels.length ? labels[labels.length - 1].textContent : null,
+      lowestGridY: grid.length ? parseFloat(grid[grid.length - 1].getAttribute('y1')) : null,
+      labelCount: labels.length,
       line: document.getElementById('mcTaxLine').getAttribute('d'),
       band: band,
       rate: document.getElementById('mcTaxRate').textContent,
@@ -385,13 +401,32 @@ const REQUEST = { retirement_age: 52.6, plan_end_age: 93, datum_spend: TARGET };
     'line len=' + (tax.line || '').length + ' mcTaxRate=' + JSON.stringify(tax.rate)
     + ' axes=' + JSON.stringify((tax.axes || '').replace(/<[^>]+>/g, '|').slice(0, 60)));
 
-  check('L9b SCALE: the line is placed on the axis the static gridlines already label (0% at y=206)',
+  /* ── L9b THE RESCALE. Three properties, and the third is the one that keeps the promise the old
+        static axis used to keep for free. */
+  check('L9b SCALE: a low-tax household gets a ceiling it can actually use, floored at 5% and never fitted',
+    tax.ceilingLow === 5 && tax.ceilingHigh === 40 && tax.ceilingMid === 10 && tax.overCapY >= 28,
+    'ceiling for a 30% top=' + tax.ceilingHigh + ' (want >=30: the axis EXTENDS rather than clipping,'
+    + ' and its 30% point lands at y=' + (tax.overCapY||0).toFixed(1) + ' which must stay inside the plot top y=28).'
+    + ' EXACT, not >=30: a restored Math.min(25) clamp also yields 30, so a loose assertion cannot see it)'
+    + ' · for a 7% band top=' + tax.ceilingMid + ' (want 10: 7 x 1.15 headroom = 8.05, so 8 is too tight)'
+    + ' · for a 0.2% top=' + tax.ceilingLow + ' (want 5 — the floor, so rounding dust is not drama)');
+
+  check('L9b2 ZERO IS ALWAYS THE BOTTOM: the axis never fits its minimum to the data',
+    tax.lowestLabel === '0%' && Math.abs(tax.lowestGridY - 206) < 0.6,
+    'lowest y-label=' + JSON.stringify(tax.lowestLabel) + ' at y=' + tax.lowestGridY
+    + '\n          ⛔ a fitted floor redraws six years of MEASURED zero as six years of some tax');
+
+  check('L9b3 ONE SCALE: the drawn line lands exactly where the emitted labels say it should',
     typeof tax.line === 'string'
-      && tax.line.indexOf(TAXY(0.02, 206).toFixed(1)) >= 0
-      && tax.line.indexOf(TAXY(0.06, 206).toFixed(1)) >= 0,
-    'want y=' + TAXY(0.02, 206).toFixed(1) + ' for 2% and y=' + TAXY(0.06, 206).toFixed(1)
-    + ' for 6%; line=' + JSON.stringify((tax.line || '').slice(0, 80))
-    + '\n          ⛔ a renderer that picks its own scale drifts from the labels beside it');
+      && tax.line.indexOf(TAXY(0.02, tax.ceilingMid).toFixed(1)) >= 0
+      && tax.line.indexOf(TAXY(0.06, tax.ceilingMid).toFixed(1)) >= 0
+      && tax.topLabel === '10%',
+    'ceiling=' + tax.ceilingMid + ' top label=' + JSON.stringify(tax.topLabel)
+    + ' · want y=' + TAXY(0.02, tax.ceilingMid).toFixed(1) + ' for 2% and y='
+    + TAXY(0.06, tax.ceilingMid).toFixed(1) + ' for 6%'
+    + '\n          line=' + JSON.stringify((tax.line || '').slice(0, 80))
+    + '\n          ⛔ labels and curve must come from ONE ceiling — written twice they agree today'
+    + ' and drift silently, with both halves still rendering');
 
   check('L9c NO INVENTED SPREAD: band drawn when p25/p75 arrive, ABSENT when they do not — and the line survives',
     typeof tax.band === 'string' && tax.band.length > 10

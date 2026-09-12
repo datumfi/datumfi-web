@@ -5319,18 +5319,25 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                             <stop offset="100%" stop-color="rgba(213,173,99,.035)"></stop>
                           </linearGradient>
                         </defs>
-                        <g class="mc-tax-gridlines">
-                          <line x1="54" y1="28" x2="590" y2="28"></line>
-                          <line x1="54" y1="99.2" x2="590" y2="99.2"></line>
-                          <line x1="54" y1="170.4" x2="590" y2="170.4"></line>
-                          <line x1="54" y1="206" x2="590" y2="206"></line>
-                        </g>
-                        <g class="mc-tax-ylabels">
-                          <text x="44" y="31" text-anchor="end">25%</text>
-                          <text x="44" y="102.2" text-anchor="end">15%</text>
-                          <text x="44" y="173.4" text-anchor="end">5%</text>
-                          <text x="44" y="209" text-anchor="end">0%</text>
-                        </g>
+                        <!-- ⛔⛔ A RULED DEVIATION FROM THE MOCK, AND THE ONLY ONE IN THIS FACE.
+                             The Mock hardcodes four gridlines at y=28/99.2/170.4/206 with the
+                             strings 25%/15%/5%/0% baked in, and a matching maxRate=25 in its
+                             renderer. Captain-ruled 2026-09-12: the tax axis is RESCALED per
+                             household, because a real estate maxes near 3% across 41 years and a
+                             true line on a 25% axis is a smudge that reads as broken.
+                             ⛔ SO THE LABELS AND THE GRIDLINES BECOME OUTPUT OF THE SAME FUNCTION
+                                THAT POSITIONS THE CURVE. That is not tidiness — it is the whole
+                                safety property. The previous version derived its pixels-per-point
+                                FROM these static labels precisely so the line could not drift off
+                                the gridlines beside it; a rescale with the labels left static
+                                destroys exactly that guarantee and does it silently, because both
+                                halves still render.
+                             🔑 THE AXIS IS THE VARIABLE. THE DATA IS NEVER THE VARIABLE. Not one
+                                computed rate is scaled, floored or clipped to fit. A 3.03%
+                                household reads 3.03% — against an axis where that is a shape
+                                rather than a smudge. -->
+                        <g class="mc-tax-gridlines" id="mcTaxGrid"></g>
+                        <g class="mc-tax-ylabels" id="mcTaxYLabels"></g>
                         <path class="mc-tax-band" id="mcTaxBand"></path>
                         <path class="mc-tax-line" id="mcTaxLine"></path>
                         <g class="mc-tax-first-marker" id="mcTaxFirstMarker"></g>

@@ -408,10 +408,89 @@
         is static markup ported from the Mock; if the renderer picked its own scale the line would
         drift from the labels beside it, and a chart whose gridlines disagree with its own curve is
         wrong in the one way nobody checks. */
-  var TAX_X0 = 54, TAX_X1 = 590, TAX_Y0 = 206, TAX_PER_POINT = (206 - 28) / 25;
+  var TAX_X0 = 54, TAX_X1 = 590, TAX_Y0 = 206, TAX_Y1 = 28;
 
-  function taxY(rate) { return TAX_Y0 - (Number(rate) * 100) * TAX_PER_POINT; }
+  /* ⛔ THE CEILING IS CHOSEN FROM A CLOSED LIST OF HUMAN NUMBERS, NEVER FITTED TO THE DATA. A
+     fitted top produces axes labelled 3.4% or 7.3%, which is a number a reader has to decode
+     instead of read, and it makes two households incomparable for no gain. */
+  /* ⚠️ THE LIST RUNS PAST 25, AND THAT IS A DECLARED DEVIATION FROM THE RULING, FLAGGED NOT
+     SMUGGLED. The instruction was "cap at 25 — the current axis becomes the maximum rather than
+     the constant", on the reasonable assumption that no retiree's effective rate exceeds it.
+     ⛔ BUT A HARD CAP AND "WE DO NOT CLIP MEASUREMENTS TO FIT FURNITURE" CANNOT BOTH HOLD. With a
+        true cap, a household whose median genuinely reaches 30% is drawn ABOVE the top gridline —
+        outside the plot, still honest, and visually indistinguishable from a rendering bug. The
+        two honest answers are "clip the data" (forbidden, and the exact defect the ruling deletes
+        the Mock's Math.min for) or "extend the axis". This extends the axis.
+     🔑 25 IS THE NORMAL TOP, NOT A LIMIT ON WHAT CAN BE SHOWN. Above it the steps keep going so
+        the data always fits inside the box it is drawn in. Measured max across 41 retirement years
+        on a $1.0M estate is 3.03%, so the rungs past 25 are unreachable in practice — which is
+        precisely why they cost nothing and why their absence would have gone unnoticed. */
+  var TAX_STEPS = [4, 5, 8, 10, 15, 20, 25, 30, 40, 50];
+  /* ⚠️ THE FLOOR ON THE CEILING IS 5 AND THE NUMBER IS WRITTEN DOWN HERE ON PURPOSE. Without it a
+     household paying 0.2% gets an axis that magnifies rounding dust into a dramatic climb — the
+     mirror of the defect this rescale fixes, and a worse one, because it INVENTS drama where the
+     hugging problem only hid a real shape. */
+  var TAX_CEIL_MIN = 5;
+  /* ⚠️ 25 IS NOW A MAXIMUM, NOT A CONSTANT. It used to be the only axis there was. */
+  var TAX_CEIL_MAX = 25;
+  var TAX_HEADROOM = 1.15;
+
+  /* Highest measured percentage anywhere in the face — the band's top edge when a band exists,
+     the median's when it does not. ⛔ NOTHING IS CLIPPED TO REACH IT: the Mock's renderer wrapped
+     its median and both band edges in Math.min(25, …), which is invisible under a fixed axis and
+     becomes live data corruption under a computed one — a genuine 30% year silently rewritten to
+     25% and drawn as though measured. That clamp is deliberately absent here. WE DO NOT CLIP
+     MEASUREMENTS TO FIT FURNITURE. */
+  function taxCeiling(series, p75) {
+    var top = 0, i;
+    if (Array.isArray(series)) {
+      for (i = 0; i < series.length; i++) {
+        if (Number.isFinite(Number(series[i]))) top = Math.max(top, Number(series[i]) * 100);
+      }
+    }
+    if (Array.isArray(p75)) {
+      for (i = 0; i < p75.length; i++) {
+        if (Number.isFinite(Number(p75[i]))) top = Math.max(top, Number(p75[i]) * 100);
+      }
+    }
+    var want = top * TAX_HEADROOM;
+    for (i = 0; i < TAX_STEPS.length; i++) {
+      if (TAX_STEPS[i] >= want && TAX_STEPS[i] >= TAX_CEIL_MIN) return TAX_STEPS[i];
+    }
+    return TAX_CEIL_MAX;
+  }
+
+  /* ⛔ ZERO IS ALWAYS THE BOTTOM. NEVER A FITTED MINIMUM. A household drawing from taxable and Roth
+     through the bridge years genuinely pays 0% federal, and that is the best thing on this face —
+     but it is only legible if the baseline is a TRUE zero the curve can sit on. A fitted floor
+     would redraw six years of measured zero as six years of apparently-some tax, which is a worse
+     lie than the flatness it would be fixing. */
+  function taxY(rate, ceiling) {
+    var c = Number(ceiling) > 0 ? Number(ceiling) : TAX_CEIL_MAX;
+    return TAX_Y0 - (Number(rate) * 100 / c) * (TAX_Y0 - TAX_Y1);
+  }
   function taxX(i, n) { return TAX_X0 + (n <= 1 ? 0 : (i / (n - 1)) * (TAX_X1 - TAX_X0)); }
+
+  /* Four stops including zero, evenly spaced IN RATE. The Mock's uneven pixel gaps were an artifact
+     of 25/15/5/0 having a five-point last step; computed stops remove that without anyone deciding
+     to. Integers print clean; thirds of an odd ceiling print to one decimal rather than lying. */
+  function taxLabel(v) {
+    return (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1)) + '%';
+  }
+
+  function renderTaxAxis(ceiling) {
+    var grid = el('mcTaxGrid'), labels = el('mcTaxYLabels');
+    if (!grid && !labels) return;
+    var g = [], t = [];
+    for (var k = 3; k >= 0; k--) {
+      var rate = (ceiling * k) / 3;
+      var y = taxY(rate / 100, ceiling);
+      g.push('<line x1="' + TAX_X0 + '" y1="' + y.toFixed(1) + '" x2="' + TAX_X1 + '" y2="' + y.toFixed(1) + '"></line>');
+      t.push('<text x="44" y="' + (y + 3).toFixed(1) + '" text-anchor="end">' + taxLabel(rate) + '</text>');
+    }
+    if (grid) grid.innerHTML = g.join('');
+    if (labels) labels.innerHTML = t.join('');
+  }
 
   function renderTax(series, p25, p75) {
     var line = el('mcTaxLine'), band = el('mcTaxBand'), marker = el('mcTaxFirstMarker'),
@@ -426,13 +505,24 @@
       if (axes) axes.innerHTML = '';
       if (rate) rate.textContent = '';
       if (zero) zero.hidden = true;
+      var g0 = el('mcTaxGrid'), l0 = el('mcTaxYLabels');
+      if (g0) g0.innerHTML = '';
+      if (l0) l0.innerHTML = '';
       return;
     }
 
     var n = series.length;
+
+    /* ⛔ ONE CEILING, COMPUTED ONCE, USED BY THE AXIS AND BY EVERY PATH BELOW. Writing the new
+       top in two places is the exact failure this rescale was warned about: the labels and the
+       curve would agree today and drift the first time either side is touched, and BOTH WOULD
+       STILL RENDER. */
+    var ceiling = taxCeiling(series, p75);
+    renderTaxAxis(ceiling);
+
     if (line) {
       line.setAttribute('d', series.map(function (v, i2) {
-        return (i2 === 0 ? 'M' : 'L') + ' ' + taxX(i2, n).toFixed(1) + ' ' + taxY(v).toFixed(1);
+        return (i2 === 0 ? 'M' : 'L') + ' ' + taxX(i2, n).toFixed(1) + ' ' + taxY(v, ceiling).toFixed(1);
       }).join(' '));
     }
 
@@ -447,11 +537,11 @@
     if (band) {
       if (haveBand) {
         var top = p75.map(function (v, i2) {
-          return (i2 === 0 ? 'M' : 'L') + ' ' + taxX(i2, n).toFixed(1) + ' ' + taxY(v).toFixed(1);
+          return (i2 === 0 ? 'M' : 'L') + ' ' + taxX(i2, n).toFixed(1) + ' ' + taxY(v, ceiling).toFixed(1);
         }).join(' ');
         var bot = [];
         for (var j = n - 1; j >= 0; j--) {
-          bot.push('L ' + taxX(j, n).toFixed(1) + ' ' + taxY(p25[j]).toFixed(1));
+          bot.push('L ' + taxX(j, n).toFixed(1) + ' ' + taxY(p25[j], ceiling).toFixed(1));
         }
         band.setAttribute('d', top + ' ' + bot.join(' ') + ' Z');
       } else {
@@ -465,7 +555,7 @@
     }
 
     if (marker) {
-      marker.innerHTML = '<circle cx="' + taxX(0, n).toFixed(1) + '" cy="' + taxY(series[0]).toFixed(1)
+      marker.innerHTML = '<circle cx="' + taxX(0, n).toFixed(1) + '" cy="' + taxY(series[0], ceiling).toFixed(1)
         + '" r="3.2"></circle>';
     }
 
@@ -584,6 +674,7 @@
       interpAt: interpAt,
       renderTax: renderTax,
       taxY: taxY,
+      taxCeiling: taxCeiling,
       curvePoints: function () { return CURVE_POINTS; },
       dataSlots: function () { return DATA_SLOTS.slice(); },
       emptyState: function () { return EMPTY_STATE; },
