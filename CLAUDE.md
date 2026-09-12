@@ -246,6 +246,27 @@ loosening the parser.
    SUPPRESSION ITSELF BECOMES UNMEASURABLE.
    🗓️ EXPIRY: 1-year GitHub Student Pack term installed ~2026-08, LAPSES ~2027-08. Falsifier — log
    into Sentry and read the plan. MONITORING THAT LAPSES DOES NOT ALARM; IT STOPS TELLING YOU THINGS.
+ · scripts/studio-measurement.js · THE MEASUREMENT ROOM — the Floor/Datum/Ceiling panel and, from
+   2026-09-12, the ONLY mapping from the engine's `capacity_curve` onto this panel's axis.
+   ⭐ PINNED BY ITS OWN TRIGGER, NOT BY A JUDGEMENT CALL. It shipped deliberately unpinned with the
+   condition written into its header: *"Right now its absence changes nothing — the panel is inert
+   and nothing opens it. PIN IT THE COMMIT THE NUMBERS ARRIVE. A deferral with no trigger is a gap.
+   🔑 SACRED IS EARNED BY CONSEQUENCE, NOT BY RESEMBLANCE."* The numbers arrived; the trigger fired.
+   ⛔ ITS FAILURE MODES ARE ASYMMETRIC AND THAT ASYMMETRY IS THE PIN'S WHOLE JOB. Its ABSENCE is
+   BLANK — the panel renders its empty state, which is a NORMAL display condition here. Its
+   CORRUPTION is WRONG AND SILENT: the engine's `spend_grid` is FOUR TO SIX TIMES WIDER than the
+   window this panel draws (MEASURED on three households — grid 18,225-248,225 against a window of
+   31,000-77,000; 8,710-248,710 against 26,000-60,000; 39,710-249,710 against 78,000-144,000), so
+   a broken resample draws the engine's whole sweep squeezed inside the user's own range —
+   confidence collapsing 100%→0% across their Floor-to-Ceiling — WITH THE AXIS LABELS STILL
+   CORRECT AND NOTHING THROWN.
+   ⚠️ `fromEngine` READS THE WINDOW FROM `bounds()` AND MUST CONTINUE TO. A second copy of
+   `floor - 12000` would agree on the day it was written and drift the day the stretch is tuned,
+   misaligning the curve from the axis while both still render. It also forgets that `bounds()`
+   floors minSpend at 0.
+   ⚠️ READING OUTSIDE THE GRID IS LICENSED ONLY BY SATURATION (first rate ≥ 0.999 / last ≤ 0.001);
+   anywhere else the scenario is REFUSED. A clamp that quietly repeats the nearest value is a
+   measurement claim about a spend nobody computed.
 <!-- SACRED-LIST-END -->
 
 THIS LIST AND `SACRED{}` IN `scripts/build-dist.mjs` MUST MATCH EXACTLY — every host declared here

@@ -134,6 +134,134 @@
     return Number(v[lo]) * (1 - frac) + Number(v[hi]) * frac;
   }
 
+  /* ══ THE WIRING. The header above promised this: "Mapping the engine's payload (tiers /
+        capacity_curve / legacy) onto that shape is the WIRING commit, where numbers arriving can
+        be proven rather than assumed." This is that commit (2026-09-12).
+
+     ⛔⛔ THE ENGINE'S CURVE AND THIS RENDERER DO NOT SHARE AN X-AXIS, AND HANDING THE ARRAY OVER
+        RAW WOULD BE CATASTROPHIC AND INVISIBLE. `capacity_curve.success_rates` is sampled on the
+        engine's OWN `spend_grid` — $5,000 steps spanning the whole feasible sweep. MEASURED on
+        three households: grid [18,225 .. 248,225] while this panel's window is [31,000 .. 77,000];
+        [8,710 .. 248,710] against [26,000 .. 60,000]; [39,710 .. 249,710] against [78,000 ..
+        144,000]. THE GRID IS FOUR TO SIX TIMES WIDER THAN THE WINDOW EVERY TIME.
+        render() places point i at `x = LEFT + i/(n-1) * W` — evenly across the window — so the
+        raw array would draw the engine's entire 18k–248k sweep squeezed inside an axis LABELLED
+        31k–77k. Confidence would appear to collapse from 100% to 0% across the user's own range,
+        the axis labels would still read correctly, and nothing would throw.
+        🔑 THE RESAMPLE IS NOT A TIDYING STEP. It is the difference between a chart and a lie.
+
+     ⛔ IT RESAMPLES THROUGH bounds() RATHER THAN THROUGH A COPY OF ITS ARITHMETIC. There is
+        exactly ONE definition of this panel's window, and both the drawing and the resample read
+        it. A second copy of `floor - 12000` here would agree today and drift the day somebody
+        tunes the stretch — misaligning the curve from the axis SILENTLY, since both would still
+        render. Note bounds() also floors minSpend at 0, which a hand-copied expression forgets. */
+
+  /* Linear interpolation on the engine's own (spend -> success) samples. Straight lines between
+     measured points is exactly what the chart draws and what successAtSpend() already assumes, so
+     this introduces no shape the engine did not report. */
+  function interpAt(grid, rates, spend) {
+    var n = grid.length;
+    if (spend <= grid[0]) return rates[0];
+    if (spend >= grid[n - 1]) return rates[n - 1];
+    var lo = 0, hi = n - 1;
+    while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (grid[mid] <= spend) lo = mid; else hi = mid; }
+    var span = grid[hi] - grid[lo];
+    if (!(span > 0)) return rates[lo];
+    var f = (spend - grid[lo]) / span;
+    return rates[lo] * (1 - f) + rates[hi] * f;
+  }
+
+  /* ⛔ RESOLUTION, NOT INVENTION. 61 samples across a ~46,000-wide window is roughly one point per
+     $760 — finer than the engine's $5,000 step, which means the polyline follows the measured
+     piecewise-linear function MORE closely, never less. It adds no inflection the engine did not
+     report, because every value between two samples is on the straight line joining them. */
+  var CURVE_POINTS = 61;
+
+  /* ⚠️ SATURATION IS THE ONLY LICENCE TO READ OUTSIDE THE GRID, AND IT IS NARROW ON PURPOSE.
+     success_rates is documented monotonically decreasing. So below the grid's first point success
+     is >= rates[0], and capped at 1 — which pins it EXACTLY when rates[0] is already 1. The same
+     argument mirrored gives the top end when the last rate is already 0. Anywhere else, reading
+     past the grid would be asserting a confidence nobody computed, so the scenario is REFUSED and
+     the panel shows its empty state.
+     🔑 THIS IS THE HONEST-SHELL RULE APPLIED TO AN AXIS: what the engine did not measure is not
+        drawn, and a clamp that quietly repeats the nearest value is a measurement claim. */
+  var SATURATED_HI = 0.999, SATURATED_LO = 0.001;
+
+  /* Build the renderer's scenario from a raw /api/calculate response. Returns null — never a
+     partial object — when anything required is missing or unusable; render(null) is the empty
+     state, which is a NORMAL display condition for this panel, not an error. */
+  function fromEngine(res, req) {
+    if (!res || typeof res !== 'object') return null;
+    var t = res.tiers && (res.tiers.blended || res.tiers);
+    var cc = res.capacity_curve;
+    if (!t || !cc) return null;
+
+    var floor = Number(t.bedrock), datum = Number(t.keystone), ceiling = Number(t.capstone);
+    if (!Number.isFinite(floor) || !Number.isFinite(datum) || !Number.isFinite(ceiling)) return null;
+
+    var grid = cc.spend_grid, rates = cc.success_rates;
+    if (!Array.isArray(grid) || !Array.isArray(rates)) return null;
+    if (grid.length < 2 || grid.length !== rates.length) return null;
+    for (var k = 0; k < grid.length; k++) {
+      if (!Number.isFinite(Number(grid[k])) || !Number.isFinite(Number(rates[k]))) return null;
+    }
+
+    /* THE ONE DEFINITION OF THE WINDOW — read, never re-derived. */
+    var b = bounds({ floor: floor, ceiling: ceiling });
+    if (!Number.isFinite(b.minSpend) || !(b.maxSpend > b.minSpend)) return null;
+
+    if (b.minSpend < grid[0] && !(rates[0] >= SATURATED_HI)) return null;
+    if (b.maxSpend > grid[grid.length - 1] && !(rates[rates.length - 1] <= SATURATED_LO)) return null;
+
+    var curve = [];
+    for (var i = 0; i < CURVE_POINTS; i++) {
+      var spend = b.minSpend + (b.maxSpend - b.minSpend) * (i / (CURVE_POINTS - 1));
+      var v = interpAt(grid, rates, spend);
+      if (!Number.isFinite(v)) return null;
+      curve.push(v);
+    }
+
+    var s = { floor: floor, datum: datum, ceiling: ceiling, curve: curve };
+
+    /* The terminal estate at the Datum, from the engine's own parallel array. Absent when the
+       engine shipped no median_ending — blank, never derived from the balance. */
+    var me = cc.median_ending;
+    if (Array.isArray(me) && me.length === grid.length) {
+      var term = interpAt(grid, me, datum);
+      if (Number.isFinite(term)) s.terminal = money(term);
+    }
+
+    /* ⚠️ horizon IS ARITHMETIC ON THE USER'S OWN TWO ANSWERS, WHICH IS WHY IT IS ALLOWED HERE AND
+       `label` IS NOT. Retirement age and plan-end age are both things they typed; the years
+       between them are not a new fact. The market-outlook LABEL would be a display string this
+       file does not own — and it is mid-rename to the Datumae Blend — so mcClimate stays blank
+       until the Architect's name for it exists. A blank slot is the honest shell; a guessed one
+       is the defect this panel was built to avoid. */
+    if (req && Number.isFinite(Number(req.plan_end_age)) && Number.isFinite(Number(req.retirement_age))) {
+      var yrs = Math.round(Number(req.plan_end_age) - Number(req.retirement_age));
+      if (yrs > 0) s.horizon = yrs + ' yrs';
+    }
+    return s;
+  }
+
+  /* Read what the reveal already stored and render it. The Studio writes the whole response to
+     `datumfi_range` on every successful compute (studio.html), so this needs no second request
+     and no engine change — the data has been arriving and being discarded since the curve
+     shipped. A malformed or absent entry yields the empty state, quietly. */
+  function renderFromSession() {
+    var res = null, req = null;
+    try { res = JSON.parse(w.sessionStorage.getItem('datumfi_range') || 'null'); } catch (_e) { res = null; }
+    try { req = JSON.parse(w.sessionStorage.getItem('datumfi_studio_request') || 'null'); } catch (_e) { req = null; }
+    var s = fromEngine(res, req);
+    /* ⛔ A DRAG BELONGS TO THE SCENARIO IT WAS MADE ON. Carrying `datumSpend` across a fresh
+       render would show a spend the user chose for a DIFFERENT household, with this household's
+       confidence read off beside it — two households in one sentence, and the number looks
+       deliberate because it was, once. */
+    datumSpend = null;
+    render(s);
+    return !!s;
+  }
+
   var current = null;         // the last usable scenario, or null
   var datumSpend = null;      // the dragged Datum, or null for the scenario's own
 
@@ -198,7 +326,20 @@
     render(current);
   }
 
-  function open() { var o = el('mcOverlay'); if (!o) return; o.hidden = false; o.classList.add('open'); }
+  /* ⛔ OPENING IS A READ. The panel refreshes from the stored response every time it is shown,
+     rather than being filled once by whoever opens it. Two reasons, and the second is the one that
+     matters: a panel that is populated by its CALLER shows whatever the last caller left behind,
+     so a second door added later inherits a silent staleness bug from the first. Filling on open
+     means the door — whenever the Architect rules where it lives — is one line that cannot get
+     this wrong.
+     ⚠️ AND IT MEANS A STALE RANGE CANNOT SURVIVE A RECOMPUTE. sessionStorage is rewritten on every
+        successful reveal; reading it here is what guarantees the numbers on screen belong to the
+        household currently in the Studio. */
+  function open() {
+    var o = el('mcOverlay'); if (!o) return;
+    renderFromSession();
+    o.hidden = false; o.classList.add('open');
+  }
   function close() {
     var o = el('mcOverlay'); if (!o) return;
     o.classList.remove('open');
@@ -234,6 +375,8 @@
   w.DatumMeasurement = {
     render: render,
     renderEmpty: renderEmpty,
+    fromEngine: fromEngine,
+    renderFromSession: renderFromSession,
     open: open,
     close: close,
     /* Read-only seams so a gate can prove WHY a render was refused rather than inferring it from
@@ -244,6 +387,8 @@
       pct: pct,
       bounds: bounds,
       successAtSpend: successAtSpend,
+      interpAt: interpAt,
+      curvePoints: function () { return CURVE_POINTS; },
       dataSlots: function () { return DATA_SLOTS.slice(); },
       emptyState: function () { return EMPTY_STATE; },
       datumSpend: function () { return datumSpend; },
