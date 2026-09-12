@@ -5211,7 +5211,20 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
               <section class="mc-chart">
                 <div class="mc-chart-view-head">
                   <div class="mc-chart-view-label">Measurement faces</div>
-                  <button class="mc-view-toggle" type="button" data-mc-view-toggle aria-pressed="false" aria-label="Switch to distribution view"><span data-mc-view-toggle-label>Show distribution</span><span class="mc-view-toggle-icon">↻</span></button>
+                  <!-- ⭐ THE THREE-TAB SEGMENT, PORTED VERBATIM (batch 2). It REPLACES the
+                       "Show distribution" toggle, and replacing it costs nothing that worked:
+                       MEASURED 2026-09-12, the toggle had ZERO handlers anywhere in studio.html or
+                       any part file. The button rendered, changed aria-pressed never, and the
+                       distribution face beneath it has been UNREACHABLE since the day it was ported.
+                       🔑 A CONTROL WITH NO LISTENER IS NOT A PARTIAL FEATURE. It is a picture of a
+                          control, and it reads as shipped to everyone including the people who
+                          built it. Same family as the COLA field that collected a value nothing
+                          sent, and the capacity curve that arrived and was discarded. -->
+                  <div class="mc-view-segment" role="tablist" aria-label="Measurement view">
+                    <button class="mc-view-segment-btn active" type="button" role="tab" aria-selected="true" data-mc-view-tab="curve">Curve</button>
+                    <button class="mc-view-segment-btn" type="button" role="tab" aria-selected="false" data-mc-view-tab="distribution">Distribution</button>
+                    <button class="mc-view-segment-btn tax" type="button" role="tab" aria-selected="false" data-mc-view-tab="tax">Tax</button>
+                  </div>
                 </div>
                 <div class="mc-visual-switch" id="mcVisualSwitch" data-view="curve">
                   <div class="mc-visual-face curve-view">
@@ -5274,6 +5287,61 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                       <div class="mc-dist-tooltip" id="mcDistTooltip" role="tooltip" aria-live="polite"></div>
                     </div>
                   </div>
+
+                  <!-- ⭐ THE TAX FACE, PORTED VERBATIM FROM THE MOCK (batch 2, 2026-09-12).
+                       Wired, not labelled: the engine returns `eff_rate_by_year` — the median
+                       effective rate per retirement year across 40,000 paths — and gained
+                       `eff_rate_p25_by_year` / `eff_rate_p75_by_year` in the same batch so the
+                       authored sentence below ("Median + interquartile band") is TRUE rather than
+                       aspirational.
+                       ⚠️ THE BAND IS OPTIONAL AND ITS ABSENCE IS A NORMAL STATE, NOT AN ERROR. The
+                          web ships before the container rebuilds, so for that interval the response
+                          carries the median and no band. The renderer draws the median alone and
+                          marks the band "Recorded, not yet modelled" — it never fakes an envelope
+                          around a line, because a band drawn from the median would assert a spread
+                          nobody computed.
+                       ⛔ THE ZERO STATE IS NOT AN EMPTY STATE, AND THE DISTINCTION IS ARCHITECT-
+                          RULED. A household drawing from taxable and Roth in the bridge years pays
+                          0% federal — MEASURED at 0.0% for the first six years of an ordinary $1.0M
+                          household, not a theoretical branch. That zero WAS COMPUTED, so it renders
+                          as a result. Never route a computed zero into an absence. -->
+                  <div class="mc-visual-face tax-view">
+                    <div class="mc-section-label">Tax drag across the retirement horizon</div>
+                    <div class="mc-chart-title">
+                      <strong>Median effective tax rate, year by year</strong>
+                      <span id="mcTaxSpreadCopy">Median + interquartile band across 40,000 modeled paths</span>
+                    </div>
+                    <div class="mc-curve-shell mc-tax-shell">
+                      <svg class="mc-curve-svg mc-tax-svg" id="mcTaxSvg" viewBox="0 0 620 240" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Median effective tax rate across retirement years">
+                        <defs>
+                          <linearGradient id="mcTaxBandFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="rgba(213,173,99,.28)"></stop>
+                            <stop offset="100%" stop-color="rgba(213,173,99,.035)"></stop>
+                          </linearGradient>
+                        </defs>
+                        <g class="mc-tax-gridlines">
+                          <line x1="54" y1="28" x2="590" y2="28"></line>
+                          <line x1="54" y1="99.2" x2="590" y2="99.2"></line>
+                          <line x1="54" y1="170.4" x2="590" y2="170.4"></line>
+                          <line x1="54" y1="206" x2="590" y2="206"></line>
+                        </g>
+                        <g class="mc-tax-ylabels">
+                          <text x="44" y="31" text-anchor="end">25%</text>
+                          <text x="44" y="102.2" text-anchor="end">15%</text>
+                          <text x="44" y="173.4" text-anchor="end">5%</text>
+                          <text x="44" y="209" text-anchor="end">0%</text>
+                        </g>
+                        <path class="mc-tax-band" id="mcTaxBand"></path>
+                        <path class="mc-tax-line" id="mcTaxLine"></path>
+                        <g class="mc-tax-first-marker" id="mcTaxFirstMarker"></g>
+                        <g class="mc-tax-xlabels" id="mcTaxAxes"></g>
+                      </svg>
+                      <div class="mc-tax-zero" id="mcTaxZero" hidden>
+                        <strong>0% median effective tax</strong>
+                        <span>The median modeled path produces no federal income-tax drag in this period. The baseline is the result, not an empty state.</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </section>
 
@@ -5303,6 +5371,16 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                   <div class="mc-mini mc-helpable" tabindex="0" data-help="The distance between Floor and Ceiling. A wider span means more room between defensive and stretched spending choices — not more certainty.">
                     <span>Range width</span>
                     <strong id="mcRangeWidth"></strong>
+                  </div>
+                  <!-- ⭐ THE TAX TILE IS THE FACE'S SECOND DOOR, AND THE MOCK GIVES IT BOTH ON
+                       PURPOSE. The tab is how you browse the three faces; this tile is how you
+                       arrive at the tax one from the number that made you curious. Porting only the
+                       tab would have kept the face reachable and lost the reason anybody goes there.
+                       ⚠️ ROLE, TABINDEX AND THE ENTER/SPACE HANDLER ARE ALL LOAD-BEARING: it is a
+                          <div> acting as a button, so without them it is mouse-only. -->
+                  <div class="mc-mini mc-tax-entry mc-helpable" tabindex="0" role="button" aria-label="Show tax view" data-mc-tax-tile data-help="The median effective tax rate in the first full retirement year. Select this tile to inspect the year-by-year median tax curve and its interquartile spread across the modeled futures.">
+                    <span>Effective tax ↗</span>
+                    <strong id="mcTaxRate"></strong>
                   </div>
                   <!-- ⛔ mcMiniDatum DELETED 2026-09-12, IN THE SAME COMMIT THAT LANDS mcHeroDatum,
                        AND THAT PAIRING IS THE RULING, NOT A COINCIDENCE. Architect-ruled: the tile

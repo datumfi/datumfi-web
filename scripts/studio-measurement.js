@@ -111,6 +111,11 @@
         pass will fill. They currently have no writer; that is a stated gap, not an oversight. */
   function renderEmpty() {
     clearData();
+    /* The tax face is cleared through its own renderer, not through DATA_SLOTS: its content is
+       SVG path data and generated axis nodes, which put() cannot reach. A slot list that only
+       knows about text would leave a previous household's curve drawn under the next one's
+       blanks. */
+    renderTax(null, null, null);
   }
 
   /* ⛔ THE ONLY GATE BETWEEN A BAD NUMBER AND THE SCREEN. A scenario is usable only if every
@@ -283,6 +288,14 @@
       var yrs = Math.round(Number(req.plan_end_age) - Number(req.retirement_age));
       if (yrs > 0) s.horizon = yrs + ' yrs';
     }
+
+    /* ⚠️ THE TAX SERIES RIDES ALONG RATHER THAN GATING THE SCENARIO. `usable()` deliberately does
+       NOT test it: the Range, the curve and the cards are all readable without a tax face, so a
+       response missing eff_rate_by_year must still render everything else. Folding it into the
+       door test would blank three working faces to protect one. */
+    s.taxSeries = res.eff_rate_by_year || null;
+    s.taxP25 = res.eff_rate_p25_by_year || null;
+    s.taxP75 = res.eff_rate_p75_by_year || null;
     return s;
   }
 
@@ -341,6 +354,8 @@
     put('mcHeroRange', money(s.floor) + ' — ' + money(s.ceiling));
     put('mcHeroDatum', money(spend));
 
+    renderTax(s.taxSeries, s.taxP25, s.taxP75);
+
     /* ⛔ ORIENTATION — DEVIATION 1. `y = TOP + v*H`, so v=1 (high confidence, low spend) lands at
        the BOTTOM and v→0 (low confidence, high spend) lands at the TOP. Floor low, Ceiling high.
        v83 used `(1-v)` here and drew it upside down. DO NOT "restore" it. */
@@ -384,6 +399,116 @@
      ⚠️ AND IT MEANS A STALE RANGE CANNOT SURVIVE A RECOMPUTE. sessionStorage is rewritten on every
         successful reveal; reading it here is what guarantees the numbers on screen belong to the
         household currently in the Studio. */
+  /* ══ THE TAX FACE (batch 2, 2026-09-12) ══════════════════════════════════════════════════════
+     Geometry is the Mock's own: viewBox 620x240, plot x 54..590, and a y axis whose gridlines sit
+     at 28 / 99.2 / 170.4 / 206 for 25% / 15% / 5% / 0%. Those four are EVENLY SPACED IN RATE
+     (25-15-5) but NOT in pixels (71.2, 71.2, 35.6), because the last gap is 5 points and the
+     others are 10. So the scale is linear at 7.12px per point with the 0% baseline at y=206.
+     ⛔ DERIVED FROM THE LABELS RATHER THAN RE-CHOSEN, AND THAT IS THE WHOLE TRICK. The axis text
+        is static markup ported from the Mock; if the renderer picked its own scale the line would
+        drift from the labels beside it, and a chart whose gridlines disagree with its own curve is
+        wrong in the one way nobody checks. */
+  var TAX_X0 = 54, TAX_X1 = 590, TAX_Y0 = 206, TAX_PER_POINT = (206 - 28) / 25;
+
+  function taxY(rate) { return TAX_Y0 - (Number(rate) * 100) * TAX_PER_POINT; }
+  function taxX(i, n) { return TAX_X0 + (n <= 1 ? 0 : (i / (n - 1)) * (TAX_X1 - TAX_X0)); }
+
+  function renderTax(series, p25, p75) {
+    var line = el('mcTaxLine'), band = el('mcTaxBand'), marker = el('mcTaxFirstMarker'),
+        axes = el('mcTaxAxes'), zero = el('mcTaxZero'), rate = el('mcTaxRate'),
+        spread = el('mcTaxSpreadCopy');
+
+    var ok = Array.isArray(series) && series.length > 0;
+    for (var i = 0; ok && i < series.length; i++) if (!Number.isFinite(Number(series[i]))) ok = false;
+    if (!ok) {
+      [line, band].forEach(function (e) { if (e) e.removeAttribute('d'); });
+      if (marker) marker.innerHTML = '';
+      if (axes) axes.innerHTML = '';
+      if (rate) rate.textContent = '';
+      if (zero) zero.hidden = true;
+      return;
+    }
+
+    var n = series.length;
+    if (line) {
+      line.setAttribute('d', series.map(function (v, i2) {
+        return (i2 === 0 ? 'M' : 'L') + ' ' + taxX(i2, n).toFixed(1) + ' ' + taxY(v).toFixed(1);
+      }).join(' '));
+    }
+
+    /* ⛔ THE BAND IS DRAWN ONLY FROM MEASURED EDGES. A response minted before the engine gained
+       p25/p75 carries the median alone, and for that interval the face shows the line WITHOUT an
+       envelope and says so. Deriving a band from the median — ±x%, or a fraction of the value —
+       would draw a spread nobody computed, on the surface whose whole subject is spread. */
+    var haveBand = Array.isArray(p25) && Array.isArray(p75) &&
+                   p25.length === n && p75.length === n &&
+                   p25.every(function (v) { return Number.isFinite(Number(v)); }) &&
+                   p75.every(function (v) { return Number.isFinite(Number(v)); });
+    if (band) {
+      if (haveBand) {
+        var top = p75.map(function (v, i2) {
+          return (i2 === 0 ? 'M' : 'L') + ' ' + taxX(i2, n).toFixed(1) + ' ' + taxY(v).toFixed(1);
+        }).join(' ');
+        var bot = [];
+        for (var j = n - 1; j >= 0; j--) {
+          bot.push('L ' + taxX(j, n).toFixed(1) + ' ' + taxY(p25[j]).toFixed(1));
+        }
+        band.setAttribute('d', top + ' ' + bot.join(' ') + ' Z');
+      } else {
+        band.removeAttribute('d');
+      }
+    }
+    if (spread) {
+      spread.textContent = haveBand
+        ? 'Median + interquartile band across 40,000 modeled paths'
+        : 'Median across 40,000 modeled paths · interquartile band recorded, not yet modelled';
+    }
+
+    if (marker) {
+      marker.innerHTML = '<circle cx="' + taxX(0, n).toFixed(1) + '" cy="' + taxY(series[0]).toFixed(1)
+        + '" r="3.2"></circle>';
+    }
+
+    /* Year labels at first, middle and last — the Mock's three-stop x axis. */
+    if (axes) {
+      var stops = n === 1 ? [0] : [0, Math.floor((n - 1) / 2), n - 1];
+      axes.innerHTML = stops.map(function (i2) {
+        var anchor = i2 === 0 ? 'start' : (i2 === n - 1 ? 'end' : 'middle');
+        return '<text x="' + taxX(i2, n).toFixed(1) + '" y="228" text-anchor="' + anchor + '">Year '
+          + (i2 + 1) + '</text>';
+      }).join('');
+    }
+
+    if (rate) rate.textContent = pct(series[0]);
+
+    /* ⛔ A COMPUTED ZERO IS A RESULT, NOT AN ABSENCE — Architect-ruled, and it is REACHABLE on an
+       ordinary household: a plan drawing from taxable and Roth through the bridge years pays 0%
+       federal, measured at 0.0% for the first six years of a $1.0M estate. The panel says so in
+       the designer's own words instead of showing a flat line with no explanation. */
+    if (zero) zero.hidden = !series.every(function (v) { return Number(v) === 0; });
+  }
+
+  /* The three faces. Ported from the Mock's applyMCVisualView, including the flip. */
+  function setView(view) {
+    var next = ['curve', 'distribution', 'tax'].indexOf(view) >= 0 ? view : 'curve';
+    var visual = el('mcVisualSwitch');
+    var tabs = d.querySelectorAll('[data-mc-view-tab]');
+    function commit() {
+      if (visual) visual.setAttribute('data-view', next);
+      for (var i = 0; i < tabs.length; i++) {
+        var active = tabs[i].getAttribute('data-mc-view-tab') === next;
+        tabs[i].classList.toggle('active', active);
+        tabs[i].setAttribute('aria-selected', active ? 'true' : 'false');
+      }
+    }
+    if (!visual) { commit(); return; }
+    visual.classList.add('is-flipping');
+    w.setTimeout(function () {
+      commit();
+      w.requestAnimationFrame(function () { visual.classList.remove('is-flipping'); });
+    }, 145);
+  }
+
   function open() {
     var o = el('mcOverlay'); if (!o) return;
     renderFromSession();
@@ -409,6 +534,25 @@
       shell.addEventListener('pointerup', function () { dragging = false; });
       shell.addEventListener('pointercancel', function () { dragging = false; });
     }
+    d.querySelectorAll('[data-mc-view-tab]').forEach(function (t) {
+      if (t.__mcWired) return;
+      t.__mcWired = true;
+      t.addEventListener('click', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        setView(t.getAttribute('data-mc-view-tab'));
+      });
+    });
+    /* ⛔ THE TILE IS A div WITH role=button, SO KEYBOARD IS NOT FREE. Enter and Space are wired
+       explicitly; without them the tax face has one door for a mouse and none for a keyboard. */
+    var taxTile = d.querySelector('[data-mc-tax-tile]');
+    if (taxTile && !taxTile.__mcWired) {
+      taxTile.__mcWired = true;
+      var openTax = function (e) { if (e) { e.preventDefault(); e.stopPropagation(); } setView('tax'); };
+      taxTile.addEventListener('click', openTax);
+      taxTile.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') openTax(e);
+      });
+    }
     d.querySelectorAll('[data-mc-close]').forEach(function (b) {
       if (b.__mcWired) return;
       b.__mcWired = true;
@@ -425,6 +569,7 @@
     render: render,
     renderEmpty: renderEmpty,
     fromEngine: fromEngine,
+    setView: setView,
     renderFromSession: renderFromSession,
     open: open,
     close: close,
@@ -437,6 +582,8 @@
       bounds: bounds,
       successAtSpend: successAtSpend,
       interpAt: interpAt,
+      renderTax: renderTax,
+      taxY: taxY,
       curvePoints: function () { return CURVE_POINTS; },
       dataSlots: function () { return DATA_SLOTS.slice(); },
       emptyState: function () { return EMPTY_STATE; },

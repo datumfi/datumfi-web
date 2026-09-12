@@ -322,6 +322,108 @@ const REQUEST = { retirement_age: 52.6, plan_end_age: 93, datum_spend: TARGET };
     + ((panel.match(/10,000\s+futures/gi) || []).length)
     + '\n          ⛔ 40,000 is the measured figure: 10,000 paths from each of four market engines');
 
+  /* ── L9 THE TAX FACE (batch 2, 2026-09-12).
+        ⛔ L9c IS THE LEG THAT EARNS THIS BLOCK. A band must be drawn only from MEASURED edges. The
+           web ships before the container rebuilds, so for that interval the response carries a
+           median and no p25/p75 — and the tempting repair is an envelope derived from the median
+           (±x%, or a fraction of the value). That would draw a spread nobody computed, on the one
+           face whose entire subject IS the spread. Absent band ⇒ no path, and the authored
+           sentence says so rather than claiming an interquartile range that is not there.
+        ⛔ L9d: A COMPUTED ZERO IS A RESULT. An all-zero series must show the Architect's zero-state
+           sentence, NOT the empty state — the bridge years genuinely pay 0% federal, and routing
+           that into an absence would tell a user we could not answer when we did. */
+  const TAXY = (r, base) => base - (r * 100) * ((206 - 28) / 25);
+  const tax = await page.evaluate((a) => {
+    const M = window.DatumMeasurement;
+    const withBand = Object.assign({}, a[0], {
+      eff_rate_by_year: [0.02, 0.04, 0.06],
+      eff_rate_p25_by_year: [0.01, 0.03, 0.05],
+      eff_rate_p75_by_year: [0.03, 0.05, 0.07]
+    });
+    M.render(M.fromEngine(withBand, a[1]));
+    const band = (document.getElementById('mcTaxBand') || {}).getAttribute
+      ? document.getElementById('mcTaxBand').getAttribute('d') : null;
+    const out = {
+      line: document.getElementById('mcTaxLine').getAttribute('d'),
+      band: band,
+      rate: document.getElementById('mcTaxRate').textContent,
+      spread: document.getElementById('mcTaxSpreadCopy').textContent,
+      axes: document.getElementById('mcTaxAxes').innerHTML,
+      zeroHidden: document.getElementById('mcTaxZero').hidden
+    };
+    // median only — no p25/p75, the pre-rebuild response
+    const noBand = Object.assign({}, a[0], { eff_rate_by_year: [0.02, 0.04, 0.06] });
+    M.render(M.fromEngine(noBand, a[1]));
+    out.bandWhenAbsent = document.getElementById('mcTaxBand').getAttribute('d');
+    out.spreadWhenAbsent = document.getElementById('mcTaxSpreadCopy').textContent;
+    out.lineWhenAbsent = document.getElementById('mcTaxLine').getAttribute('d');
+    // an all-zero series — the computed zero
+    const zeroSeries = Object.assign({}, a[0], { eff_rate_by_year: [0, 0, 0, 0] });
+    M.render(M.fromEngine(zeroSeries, a[1]));
+    out.zeroShown = !document.getElementById('mcTaxZero').hidden;
+    out.zeroRate = document.getElementById('mcTaxRate').textContent;
+    return out;
+  }, [RESPONSE, REQUEST]);
+
+  /* ⚠️ THE VIEW COMMITS AFTER THE FLIP, SO THIS LEG MUST WAIT — and the first version did not,
+     reading "curve" 0ms after asking for "tax" and going red on working code. The 145ms delay is
+     the MOCK'S OWN: setView adds .is-flipping, waits, then commits, so the faces swap at the
+     midpoint of the card turn rather than snapping before it. Porting faithfully means keeping it.
+     🔑 A GATE THAT IGNORES AN ANIMATION IT PORTED ON PURPOSE IS MEASURING A DIFFERENT PRODUCT. */
+  await page.evaluate(() => window.DatumMeasurement.setView('tax'));
+  await page.waitForTimeout(320);
+  tax.viewAfterSetView = await page.evaluate(() =>
+    document.getElementById('mcVisualSwitch').getAttribute('data-view'));
+  tax.tabSelected = await page.evaluate(() => {
+    const t = document.querySelector('[data-mc-view-tab="tax"]');
+    return t ? t.getAttribute('aria-selected') : null;
+  });
+
+  check('L9a THE CLAIM: the tax face draws a median line, a first-year rate and a year axis',
+    typeof tax.line === 'string' && tax.line.length > 10 && tax.rate === '2%'
+      && /Year 1/.test(tax.axes) && /Year 3/.test(tax.axes),
+    'line len=' + (tax.line || '').length + ' mcTaxRate=' + JSON.stringify(tax.rate)
+    + ' axes=' + JSON.stringify((tax.axes || '').replace(/<[^>]+>/g, '|').slice(0, 60)));
+
+  check('L9b SCALE: the line is placed on the axis the static gridlines already label (0% at y=206)',
+    typeof tax.line === 'string'
+      && tax.line.indexOf(TAXY(0.02, 206).toFixed(1)) >= 0
+      && tax.line.indexOf(TAXY(0.06, 206).toFixed(1)) >= 0,
+    'want y=' + TAXY(0.02, 206).toFixed(1) + ' for 2% and y=' + TAXY(0.06, 206).toFixed(1)
+    + ' for 6%; line=' + JSON.stringify((tax.line || '').slice(0, 80))
+    + '\n          ⛔ a renderer that picks its own scale drifts from the labels beside it');
+
+  check('L9c NO INVENTED SPREAD: band drawn when p25/p75 arrive, ABSENT when they do not — and the line survives',
+    typeof tax.band === 'string' && tax.band.length > 10
+      && tax.bandWhenAbsent === null
+      && typeof tax.lineWhenAbsent === 'string' && tax.lineWhenAbsent.length > 10
+      && /not yet modelled/i.test(tax.spreadWhenAbsent)
+      && /interquartile band across 40,000/i.test(tax.spread),
+    'band present=' + (typeof tax.band === 'string')
+    + ' · band when p25/p75 absent=' + JSON.stringify(tax.bandWhenAbsent)
+    + ' · line still drawn=' + (typeof tax.lineWhenAbsent === 'string')
+    + '\n          copy with band: ' + JSON.stringify(tax.spread)
+    + '\n          copy without:   ' + JSON.stringify(tax.spreadWhenAbsent));
+
+  check('L9d A COMPUTED ZERO IS A RESULT: an all-zero series shows the zero state, not an absence',
+    tax.zeroShown === true && tax.zeroHidden === true && tax.zeroRate === '0%',
+    'zero state shown on all-zero series=' + tax.zeroShown
+    + ' · hidden on a non-zero series=' + tax.zeroHidden
+    + ' · mcTaxRate=' + JSON.stringify(tax.zeroRate));
+
+  check('L9e THE FACE HAS BOTH DOORS: the tab segment switches the view AND marks itself selected',
+    tax.viewAfterSetView === 'tax' && tax.tabSelected === 'true',
+    'data-view after setView("tax")=' + JSON.stringify(tax.viewAfterSetView)
+    + ' · tax tab aria-selected=' + JSON.stringify(tax.tabSelected)
+    + '\n          ⛔ aria-selected is asserted separately: a face that switches while the tab still'
+    + ' reads unselected is a screen reader announcing the wrong view');
+
+  const shellSrc = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+  check('L9f the tax tile is keyboard-reachable, not mouse-only',
+    /data-mc-tax-tile/.test(shellSrc) && /role="button"[^>]*data-mc-tax-tile|data-mc-tax-tile[\s\S]{0,200}?tabindex="0"|tabindex="0"[^>]*data-mc-tax-tile/.test(shellSrc),
+    'tile present=' + /data-mc-tax-tile/.test(shellSrc)
+    + ' · it is a div acting as a button, so tabindex and role are the whole accessibility story');
+
   /* ── L6 NO FORK. One reader of capacity_curve across every shipped script and the shell. A second
         mapper is how two surfaces come to disagree about the same household. */
   const files = [path.join(ROOT, 'studio.html'), path.join(ROOT, 'range.html')]
