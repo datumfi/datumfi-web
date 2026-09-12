@@ -15927,6 +15927,17 @@ const _reachesEngine = a =>
              ⚠️ CLAMPING SURVIVES AND MUST: a plan-through age below retirement+20 is refused by
                 the engine, so an answer the person gave is pulled into the range their own
                 household allows. CORRECTING AN ANSWER IS NOT THE SAME ACT AS SUPPLYING ONE. */
+          /* §6.10 — CLAMP THE CONTROL'S RANGE TO THE HOUSEHOLD'S VALID FLOOR, so an impossible
+             answer is UNREACHABLE rather than rejected.
+             ⛔ THIS IS THE COMPANION TO 'A REFUSAL MUST SURVIVE ITS DOOR BEING SHUT': A DOOR MUST
+                OPEN ONTO A ROOM YOU CAN STAND IN. We made plan-through mandatory in the previous
+                commit, and the control still shipped min=75 for every household — so a person
+                retiring at 67 could choose 78, be refused by the engine, and read the second
+                refusal as the product changing its mind. MEASURED: the engine rejected 78 and 85
+                for a late-start household whose real floor is max(75, RA+20) = 87.
+             🔑 A RANGE THE PRODUCT WILL NOT ACCEPT SHOULD NOT BE OFFERED. Rejecting an answer the
+                control invited is a worse experience than never offering it. */
+          if (sPlan.min !== String(minPlanEnd)) sPlan.min = String(minPlanEnd);
           var _peBox = document.getElementById('plan-end-age');
           var _answered = !!(_peBox && String(_peBox.value || '').trim());
           var cur = parseInt(sPlan.value, 10);
@@ -17515,7 +17526,8 @@ const _reachesEngine = a =>
       var sA = $('slider-age'), sR = $('slider-activation'), sP = $('sl-plan-through');
       if (dobM && sA) { var by = parseInt(dobM[2],10); var ca = now.getFullYear() - by; if (now.getMonth() + 1 < parseInt(dobM[1],10)) ca--; sA.value = clampN(ca, 18, 85); }
       if (retM && sR && dobM) { var ry = parseInt(retM[2],10), by2 = parseInt(dobM[2],10), bm = parseInt(dobM[1],10); var ra = ry - by2; if (parseInt(retM[1],10) < bm) ra--; sR.value = clampN(ra, (parseInt(sA && sA.value, 10) || 40) + 1, 90); }
-      if (sP && prof.plan_end_age) { sP.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105); var _peR = $('plan-end-age'); if (_peR && prof.plan_end_date && _ageDateRe.test(String(prof.plan_end_date).trim())) _peR.value = _fmtDateStr(prof.plan_end_date); if (typeof _mirrorPlanEnd === 'function') _mirrorPlanEnd(); }
+      /* Same gate as the sibling restore above: the DATE is the record that a person answered. */
+      if (sP && prof.plan_end_age && prof.plan_end_date) { sP.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105); var _peR = $('plan-end-age'); if (_peR && prof.plan_end_date && _ageDateRe.test(String(prof.plan_end_date).trim())) _peR.value = _fmtDateStr(prof.plan_end_date); if (typeof _mirrorPlanEnd === 'function') _mirrorPlanEnd(); }
       // 05/ Market Conditions paradigm + inflation mode — re-assert from the slot too.
       if (bp.market_paradigm) { var _mr = document.querySelector('input[name="market"][value="' + bp.market_paradigm + '"]'); if (_mr) _mr.checked = true; }
       if (bp.inflation_mode)  { var _ir = document.querySelector('input[name="inflation"][value="' + bp.inflation_mode + '"]'); if (_ir) _ir.checked = true; }
@@ -17861,7 +17873,19 @@ const _reachesEngine = a =>
         if (parseInt(retM[1],10) < bm) ra--;
         sRet.value = clampN(ra, (parseInt(sAge.value,10) || 40) + 1, 90);
       }
-      if (sPlan && prof.plan_end_age) {
+      /* ⛔⛔ GATED ON THE DATE, NOT ON THE AGE, AND THE DIFFERENCE IS THE WHOLE COLD-DEFAULT PURGE.
+         studio-blueprint.js carries  AS A SCHEMA DEFAULT, so EVERY blueprint
+         decodes 93 whether or not a human ever chose it —  is therefore always
+         truthy and this branch re-seeded the Captain's number on every restore, straight past the
+         markup default we had just removed. MEASURED: the control shipped at 90 and read 93 cold.
+         🔑 THE DEFAULT WAS REMOVED FROM THE CONTROL AND SURVIVED IN THE PERSISTENCE LAYER. A value
+            deleted in one layer is not deleted; it is deleted THERE.
+         ⭐ plan_end_date IS THE PROVENANCE RECORD and it has no schema default — a user who never
+            answered has no date. Read the record first and the value second, exactly as the
+            salary-zero repair reads primary_salary_stated before primary_salary.
+         ⚠️ THE SCHEMA DEFAULT ITSELF IS LEFT ALONE ON PURPOSE. Changing it edits a SACRED host and
+            every stored blueprint's decode; it is harmless once nothing TREATS it as an answer. */
+      if (sPlan && prof.plan_end_age && prof.plan_end_date) {
         sPlan.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105);
         // Month-survival: seed the Plan-Through date field from the carried typed string FIRST,
         // so _mirrorPlanEnd keeps it verbatim (it implies the slider's PTA age) instead of
@@ -18004,7 +18028,18 @@ const _reachesEngine = a =>
       /* The snap this line used to describe by itself now lives in _sliderSnapDollars, because the
          note was RIGHT and LOCAL: it named $100,001 exactly, fixed the box the reader was looking at,
          and five other sites kept the old arithmetic — including the one that talks to the engine. */
-      else if (SC) n = window._sliderSnapDollars('datum', parseInt(sDat.value, 10));
+      /* ⛔⛔ THE MIRROR STAYS EMPTY UNTIL THE DATUM IS ANSWERED, AND THE FIRST VERSION OF THIS
+         COMMIT SHIPPED A BRAND-NEW DEFAULT BY FORGETTING IT. Moving the slider's resting position
+         to the midpoint of its range made THIS line derive $141,000 from that position and write it
+         into the box — a number no human had ever chosen, LARGER than the $100,000 the commit
+         existed to delete, and invented by the very act of removing a default.
+         MEASURED on a cold Studio: spend-input read '$141,000' while the readout beside it
+         correctly said 'Not set'. THE SCREEN CONTRADICTED ITSELF IN TWO ADJACENT CONTROLS.
+         🔑 A MIRROR MUST NOT SYNTHESISE WHAT IT MIRRORS. Deriving a display value from a resting
+            position is how a slider's position becomes an answer, which is precisely what §3.2
+            forbids — and it is a default that no census of literals would ever find, because the
+            number exists nowhere in the source. */
+      else { spendEl.value = ''; return; }
       if (n > 0) spendEl.value = '$' + n.toLocaleString('en-US');
     }
 
@@ -18251,7 +18286,13 @@ const _reachesEngine = a =>
         }
         _prev.dat = n;
         updateDatumLabel(); fireUpdate();
-        var spendEl = $('spend-input'); if (spendEl) spendEl.value = sDat.dataset.exactVal;
+        /* ⛔ ONE FORMATTER, NOT TWO. This wrote dataset.exactVal RAW into the box — so a drag
+           left '100000' on screen where every other path renders '$100,000'. It was invisible
+           while the box shipped pre-filled and formatted; emptying it on a cold Studio is what
+           exposed it. Same shape as the six datum conversions: a second place doing the same job
+           slightly differently. syncSpendFromDatumSlider is the one that knows the format AND the
+           unset case, so it owns both. */
+        if (typeof syncSpendFromDatumSlider === 'function') syncSpendFromDatumSlider();
         if (window.renderWantBox) renderWantBox();   // B2 v2 — keep the outflow box live with the Datum
       });
       var sTax = $('slider-tax');
@@ -19723,7 +19764,21 @@ const _reachesEngine = a =>
                     can say so honestly; that permanent line is his to write, not this one's to
                     grow into. `_gate_cache_claims_no_freshness` holds the gap CONDITIONALLY, so
                     the constraint lifts itself the day the signature is complete. */
-              'Showing your last claiming map.',
+              /* ⭐ THE PERMANENT LINE, ARCHITECT-AUTHORED, §6.8, WIRED VERBATIM. It replaces the
+                 holding line the moment the signature could verify the claim — which is a
+                 different and better outcome than removing a lie: the capability arrived, so the
+                 sentence is allowed to say something again.
+                 ⛔ NOTE WHAT IT DOES NOT SAY: current · up to date · still valid · fresh. The dead
+                    copy claimed the ANSWER was current, and a cache cannot know that. It knows the
+                    QUESTION was identical, and that is the whole of the claim.
+                 ⚠️ AND IT IS DELIBERATELY BANNED BY _gate_cache_claims_no_freshness's OWN REGEX
+                    (/nothing (has )?changed/). That is not an oversight to work around — it is the
+                    conditional doing its job. The leg constrains ONLY while the signature is
+                    narrower than the payload; today it covers every sent key, so the claim is
+                    verifiable and permitted. ADD ONE SIG_IGNORE ENTRY AND THIS SENTENCE GOES RED
+                    AGAIN, AUTOMATICALLY, because it would once more be asserting something the
+                    signature cannot check. The copy is safe exactly as long as the mechanism is. */
+              'Nothing has changed since this was run.',
               '',
               '<div style="display:flex;gap:8px;margin-top:10px;">' +
               '<button onclick="window._ssMatrixUseCached()" class="measure-btn" style="font-size:10px;padding:8px;">Use Previous Map</button>' +

@@ -129,11 +129,23 @@ if (signatureIncomplete) {
     + '\n          ⭐ this is the gate lifting on its own, without anyone remembering to delete it');
 }
 
-/* ── L3 — the holding line is present and says only what is true. */
-check('L3 THE HOLDING LINE: the surface still tells the user what it is showing',
-  branchText !== null && /Showing your last claiming map\./.test(branchText),
+/* ── L3 — an AUTHORED line is present and says only what is true.
+   ⭐ IT ACCEPTS EITHER, AND THE REASON IS THE POINT. The holding line said only that a previous map
+      was being shown; the permanent line (§6.8, shipped once the signature could verify the claim)
+      says the QUESTION was identical. Both are authored, both are honest.
+   ⛔ IT DOES NOT PIN WHICH ONE. Pinning the permanent line would make reverting to the holding line
+      a RED — and the holding line is exactly what a future narrowing of the signature should revert
+      TO. AN INSTRUMENT THAT FORBIDS THE SAFE FALLBACK HAS TURNED A SAFETY VALVE INTO A BREACH.
+   ⚠️ EXACTLY ONE, never two: a branch carrying both would be saying two different things about the
+      same cache hit, which is how a surface starts contradicting itself. */
+const AUTHORED_LINES = [/Showing your last claiming map\./, /Nothing has changed since this was run\./];
+const _which = branchText ? AUTHORED_LINES.filter((re) => re.test(branchText)) : [];
+check('L3 THE SURFACE STILL TELLS THE USER WHAT IT IS SHOWING: one authored line, and only one',
+  branchText !== null && _which.length === 1,
   branchText === null ? 'cached branch not located'
-    : 'authored holding line present=' + /Showing your last claiming map\./.test(branchText)
+    : 'authored lines found: ' + _which.length + (_which.length === 1
+        ? ' (' + (AUTHORED_LINES[1].test(branchText) ? 'the permanent §6.8 line' : 'the holding line') + ')'
+        : ' — exactly one must be present')
     + '\n          a silent branch would pass L2 and leave the user with no explanation at all');
 
 results.forEach((r) => console.log('  ' + r));
