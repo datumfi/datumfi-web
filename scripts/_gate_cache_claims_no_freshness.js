@@ -40,10 +40,26 @@ function check(label, cond, detail) {
 
 const src = studioSource();
 
-/* ── The signature's own key list, read from the source rather than duplicated here. A copy would
-      be a second maintained list of what matters, which is the defect this gate is about. */
-const sigBlock = /function _computeSig\s*\([^)]*\)\s*\{([\s\S]*?)\n\s{4}\}/.exec(src);
-const sigKeys = sigBlock ? [...sigBlock[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]) : [];
+/* ── WHAT THE SIGNATURE COVERS, DERIVED FROM HOW IT IS BUILT — NOT FROM A LIST INSIDE IT.
+      ⛔⛔ THIS GATE'S OWN L0 CAUGHT THE MOMENT THE OLD METHOD DIED, AND THAT IS THE WHOLE STORY.
+         It used to regex the key ARRAY inside _computeSig and count the quoted names. On
+         2026-09-12 _computeSig stopped having an array — it now enumerates Object.keys(request),
+         which is precisely the repair this gate was written to wait for — and the regex matched
+         nothing. L0 went RED reporting "_computeSig keys=0", exactly as its own comment predicted:
+         "a regex that matched nothing would make every leg below vacuously true."
+      🔑 THE GATE WAS A HAND-KEPT-LIST READER POLICING A HAND-KEPT LIST. It could only measure a
+         signature written in the shape it already expected, so THE FIX READ TO IT AS THE
+         DISAPPEARANCE OF THE THING IT GUARDED. An instrument that can only see one implementation
+         is measuring the implementation, not the property.
+      ⭐ THE PROPERTY, RESTATED SO IT SURVIVES THE NEXT REWRITE: the signature is narrow exactly
+         when some key the client SENDS is deliberately left out of it. With an enumerating
+         signature the only way to leave one out is SIG_IGNORE, so coverage = everything sent,
+         minus whatever that object names. Read the exclusions; derive the rest. */
+const derives = /function _computeSig[\s\S]{0,400}?Object\.keys\(\s*r\s*\|\|\s*\{\}\s*\)/.test(src);
+const ignoreBlock = /var SIG_IGNORE\s*=\s*\{([^}]*)\}/.exec(src);
+const ignored = ignoreBlock
+  ? [...ignoreBlock[1].matchAll(/['"]?([a-z_][a-z_0-9]*)['"]?\s*:/g)].map((m) => m[1])
+  : [];
 
 /* ── Every key the client actually puts on the request body. */
 const sent = new Set();
@@ -60,13 +76,17 @@ if (literal) for (const m of literal[1].matchAll(/(?:^|[{,])\s*([a-z_][a-z_0-9]*
    🔑 AN EXTRACTOR THAT OVER-MATCHES DOES NOT FIND MORE. IT FINDS NOISE AND CALLS IT A FINDING. */
 for (const k of [...sent]) if (k.length < 4) sent.delete(k);
 
-const missing = [...sent].filter((k) => !sigKeys.includes(k)).sort();
+const missing = [...sent].filter((k) => ignored.includes(k)).sort();
 const signatureIncomplete = missing.length > 0;
 
-check('L0 INSTRUMENT: the signature and the payload were both located in source',
-  sigKeys.length >= 10 && sent.size >= 5,
-  '_computeSig keys=' + sigKeys.length + ' · payload keys found=' + sent.size
-  + '\n          (a regex that matched nothing would make every leg below vacuously true)');
+check('L0 INSTRUMENT: the signature enumerates the payload, and the payload was located',
+  derives && sent.size >= 5,
+  '_computeSig enumerates the request=' + derives + ' · payload keys found=' + sent.size
+  + ' · declared exclusions=' + (ignored.length ? ignored.join(', ') : 'none')
+  + '\n          (a regex that matched nothing would make every leg below vacuously true)'
+  + '\n          ⛔ IF THIS GOES RED READ IT AS "THE SIGNATURE CHANGED SHAPE", NOT "THE SIGNATURE'
+  + ' IS FINE". It went red once already, the day _computeSig was repaired, because the gate was'
+  + ' looking for a list that the repair deleted.');
 
 check('L1 THE CONDITION: is the cache signature still narrower than the payload?',
   true,   // reported, never failed — this leg MEASURES, it does not judge

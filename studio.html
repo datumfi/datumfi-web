@@ -18966,19 +18966,46 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     var _pendingReq = null;
 
     // ── Payload signature for cache invalidation ──────────────────────────────
+    /* ⛔⛔ THE CACHE SIGNATURE IS DERIVED FROM THE PAYLOAD, NOT RESTATED BESIDE IT.
+       WHAT THIS REPLACES: a hand-kept list of FIFTEEN key names. It omitted five the client
+       actually sends — filing_status, location, healthcare_annual, pension_cola, custom_weights —
+       every one of them consequential, and filing_status alone was MEASURED to move tiers by up to
+       9.25 confidence points. Change your filing status, and the signature was byte-identical, so
+       the product served the PREVIOUS household's claiming map under the sentence "Inputs
+       unchanged — your claiming map is current."
+       🔑 A CACHE MAY GO STALE. IT MAY NEVER CLAIM A FRESHNESS IT HAS NOT VERIFIED. Staleness is a
+          performance characteristic; asserting freshness you did not check is the product lying in
+          our own voice, on the screen where someone decides when to claim Social Security.
+       ⛔ THE DEFECT WAS THE DIRECTION OF THE LIST, NOT ITS CONTENTS, WHICH IS WHY ADDING THE FIVE
+          WOULD HAVE BEEN THE WRONG FIX. An INCLUDE list fails toward the lie: forget a key and the
+          cache confidently reports "unchanged" about something that changed. An EXCLUDE list fails
+          toward a wasted recompute: forget to exclude something and you get a spurious MISS, which
+          costs a few seconds and tells nobody anything false.
+          WHEN A MECHANISM CAN FAIL TWO WAYS, BUILD IT SO THE CHEAP FAILURE IS THE ONE IT FALLS
+          INTO. The list is now every key the payload carries, and the only way to lose one is to
+          stop sending it.
+       ⭐ ONE DERIVATION, TWO CONSUMERS. _gate_payload_accounted.js enumerates its population the
+          same way — off buildStudioRequest()'s own output — so the gate and the cache cannot hold
+          two different opinions about what the payload contains. A hand-kept list of what to check
+          is the same defect as a hand-kept cache signature; this file now has neither.
+       ⚠️ SORTED, because a conditional key (the co-architect block is only assigned in joint mode)
+          changes insertion order, and two orderings of identical values must not read as two
+          different households.
+       ⚠️ SIG_IGNORE IS EMPTY ON PURPOSE AND THAT IS THE MEASURED STATE, NOT AN OVERSIGHT. Every key
+          the client currently sends can change the answer, so nothing is excluded. It exists as the
+          declared place for a future DISPLAY-ONLY key, so that excluding one is a deliberate edit
+          with a name attached rather than a quiet omission from a list nobody re-reads. */
+    var SIG_IGNORE = {};
     function _computeSig(r) {
-      var keys = [
-        'current_age', 'retirement_age', 'accounts', 'datum_spend',
-        'ss_strategy_primary', 'ss_strategy_secondary',
-        'ss_primary_benefit_overrides', 'ss_secondary_benefit_overrides',
-        'co_architect_age', 'co_architect_retirement_age',
-        'ss_haircut', 'current_cape', 'market_outlook',
-        'plan_end_age', 'bridge_access_mode'
-      ];
       var obj = {};
-      keys.forEach(function(k) { obj[k] = r[k]; });
+      Object.keys(r || {}).sort().forEach(function (k) {
+        if (SIG_IGNORE[k]) return;
+        obj[k] = r[k];
+      });
       return JSON.stringify(obj);
     }
+    window._computeSig = _computeSig;          // gate seam — read-only
+    window._sigIgnored = function () { return Object.keys(SIG_IGNORE); };
 
     // ── Render 3×3 SS Matrix grid into #ss-matrix-grid ────────────────────
     function renderMatrixGrid(result) {
