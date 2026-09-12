@@ -39,6 +39,7 @@
  */
 const http = require('http'), fs = require('fs'), path = require('path');
 const { chromium } = require('playwright');
+const { studioSource } = require('./_studio_source.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8235;
 const DECL = path.join(__dirname, 'payload_sources.json');
@@ -100,6 +101,49 @@ const FROM_CONTROL = {
   await page.waitForFunction(() => typeof window._studioEnterRoom === 'function', null, { timeout: 9000 });
   await page.evaluate(() => window._studioEnterRoom('data'));
   await page.waitForTimeout(700);
+
+  /* ── L5/L6 — THE COLLECTED BLOCK, MEASURED FROM THE EMPTIEST STATE, BEFORE ANYTHING IS ANSWERED.
+        ⭐ THIS IS THE WIRE BETWEEN THE GATE AND THE COPY, AND IT IS THE PART THAT SURVIVES US.
+           The gate discovers what the product demands; the block is what the product SAYS it
+           demands. If the second can drift behind the first, the copy rots the moment a field is
+           added — and nobody notices, because a shorter list still looks like a list.
+        ⛔ SO: EVERY REFUSAL THE BUILDER QUEUES MUST BE NAMED IN THE BLOCK. Not counted — NAMED.
+        ⚠️ MEASURED 2026-09-12 AND IT CHANGED THE FIX: `_buildRequestErrors` already returned SIX
+           entries from ONE call on an empty Studio. Collection was never the defect. Every surface
+           rendered `_buildRequestError` — the FIRST one — so the product held the whole answer and
+           showed a seventh of it. The maze was a rendering defect wearing a validation defect's
+           clothes. */
+  const blockProbe = await page.evaluate(() => {
+    window._buildRequestErrors = [];
+    try { window._buildStudioRequest(); } catch (e) { /* a throw is a refusal too */ }
+    const queued = (window._buildRequestErrors || []).map((e) => ({ field: e.field, target: e.target }));
+    const block = (typeof window._datumCollectedRefusal === 'function')
+      ? window._datumCollectedRefusal() : null;
+    return { queued, block };
+  });
+
+  const queuedNamed = (blockProbe.queued || []).filter((e) => e.field);
+  const blockNames = new Set(((blockProbe.block || {}).items || []).map((i) => i.name));
+  const unnamed = queuedNamed.filter((e) => !blockNames.has(e.field));
+
+  check('L5 THE BLOCK NAMES EVERY REFUSAL THE BUILDER QUEUES — the copy cannot drift behind the requirements',
+    blockProbe.block !== null && queuedNamed.length > 1 && unnamed.length === 0,
+    'queued from an empty Studio: ' + queuedNamed.length + ' (' + queuedNamed.map((e) => e.field).join(', ') + ')'
+    + '\n          named in the block: ' + blockNames.size + ' (' + [...blockNames].join(', ') + ')'
+    + (unnamed.length ? '\n          ⛔ QUEUED BUT NOT NAMED: ' + unnamed.map((e) => e.field).join(', ') : '')
+    + '\n          ⛔ a field the product demands and the block does not name is a maze step'
+    + ' waiting to happen');
+
+  check('L6 ONE BLOCK, ONE DOOR, AND THE HEADING AGREES WITH THE COUNT',
+    blockProbe.block !== null
+      && /You are missing (a few things|one thing)\./.test(blockProbe.block.title)
+      && (blockProbe.block.items.length === 1) === /one thing/.test(blockProbe.block.title)
+      && !!blockProbe.block.firstTarget,
+    'title=' + JSON.stringify((blockProbe.block || {}).title)
+    + ' · items=' + ((blockProbe.block || {}).items || []).length
+    + ' · door target=' + JSON.stringify((blockProbe.block || {}).firstTarget)
+    + '\n          ⛔ a one-item list under "a few things" is how a collected refusal starts reading'
+    + ' like a form validator');
 
   /* ── THE WALK. Nothing seeded. Answer exactly what the product refuses on, and record it. */
   const asked = new Set();
@@ -218,6 +262,50 @@ const FROM_CONTROL = {
     due !== null && daysLeft > 0,
     due ? (decl.unaccounted_review_due + ' — ' + daysLeft + ' day(s)') : 'NO REVIEW DATE DECLARED'
     + '\n          ⛔ moving the date without lowering the count is forbidden');
+
+  /* ── L7 — BOTH DOORS ACTUALLY USE THE BLOCK.
+        ⛔⛔ ITS OWN RED-FIRST RUN DEMANDED THIS LEG. L5 and L6 read the block BUILDER, so bypassing
+           the RENDERER — `var block = null` — left them green while the surface fell straight back
+           to showing one refusal at a time. THAT IS THE MAZE RESTORED UNDER A GREEN GATE, and it is
+           the same shape as L10a proving a panel was open while its contents froze.
+        🔑 A LEG THAT CHECKS A VALUE IS BUILT HAS NOT CHECKED THAT ANYTHING SHOWS IT. */
+  const shell = studioSource();
+  const revealUsesBlock = /function _revealStatus[\s\S]{0,900}?_datumCollectedRefusal\(\)/.test(shell);
+  const matrixUsesBlock = /_reqErrField = window\._buildRequestErrorField;[\s\S]{0,900}?_datumCollectedRefusal\(\)/.test(shell);
+  check('L7 BOTH DOORS RENDER THE BLOCK: neither falls back to showing one refusal at a time',
+    revealUsesBlock && matrixUsesBlock,
+    'Reveal door wired=' + revealUsesBlock + ' · SS-matrix door wired=' + matrixUsesBlock
+    + '\n          ⛔ the block existing and no surface using it is exactly the defect being fixed —'
+    + ' the builder has always known all six');
+
+  /* ── L8 — THE SINGULAR DEGRADES. Measured by emptying ONE answered field after the walk, which is
+        the only way to reach a one-refusal state; from the empty Studio there are always six. */
+  const singular = await page.evaluate(() => {
+    /* ⚠️ filing-status AND NOT pri-dob. Blanking the DOB produced NO refusal — the Profile
+       re-hydrates that field, so the emptied value never reached the builder and the leg measured
+       a state the product does not have. A select is read straight from the DOM. */
+    const el = document.getElementById('filing-status');
+    if (!el) return { ok: false };
+    const keep = el.value;
+    el.focus(); el.value = '';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    el.blur();
+    window._buildRequestErrors = [];
+    try { window._buildStudioRequest(); } catch (e) { /* refusal */ }
+    const b = window._datumCollectedRefusal ? window._datumCollectedRefusal() : null;
+    const out = { ok: true, title: b && b.title, n: b ? b.items.length : 0 };
+    el.focus(); el.value = keep;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    el.blur();
+    return out;
+  });
+  check('L8 THE SINGULAR DEGRADES: one missing thing is not announced as "a few things"',
+    singular.ok && singular.n === 1 && singular.title === 'You are missing one thing.',
+    'with one field emptied: ' + singular.n + ' item(s), heading ' + JSON.stringify(singular.title)
+    + '\n          ⛔ a one-item list under "a few things" is how a collected refusal starts reading'
+    + ' like a form validator');
 
   results.forEach((r) => console.log('  ' + r));
   console.log('\nSCORE ' + passes + ' / ' + (passes + fails) + ' ' + (fails === 0 ? 'GREEN' : 'RED'));

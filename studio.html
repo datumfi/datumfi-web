@@ -16154,7 +16154,65 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         }).join('');
         _revealPaint(title, body);
       }
+      /* ⭐⭐ THE COLLECTED REFUSAL. A DOOR REFUSES ONCE, NAMING EVERYTHING IT NEEDS.
+         ⛔ THE MAZE WAS NEVER A COLLECTION PROBLEM — MEASURED 2026-09-12, AND THE MEASUREMENT
+            CHANGED THE FIX. `_buildRequestErrors` already returns SIX entries from a single call on
+            an empty Studio. The builder has always known the whole list; every surface showed
+            `_buildRequestError`, the FIRST one. So the Captain satisfied a refusal, was handed the
+            next, and did that seven times — while the product held the complete answer the entire
+            time.
+         🔑 A REFUSAL THAT REVEALS THE NEXT REFUSAL ONLY AFTER YOU SATISFY IT IS NOT A REFUSAL, IT
+            IS A MAZE. And it actively misinforms: the user reads "one thing left", budgets for one
+            thing, and learns the real cost only by paying it seven times.
+         ⚠️ THE NAMES ARE THE PRODUCT'S OWN `field` LABELS, NOT NEW COPY. Each was authored when its
+            refusal was, so this wires existing text rather than inventing any. The Architect's
+            §6.2 list spells two of them differently ("Retirement state", "At least one account
+            with a balance"); that divergence is FLAGGED FOR HIM TO RECONCILE and is deliberately
+            not resolved here — picking one myself would be authoring by choosing.
+         ⚠️ ONE DOOR PER BLOCK, NOT ONE PER LINE — Architect-ruled. It opens the FIRST unmet thing,
+            because a list of six links is a second maze wearing better manners. */
+      function _datumCollectedRefusal() {
+        var errs = (window._buildRequestErrors || []).filter(function (e) { return e && e.message; });
+        if (!errs.length) return null;
+        var named = [], seen = {};
+        for (var i = 0; i < errs.length; i++) {
+          var n = errs[i].field;
+          if (!n || seen[n]) continue;         /* a nameless refusal carries its own sentence */
+          seen[n] = 1;
+          named.push({ name: n, target: errs[i].target || null });
+        }
+        if (!named.length) return null;
+        return {
+          /* Singular degrades on its own. A one-item list under "a few things" is how a collected
+             refusal starts reading like a form validator. */
+          title: named.length === 1 ? 'You are missing one thing.' : 'You are missing a few things.',
+          items: named,
+          firstTarget: (named.find(function (x) { return x.target; }) || {}).target || null
+        };
+      }
+
+      function _datumRefusalBodyHtml(block) {
+        return '<ul style="margin:8px 0 0;padding-left:18px;list-style:disc;">'
+          + block.items.map(function (it) {
+              return '<li style="margin:3px 0;">' + it.name + '</li>';
+            }).join('')
+          + '</ul>';
+      }
+
+      /* Published so the gate can read the block the product would actually render, rather
+         than a reconstruction of it. A gate that rebuilds the copy it is checking is checking its
+         own rebuild. */
+      window._datumCollectedRefusal = _datumCollectedRefusal;
+
       function _revealStatus(err, field, fallbackTitle, fallbackBody) {
+        /* The collected block wins whenever there is one. The single-error path survives beneath it
+           for refusals that carry no field name — weights that do not sum, for instance, whose whole
+           meaning is in the sentence rather than in a label. */
+        var block = _datumCollectedRefusal();
+        if (block) {
+          _revealPaint(block.title, _datumRefusalBodyHtml(block));
+          return;
+        }
         var title = err ? (field || 'Input Error') : fallbackTitle;
         var body  = err || fallbackBody;
         _revealPaint(title, body);
@@ -19372,11 +19430,16 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       if (!req) {
         var _reqErr = window._buildRequestError;
         var _reqErrField = window._buildRequestErrorField;
+        /* ⭐ THE SAME COLLECTED BLOCK AS THE RANGE DOOR, FROM THE SAME HELPER. This is the surface
+           the Captain met seven sequential refusals on, and it is §2.2 applied to a second door
+           rather than a second pattern — L48, do not fork. Two doors rendering the same list two
+           ways is how they come to disagree about what the product requires. */
+        var _block = (typeof _datumCollectedRefusal === 'function') ? _datumCollectedRefusal() : null;
         setStatus(statusBox(
-          _reqErr ? 'rgba(212,175,55,0.15)' : 'rgba(226,75,74,0.3)',
-          _reqErr ? 'var(--gold)'            : 'var(--danger)',
-          _reqErr ? (_reqErrField || 'Input Error') : 'Cannot build map request',
-          _reqErr || 'Check your inputs and try again.',
+          _reqErr || _block ? 'rgba(212,175,55,0.15)' : 'rgba(226,75,74,0.3)',
+          _reqErr || _block ? 'var(--gold)'            : 'var(--danger)',
+          _block ? _block.title : (_reqErr ? (_reqErrField || 'Input Error') : 'Cannot build map request'),
+          _block ? _datumRefusalBodyHtml(_block) : (_reqErr || 'Check your inputs and try again.'),
           /* F79 — THE SAME DOOR ON BOTH SURFACES. This slot already carried Try Again, so the
              action row is in-house; the door goes FIRST because it resolves the refusal while Try
              Again only re-attempts it. Renders nothing when there is no target, so an untargeted
