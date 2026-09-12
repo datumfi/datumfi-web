@@ -77,9 +77,16 @@
 
   /* The sixteen DATA slots. The seven authored COPY slots are NOT in this list and are never
      written by the empty state — they are the designer's voice and stand on their own. */
+  /* ⚠️ mcMiniDatum LEFT AND mcHeroRange / mcHeroDatum ARRIVED, IN ONE EDIT (2026-09-12).
+     A slot named here but absent from the DOM is harmless — put() null-guards — but a slot in the
+     DOM and ABSENT HERE is not: it would never be cleared, so a previous household's figure would
+     survive renderEmpty() and sit on screen beside the next household's blanks, looking current.
+     🔑 THE EMPTY-STATE LIST IS A CONTRACT WITH THE MARKUP, NOT A CONVENIENCE. Adding a value slot
+        to the panel without adding it here is how a stale number outlives the run that produced it. */
   var DATA_SLOTS = ['mcClimate', 'mcSuccess', 'mcHorizon', 'mcFloorValue',
     'mcDatumValue', 'mcDatumSuccess', 'mcCeilingValue', 'mcAxisMin', 'mcAxisMax',
-    'mcGuardrail', 'mcTerminal', 'mcFailure', 'mcModeCode', 'mcRangeWidth', 'mcMiniDatum'];
+    'mcGuardrail', 'mcTerminal', 'mcFailure', 'mcModeCode', 'mcRangeWidth',
+    'mcHeroRange', 'mcHeroDatum'];
 
   function clearData() {
     for (var i = 0; i < DATA_SLOTS.length; i++) put(DATA_SLOTS[i], '');
@@ -325,7 +332,14 @@
     put('mcFailure', Number.isFinite(conf) ? pct(1 - conf) : '');
     put('mcModeCode', s.code || '');
     put('mcRangeWidth', money(s.ceiling - s.floor));
-    put('mcMiniDatum', money(spend));
+
+    /* THE HERO READOUT. Same three values the cards carry, in the Mock's own arrangement:
+       the working range as one string, the user's target spend, and the confidence at it.
+       ⛔ mcSuccess IS ALREADY WRITTEN ABOVE and is NOT repeated here — it moved INTO the hero when
+          the chip row was replaced, so there is one element with that id, not two. A second write
+          would be harmless today and a silent divergence the day the two lines disagree. */
+    put('mcHeroRange', money(s.floor) + ' — ' + money(s.ceiling));
+    put('mcHeroDatum', money(spend));
 
     /* ⛔ ORIENTATION — DEVIATION 1. `y = TOP + v*H`, so v=1 (high confidence, low spend) lands at
        the BOTTOM and v→0 (low confidence, high spend) lands at the TOP. Floor low, Ceiling high.

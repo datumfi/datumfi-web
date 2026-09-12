@@ -5144,45 +5144,73 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             studio.html is never cached — 🔑 EVEN DOCUMENTATION HAS A CHEAPER ADDRESS. -->
 <section class="mc-overlay" id="mcOverlay" aria-label="Monte Carlo measurement overlay" hidden>
           <div class="mc-overlay-panel" id="mcOverlayPanel">
-            <div class="mc-head">
-              <div>
-                <div class="mc-kicker">Measurement · 10,000 futures</div>
-                <h3 class="mc-title">Projected Estate Capacity</h3>
-                                <div class="mc-chip-row">
-                  <span class="mc-chip mc-climate-chip" id="mcClimateChip" data-climate="cooling">Climate <strong id="mcClimate"></strong></span>
-                  <span class="mc-chip">Datum success <strong id="mcSuccess"></strong></span>
-                  <span class="mc-chip">Horizon <strong id="mcHorizon"></strong></span>
-                </div>
-              </div>
+            <!-- ⭐ THE PREMIUM HERO, PORTED VERBATIM FROM Studio Mock.html (2026-09-12, batch 1).
+                 It REPLACES the old .mc-head block rather than sitting beside it: mcClimate,
+                 mcClimateChip, mcSuccess and mcHorizon all MOVED out of the chip row into the
+                 hero's readout, so keeping both would have produced duplicate ids — the silent
+                 kind of breakage, since getElementById returns the first and the second never
+                 updates.
+                 ⛔ THE COPY IS THE ARCHITECT'S AND IS WIRED VERBATIM. Every string here reads
+                    exactly as it reads in the Mock. It is not improved in transit.
+                 ⭐⭐ THE MOCK IS AHEAD OF THE LIVE FILE ON THE MATH, AND THIS BLOCK IS THE PROOF.
+                    The live page said "10,000 futures"; the true figure — measured off the live
+                    array shapes 2026-09-11 — is 40,000, four market engines at 10,000 paths each.
+                    The Mock has said 40,000 all along. It also already says the Floor is set by the
+                    stress battery and the Ceiling by the simulation, which is the ruling the engine
+                    only landed TODAY. Treat a Mock/live disagreement as the LIVE FILE being stale
+                    until proven otherwise. -->
+            <div class="mc-parity-head">
+              <span class="mc-parity-kicker">Measurement · Range</span>
               <button class="mc-close" type="button" data-mc-close>Return to Estate</button>
             </div>
 
+            <section class="mc-premium-hero">
+              <div class="mc-premium-hero-copy">
+                <span>RANGE REVEAL · MODEL DESIGN</span>
+                <strong>The Estate has been tested.</strong>
+                <p>Across 40,000 modeled paths — 10,000 from each of four market engines — the simulation resolves the spending line and its upper band. The Floor is set separately by the five-scenario stress battery. Together they reveal the tested Range, distribution, and tax drag.</p>
+              </div>
+              <div class="mc-premium-hero-readout">
+                <span>Working range</span>
+                <strong id="mcHeroRange"></strong>
+                <small>Floor → Ceiling · annual spending</small>
+                <div class="mc-premium-dual">
+                  <div><span>Target spend</span><b id="mcHeroDatum"></b></div>
+                  <div><span>Plan confidence</span><b id="mcSuccess"></b></div>
+                </div>
+                <div class="mc-premium-meta">
+                  <div class="mc-premium-climate mc-climate-chip" id="mcClimateChip" data-climate="blend"><span>Model design</span><strong id="mcClimate"></strong></div>
+                  <div><span>Horizon</span><strong id="mcHorizon"></strong></div>
+                </div>
+              </div>
+            </section>
+
             <div class="mc-grid">
               <article class="mc-range-card floor">
-                <span class="mc-card-kicker">Stress-tested lower edge</span>
+                <span class="mc-card-kicker">Five-scenario stress battery</span>
                 <div class="mc-card-title">Floor</div>
                 <strong class="mc-card-value" id="mcFloorValue"></strong>
-                <span class="mc-card-period" id="mcFloorPeriod">Protected spending line</span>
-                <div class="mc-card-note" id="mcFloorNote">The lower edge of the Estate — the level that still holds under the harshest futures tested.</div>
+                <span class="mc-card-period" id="mcFloorPeriod">5 of 5 stress cases · current requirement</span>
+                <div class="mc-card-note" id="mcFloorNote">The highest spending level that survives the required stress battery. It is not a Monte Carlo percentile.</div>
               </article>
               <article class="mc-range-card datum emphasis">
-                <span class="mc-card-kicker">Your selected spending line</span>
-                <div class="mc-card-title">Datum</div>
+                <span class="mc-card-kicker">Monte Carlo confidence curve</span>
+                <div class="mc-card-title">Spend</div>
                 <strong class="mc-card-value" id="mcDatumValue"></strong>
-                <span class="mc-card-period">Chosen spending target</span>
-                <div class="mc-datum-readout"><span>Confidence at this Datum</span><strong id="mcDatumSuccess"></strong></div>
+                <span class="mc-card-period">Selected point on the 40,000-path curve</span>
+                <div class="mc-datum-readout"><span>Confidence at this spend</span><strong id="mcDatumSuccess"></strong></div>
               </article>
               <article class="mc-range-card ceiling">
-                <span class="mc-card-kicker">Upper edge of the tested range</span>
+                <span class="mc-card-kicker">Simulation upper band</span>
                 <div class="mc-card-title">Ceiling</div>
                 <strong class="mc-card-value" id="mcCeilingValue"></strong>
                 <span class="mc-card-period">Higher spending line</span>
-                <div class="mc-card-note" id="mcCeilingNote">The upper edge of the current range — more spending room, but less certainty than the Floor.</div>
+                <div class="mc-card-note" id="mcCeilingNote">The simulation’s upper spending band — more room when modeled outcomes are favorable, without borrowing the Floor’s stress-battery machinery.</div>
               </article>
 
               <section class="mc-chart">
                 <div class="mc-chart-view-head">
-                  <div class="mc-chart-view-label">Range visualization</div>
+                  <div class="mc-chart-view-label">Measurement faces</div>
                   <button class="mc-view-toggle" type="button" data-mc-view-toggle aria-pressed="false" aria-label="Switch to distribution view"><span data-mc-view-toggle-label>Show distribution</span><span class="mc-view-toggle-icon">↻</span></button>
                 </div>
                 <div class="mc-visual-switch" id="mcVisualSwitch" data-view="curve">
@@ -5190,7 +5218,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                     <div class="mc-section-label">Modeled relationship between spending and plan resilience</div>
                     <div class="mc-chart-title">
                       <strong>How plan confidence changes as spending moves</strong>
-                      <span id="mcSpreadCopy">Drag Datum to explore a different spending level.</span>
+                      <span id="mcSpreadCopy">Drag target spend to explore a different spending level.</span>
                     </div>
                     <div class="mc-curve-shell" id="mcCurveShell">
                       <svg class="mc-curve-svg" id="mcCurveSvg" viewBox="0 0 620 240" preserveAspectRatio="none" aria-hidden="true">
@@ -5234,9 +5262,9 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                     </div>
                   </div>
                   <div class="mc-visual-face distribution-view">
-                    <div class="mc-section-label mc-dist-help" tabindex="0" data-help="Each blue bar groups modeled futures by the annual spending level they supported through the plan horizon. Taller bars mean more of the 10,000 futures landed in that neighborhood. Read the shape for where outcomes cluster and how widely they spread — not as a forecast of what you will spend.">Distribution of outcomes</div>
+                    <div class="mc-section-label mc-dist-help" tabindex="0" data-help="Each blue bar groups modeled futures by the annual spending level they supported through the plan horizon. Taller bars mean more of the 40,000 modeled paths landed in that neighborhood. Read the shape for where outcomes cluster and how widely they spread — not as a forecast of what you will spend.">Distribution of outcomes</div>
                     <div class="mc-chart-title">
-                      <strong>Supported spending across 10,000 futures</strong>
+                      <strong>Supported spending across 40,000 modeled paths</strong>
                       <span class="mc-dist-help" tabindex="0" id="mcDistSpread" data-help="The distance between your modeled Floor and Ceiling. It shows how far apart the more defensive and more stretched spending references are. A wider range means more separation between those planning choices — not more certainty or guaranteed spending."></span>
                     </div>
                     <div class="mc-dist-histogram" id="mcDistHistogram">
@@ -5276,16 +5304,30 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                     <span>Range width</span>
                     <strong id="mcRangeWidth"></strong>
                   </div>
-                  <div class="mc-mini mc-helpable" tabindex="0" data-help="The spending level you are testing right now. Treat it as a decision point, then ask whether its modeled resilience matches your comfort and ability to adjust later.">
-                    <span>Chosen Datum</span>
-                    <strong id="mcMiniDatum"></strong>
-                  </div>
+                  <!-- ⛔ mcMiniDatum DELETED 2026-09-12, IN THE SAME COMMIT THAT LANDS mcHeroDatum,
+                       AND THAT PAIRING IS THE RULING, NOT A COINCIDENCE. Architect-ruled: the tile
+                       was never a surface with no replacement — its replacement is the hero's
+                       "Target spend" readout, and it only looked orphaned because the port predates
+                       the hero band. No window is authorised in which NEITHER exists, so if the hero
+                       ever has to be reverted, this tile comes back with it.
+                       ⭐ AND THE MOCK HAD ALREADY DECIDED IT: its mini-grid holds Failure rate,
+                          Model design, Range width and Effective tax — DIAGNOSTICS. There is no
+                          Datum tile among them, in 31,116 rows. The mini-grid holds diagnostics;
+                          the hero holds the answer. We are implementing that, not inventing it. -->
                 </div>
               </aside>
             </div>
 
             <div class="mc-foot">
-              <div class="mc-foot-copy" id="mcFootCopy"></div>
+              <!-- ⭐ THE FOOTER SENTENCE RETURNS, AND IT IS THE ONE THAT EXPLAINS THE WHOLE FACE.
+                   It was emptied during the original port because the then-current copy duplicated
+                   "Drag Datum" above the curve. The Mock's sentence does a different job: it names
+                   WHERE EACH OF THE THREE NUMBERS COMES FROM — battery for the Floor, the
+                   40,000-path curve for the spend and the Ceiling. That distinction is the engine
+                   ruling of 2026-09-12 stated in the Architect's own voice, and without it the
+                   three cards read as three outputs of one machine, which is exactly what they are
+                   not. Wired verbatim. -->
+              <div class="mc-foot-copy" id="mcFootCopy">Floor comes from the stress battery. Target spend and the simulation Ceiling sit on the 40,000-path confidence curve; drag target spend to inspect another point.</div>
               <div class="mc-actions">
                 <button class="mc-action" type="button" data-mc-retest>Retest Futures</button>
                 <button class="mc-action primary" type="button" data-mc-close>Carry this range forward</button>

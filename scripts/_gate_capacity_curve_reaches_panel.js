@@ -253,6 +253,75 @@ const REQUEST = { retirement_age: 52.6, plan_end_age: 93, datum_spend: TARGET };
     warm.horizon === '40 yrs',
     'mcHorizon=' + JSON.stringify(warm.horizon) + ' want "40 yrs" (plan_end_age 93 - retirement_age 52.6)');
 
+  /* ── L7 THE HERO BAND (batch 1 of the Phase V port, 2026-09-12).
+        ⛔ L7a IS THE LEG THAT MATTERS AND IT ASSERTS AN ABSENCE. mcMiniDatum was DELETED in the
+           same commit mcHeroDatum arrived, and the Architect's ruling is explicit that NO WINDOW
+           IS AUTHORISED IN WHICH NEITHER EXISTS. A leg that only checked the hero renders would go
+           green on a half-applied revert that removed the tile and lost the hero — leaving the
+           user's own target spend on no surface at all.
+        ⛔ L7c GUARDS A SILENT DUPLICATE. mcSuccess, mcClimate, mcClimateChip and mcHorizon MOVED
+           out of the old chip row into the hero. If a merge ever restores the chip row beside it,
+           getElementById returns the FIRST match and the second element never updates — a stale
+           number sitting beside a live one, both looking current, nothing thrown. */
+  const hero = await page.evaluate((a) => {
+    window.sessionStorage.setItem('datumfi_range', JSON.stringify(a[0]));
+    window.sessionStorage.setItem('datumfi_studio_request', JSON.stringify(a[1]));
+    window.DatumMeasurement.renderFromSession();
+    const txt = (id) => (document.getElementById(id) || {}).textContent;
+    const count = (id) => document.querySelectorAll('#' + id).length;
+    return {
+      range: txt('mcHeroRange'), datum: txt('mcHeroDatum'),
+      miniGone: document.getElementById('mcMiniDatum') === null,
+      dupes: ['mcSuccess', 'mcClimate', 'mcClimateChip', 'mcHorizon', 'mcHeroDatum', 'mcHeroRange']
+        .filter((id) => count(id) !== 1),
+      foot: txt('mcFootCopy')
+    };
+  }, [RESPONSE, REQUEST]);
+
+  check('L7a THE SWAP IS ATOMIC: the hero carries the target spend AND the mini tile it replaced is gone',
+    hero.datum === '$54k' && hero.miniGone === true,
+    'mcHeroDatum=' + JSON.stringify(hero.datum) + ' · mcMiniDatum present=' + !hero.miniGone
+    + '\n          ⛔ no window is authorised in which neither exists');
+  check('L7b the working range reads Floor to Ceiling',
+    hero.range === '$43k — $65k',
+    'mcHeroRange=' + JSON.stringify(hero.range) + ' want "$43k — $65k"');
+  check('L7c NO DUPLICATE IDS: the four readouts that MOVED into the hero exist exactly once',
+    hero.dupes.length === 0,
+    'ids not appearing exactly once: ' + JSON.stringify(hero.dupes)
+    + '\n          ⛔ a restored chip row would make getElementById update only the first');
+  check('L7d the footer sentence names where each number comes from, and says 40,000',
+    typeof hero.foot === 'string' && /stress battery/.test(hero.foot) && /40,000/.test(hero.foot),
+    'mcFootCopy=' + JSON.stringify((hero.foot || '').slice(0, 90)));
+
+  /* ── L8 THE PATH COUNT. The live page said 10,000 for months; the measured figure is 40,000 --
+        four market engines at 10,000 paths each. This asserts over the WHOLE shell, not the panel,
+        because the wrong number appeared in several places and a leg scoped to one would pass
+        while the others stayed stale. */
+  /* ⛔⛔ THE PANEL SLICE COUNTS NESTING, AND THE FIRST VERSION DID NOT — IT CUT AT THE FIRST
+     `</section>`, WHICH CLOSES AN INNER ONE. The overlay contains nested sections (mc-premium-hero,
+     mc-chart), so the slice ended a few hundred bytes in and this leg was reading a FRAGMENT. It
+     went green on the whole panel and stayed green when the distribution face was reverted to
+     "10,000 futures" — the exact regression it exists to catch. Caught by its own red-first run.
+     🔑 A SCOPE BUG IN AN INSTRUMENT DOES NOT LOOK LIKE A BUG. IT LOOKS LIKE GOOD NEWS. */
+  const shell = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+  const start = shell.indexOf('<section class="mc-overlay"');
+  let depth = 0, end = start;
+  for (const m of shell.slice(start).matchAll(/<section\b|<\/section>/g)) {
+    depth += m[0] === '</section>' ? -1 : 1;
+    if (depth === 0) { end = start + m.index + m[0].length; break; }
+  }
+  /* ⛔ HTML COMMENTS ARE STRIPPED, AND THAT TOO CAME FROM A RED-FIRE. The leg first matched the
+     comment that DOCUMENTS the fix — the note recording that the live page used to say "10,000
+     futures". An instrument that forbids describing the defect it prevents makes the code less
+     legible for nothing, and the pressure it creates is to delete the explanation, not the defect.
+     🔑 GATE THE RENDERED TEXT, NOT THE SOURCE THAT EXPLAINS IT. */
+  const panel = shell.slice(start, end).replace(/<!--[\s\S]*?-->/g, ' ');
+  check('L8 PATH COUNT: no "10,000 futures" survives in the Measurement panel',
+    !/10,000\s+futures/i.test(panel),
+    'occurrences of "10,000 futures" in the panel: '
+    + ((panel.match(/10,000\s+futures/gi) || []).length)
+    + '\n          ⛔ 40,000 is the measured figure: 10,000 paths from each of four market engines');
+
   /* ── L6 NO FORK. One reader of capacity_curve across every shipped script and the shell. A second
         mapper is how two surfaces come to disagree about the same household. */
   const files = [path.join(ROOT, 'studio.html'), path.join(ROOT, 'range.html')]
