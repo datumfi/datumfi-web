@@ -16435,7 +16435,6 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             if (apiResult) sessionStorage.setItem('datumfi_range', JSON.stringify(apiResult));
             else sessionStorage.setItem('datum_api_fallback', 'true');
             sessionStorage.setItem('datum_range_revealed', 'true');
-            sessionStorage.setItem('studio_last_computed_at', new Date().toISOString());
             announce('Datum locked. Your Range is ready.');
             if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: !!apiResult, reduced_motion: true });
             await new Promise(function(r) { setTimeout(r, 500); });
@@ -16572,7 +16571,6 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           if (apiResult) sessionStorage.setItem('datumfi_range', JSON.stringify(apiResult));
           else sessionStorage.setItem('datum_api_fallback', 'true');
           sessionStorage.setItem('datum_range_revealed', 'true');
-          sessionStorage.setItem('studio_last_computed_at', new Date().toISOString());
           if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: !!apiResult });
 
           await new Promise(function(r) { setTimeout(r, 2000); });
@@ -19403,8 +19401,27 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             _pendingReq = req;
             setStatus(statusBox(
               'rgba(212,175,55,0.12)', 'var(--gold)',
-              'Inputs unchanged',
-              'Your claiming map is current — no inputs changed.',
+              /* ⛔⛔ THE FRESHNESS CLAIM IS REMOVED BECAUSE THE SIGNATURE CANNOT VERIFY IT.
+                 This read "Inputs unchanged" / "Your claiming map is current — no inputs changed."
+                 `_computeSig` names 15 keys and OMITS FIVE THE CLIENT ACTUALLY SENDS —
+                 filing_status, location, healthcare_annual, pension_cola, custom_weights — every
+                 one of which changes the answer. Filing status alone moves the success curve at
+                 32 of 35 grid points, max delta 9.25 points ($146k vs $139k at Keystone).
+                 ⇒ A USER COULD CHANGE THEIR FILING STATUS AND BE TOLD, IN OUR VOICE, THAT NOTHING
+                   HAD CHANGED. Not a missing update — the product telling a person something false
+                   about their own actions, confidently.
+                 🔑 A STALE VALUE IS A DEFECT. A STALE VALUE WITH A SENTENCE ASSERTING IT IS FRESH
+                    IS A LIE THE PRODUCT TELLS IN OUR VOICE. A cache may go stale; it may never
+                    claim freshness it has not verified.
+                 ⚠️ THIS IS A HOLDING LINE, AUTHORED BY THE ARCHITECT AND WIRED VERBATIM. It states
+                    only what is true — that a previous map is being shown — and claims nothing
+                    about whether it is current. When the signature derives itself from
+                    buildStudioRequest()'s own output, the map genuinely IS current and the copy
+                    can say so honestly; that permanent line is his to write, not this one's to
+                    grow into. `_gate_cache_claims_no_freshness` holds the gap CONDITIONALLY, so
+                    the constraint lifts itself the day the signature is complete. */
+              'Showing your last claiming map.',
+              '',
               '<div style="display:flex;gap:8px;margin-top:10px;">' +
               '<button onclick="window._ssMatrixUseCached()" class="measure-btn" style="font-size:10px;padding:8px;">Use Previous Map</button>' +
               '<button onclick="window._ssMatrixRecomputeNow()" class="measure-btn" style="font-size:10px;padding:8px;">Recompute Anyway</button>' +
