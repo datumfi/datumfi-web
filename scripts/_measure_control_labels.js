@@ -34,21 +34,65 @@ const server = http.createServer((req, res) => {
      miniature: describing a control the user is not looking at. */
   const ROOMS = ['data', 'architecture', 'tension', 'uncertainty', 'measurement', 'alignment', 'endurance'];
   const WANT = ['slider-datum', 'spend-input', 'val-datum', 'sl-plan-through', 'plan-end-age', 'val-plan-through'];
+  /* !! AND PRESS THE CAPACITY/SHAPE TOGGLE IN EVERY ROOM. The first version walked the seven rooms
+     and reported val-datum and val-plan-through as NOT VISIBLE ANYWHERE -- then I reported that as
+     a fact about the product. It was a fact about the WALK. Both controls live in the Sketch panel,
+     which is behind #shape-mode-toggle, and the walk never clicked it.
+     KEY: A CONTROL BEHIND A TOGGLE NOBODY PRESSED IS NOT AN ABSENT CONTROL. An enumeration that
+          only visits resting states measures the resting state, never the product. */
   const where = {};
   for (const room of ROOMS) {
     try { await page.evaluate((r) => window._studioEnterRoom(r), room); } catch (e) { continue; }
     await page.waitForTimeout(700);
+    for (const press of [false, true]) {
+      /* !! ENSURE THE MODE, NEVER FLIP IT. The first version called toggleShapeMode() once per
+         room -- and it TOGGLES, so seven rooms alternated estate/shape/estate/shape and every
+         odd-numbered room was measured in exactly the state the press was meant to leave.
+         Architecture, the one room that actually hosts the Sketch panel, landed on the wrong side
+         both passes. KEY: A TOGGLE IS NOT A SETTER; CALLING ONE IN A LOOP MEASURES THE PARITY OF
+         THE LOOP, NOT THE PRODUCT. */
+      if (press) {
+        try {
+          await page.evaluate(() => {
+            const l = document.querySelector('.studio-layout');
+            if (l && !l.classList.contains('mode-shape') && window.toggleShapeMode) window.toggleShapeMode();
+          });
+        } catch (e) {}
+        await page.waitForTimeout(800);
+      }
     const v = await page.evaluate((ids) => ids.map((id) => {
       const el = document.getElementById(id); if (!el) return false;
       const r = el.getBoundingClientRect(); const cs = getComputedStyle(el);
       return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none';
     }), WANT);
-    WANT.forEach((id, i) => { if (v[i] && !where[id]) where[id] = room; });
+    WANT.forEach((id, i) => { if (v[i] && !where[id]) where[id] = room + (press ? ' (Capacity/Shape toggle PRESSED)' : ''); });
+    }
   }
   console.log('WHERE EACH CONTROL IS ON SCREEN:');
   WANT.forEach((id) => console.log('  #' + id + '  ->  ' + (where[id] || 'NOT VISIBLE IN ANY ROOM at rest')));
-  const readRoom = where['spend-input'] || where['slider-datum'] || 'data';
-  await page.evaluate((r) => window._studioEnterRoom(r), readRoom);
+  const readRoom = where['val-datum'] || where['slider-datum'] || where['spend-input'] || 'data';
+  await page.evaluate((r) => window._studioEnterRoom(r), String(readRoom).split(' (')[0]);
+  await page.waitForTimeout(700);
+  if (String(readRoom).indexOf('PRESSED') >= 0) {
+    await page.evaluate(() => { const l = document.querySelector('.studio-layout');
+      if (l && !l.classList.contains('mode-shape') && window.toggleShapeMode) window.toggleShapeMode(); });
+    await page.waitForTimeout(900);
+  }
+  /* !!! AND OPEN THE COLLAPSED SECTIONS. THIS IS THE THIRD TIME THE SAME MISTAKE ANSWERED THIS
+     QUESTION WRONG. First the tool read one room. Then it pressed a toggle in a loop that flipped
+     it back. Both times it printed "NOT VISIBLE IN ANY ROOM" and both times I believed that about
+     the PRODUCT. The cause was neither: #sec-sketch is an ACCORDION section shipped with
+     style="display:none", and the Sketch controls live inside it. A user opens it by clicking its
+     header -- so the tool clicks the header.
+     KEY: "NOT VISIBLE" IS A CLAIM ABOUT THE WALK UNTIL THE WALK CAN OPEN EVERYTHING A USER CAN. */
+  await page.evaluate(() => {
+    document.querySelectorAll('.section-content').forEach((sec) => {
+      if (getComputedStyle(sec).display !== 'none') return;
+      const hdr = sec.previousElementSibling;
+      const btn = hdr && (hdr.matches('button') ? hdr : hdr.querySelector('button'));
+      if (btn) btn.click();
+    });
+  });
   await page.waitForTimeout(900);
   console.log('\nLABELS BELOW READ FROM ROOM: ' + readRoom + ' (and the Data room for the Profile faces)');
 
