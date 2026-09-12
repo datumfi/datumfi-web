@@ -15366,6 +15366,19 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            ⚠️ THE SINGULAR GLOBALS ARE PRESERVED EXACTLY. The SS Matrix reads
               window._buildRequestError / ...Field at :17537 and must not change behaviour; they now
               carry the FIRST reason, which is what they always carried. The array is ADDITIVE. */
+        /* ⛔ THE ADMISSION TEST IS NAMED BECAUSE IT NOW HAS TWO READERS, NOT ONE. `accounts` below
+           and the pension-COLA blend further down must agree EXACTLY on which rooms reach the
+           engine: `has_pension` is derived server-side from the rooms that ARRIVE, so a room this
+           payload drops must not vote on the rate. Expressed once, it cannot drift; expressed
+           twice, the day somebody adds a fourth condition to one copy is the day a $0 pension
+           starts pulling a household's adjustment toward zero with every gate green.
+           ⚠️ THE THREE CONDITIONS ARE VERBATIM FROM THE CHAIN THIS REPLACES — no clause added,
+              removed or reordered. This is a naming, not a rule change. */
+        const _reachesEngine = a =>
+             !FILTERED_TYPES.has(a.baseId)
+          && !_conduitIsInformational(a)   // §7.5 count-once guard — an informational Rollover 401(k)'s dollars are counted inside its destination plan, never twice (bank R91; safe-by-default per Captain Fork A)
+          && ((a.value || 0) > 0 || (a.inflow || 0) > 0);
+
         var _errs = [];
         /* F79 — every reason carries the DOM id of the input that can resolve it. The key is
            OPTIONAL: a reason without one renders exactly as it did before F79, so nothing
@@ -15430,6 +15443,13 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         }
         if (!filingStatus) {
           _errs.push({ field: 'Filing Status', message: FILING_STATUS_REQUIRED, target: 'filing-status' });
+        }
+        /* ⛔ THE ESTATE. See the note at the `accounts` build below for why an empty one is worse
+           than any other missing field, and why the test is on the estate rather than on any one
+           account. Queued beside the others so it joins the collected block rather than becoming a
+           sixth sequential refusal. */
+        if (!state.accounts.filter(_reachesEngine).length) {
+          _errs.push({ field: 'Your Estate', message: ESTATE_REQUIRED, target: 'sec-drafting' });
         }
 
         /* ⛔⛔ SOCIAL SECURITY IS REQUIRED FROM 2026-09-10, IN THE SAME COMMIT THE ENGINE STOPPED
@@ -15545,19 +15565,32 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            clears .active it would move the user from 67 to 70 without a word. */
         const ssStrategy = SS_AGE_MAP[activeSS?.textContent?.trim()] || 'full_67';
 
-        /* ⛔ THE ADMISSION TEST IS NAMED BECAUSE IT NOW HAS TWO READERS, NOT ONE. `accounts` below
-           and the pension-COLA blend further down must agree EXACTLY on which rooms reach the
-           engine: `has_pension` is derived server-side from the rooms that ARRIVE, so a room this
-           payload drops must not vote on the rate. Expressed once, it cannot drift; expressed
-           twice, the day somebody adds a fourth condition to one copy is the day a $0 pension
-           starts pulling a household's adjustment toward zero with every gate green.
-           ⚠️ THE THREE CONDITIONS ARE VERBATIM FROM THE CHAIN THIS REPLACES — no clause added,
-              removed or reordered. This is a naming, not a rule change. */
-        const _reachesEngine = a =>
-             !FILTERED_TYPES.has(a.baseId)
-          && !_conduitIsInformational(a)   // §7.5 count-once guard — an informational Rollover 401(k)'s dollars are counted inside its destination plan, never twice (bank R91; safe-by-default per Captain Fork A)
-          && ((a.value || 0) > 0 || (a.inflow || 0) > 0);
 
+        /* ⛔ THE ESTATE MUST EXIST. Until 2026-09-12 the client's door opened on a household with
+           NO ACCOUNTS AT ALL — measured from an empty Studio: five refusals answered, `accounts: []`
+           built and sent.
+           ⚠️⚠️ AND THE SEVERITY HERE IS SMALLER THAN IT FIRST LOOKED, WHICH IS RECORDED RATHER THAN
+              QUIETLY CORRECTED. A first version of this note claimed the engine "would have priced
+              an empty estate" and called it the most confident wrong answer the product can
+              produce. THAT WAS ASSERTED WITHOUT CHECKING AND IT IS FALSE: schemas.py puts
+              `min_length=1` on accounts, so the engine REFUSES — the user met a raw 422, not a
+              fabricated Range.
+           🔑 THE DEFECT IS A MISSING COURTESY, NOT A WRONG NUMBER, and saying so costs nothing
+              while overstating it would have spent trust we do not have spare. The client let a
+              user walk into a hard engine error instead of a sentence and a door — the same
+              division of labour as the location and filing-status pairs, where the engine's
+              refusal is the guard and the client's is the courtesy.
+           ⛔ IT SURVIVED EVERY CLIENT-SIDE CHECK BECAUSE `accounts` IS PRESENT. An empty array
+              satisfies a presence test exactly as well as a full one, so nothing that asked "is
+              this field here?" ever had a reason to object. PRESENCE IS NOT SUFFICIENCY.
+           ⚠️ THE TEST IS ON THE ESTATE, NEVER ON AN INDIVIDUAL ACCOUNT, AND THAT DISTINCTION IS
+              LOAD-BEARING. A user who genuinely holds an account at zero has stated a FACT, and
+              that zero must not be overwritten or treated as an error — it is the same distinction
+              that let a salary survive being corrected to zero. What is refused is the estate
+              reaching the engine with nothing in it at all.
+           ⚠️ `_reachesEngine` ALREADY DROPS ROOMS WITH NEITHER A BALANCE NOR AN INFLOW, so an
+              estate of only-empty rooms arrives here as a zero-length array and is refused by the
+              same line. A room the user created and never filled is not an estate. */
         // STU-010: filter Group 4, remap to engine enums, warn on unmapped future additions
         const accounts = state.accounts
           .filter(_reachesEngine)
@@ -16190,6 +16223,11 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
          date"); this is a MISSING ANSWER WITH A STAKE, which is the accounts/co-architect
          family: name the absent thing, then the consequence. */
       var FILING_STATUS_REQUIRED = 'Your filing status — it changes the tax, and the tax changes the Range.';
+      /* ⛔ ARCHITECT-AUTHORED (copy bank §6.2), WIRED VERBATIM, AND IT DELIBERATELY EXPLAINS
+         NOTHING. Captain-ruled: the user has not seen the Range or the claiming map yet, so no
+         refusal may describe them. A refusal that explains the architecture is written for the
+         builder, not for the person stuck at the door. */
+      var ESTATE_REQUIRED        = 'At least one account with a balance.';
       /* ⭐ AUTHORED BY THE ARCHITECT 2026-09-09, SHIPPED VERBATIM. L47 — I do not write brand voice,
          and this line was deliberately NOT invented when the field was wired the same day.
          ⛔ AND COPYING ITS NEIGHBOUR WOULD HAVE ASSERTED SOMETHING FALSE. FILING_STATUS_REQUIRED

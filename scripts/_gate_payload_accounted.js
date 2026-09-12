@@ -76,6 +76,7 @@ const FROM_CONTROL = {
   location: 'pri-location',
   filing_status: 'filing-status',
   ss_primary_benefit_overrides: 'ss-pri-67',
+  accounts: 'sec-drafting',
   datum_spend: 'spend-input',
   plan_end_age: 'plan-through',
   healthcare_annual: 'hc-monthly'
@@ -116,6 +117,27 @@ const FROM_CONTROL = {
     if (r.body && !r.errs.length) { payload = r.body; break; }
     if (!r.errs.length) { stuck = 'the builder returned nothing and queued no refusal'; break; }
     r.errs.forEach((e) => { if (e.t) asked.add(e.t); });
+
+    /* ⛔⛔ ANSWERING A REFUSAL IS NOT THE SAME ACT AS SEEDING A PRECONDITION, AND THE WHOLE
+       CREDIBILITY OF THIS GATE TURNS ON THE DIFFERENCE.
+         SEEDING supplies a value BEFORE the product asks, so the demand is never observed — that
+         is the defect that hollowed out the previous script's list.
+         ANSWERING supplies it BECAUSE the product refused, AFTER the demand has been recorded in
+         `asked`. The requirement is measured first and satisfied second.
+       ⇒ The estate is not a form field, so its answer is an ACTION: add an account and give it a
+         balance, which is exactly what the refusal instructs a user to do. It reaches here only
+         once `sec-drafting` is already in `asked`. */
+    const estate = r.errs.find((e) => e.t === 'sec-drafting');
+    if (estate) {
+      await page.evaluate(() => {
+        addInstance('taxable');
+        const a = window.state.accounts.filter((x) => x.baseId === 'taxable').pop();
+        a.value = 750000;
+      });
+      await page.waitForTimeout(110);
+      continue;
+    }
+
     const next = r.errs.find((e) => e.t && ANSWERS[e.t]);
     if (!next) { stuck = 'no answer known for: ' + r.errs.map((e) => e.t).join(', '); break; }
     await page.evaluate((a) => {
@@ -179,13 +201,15 @@ const FROM_CONTROL = {
     + '\n          DECLARED (' + declaredKeys.length + '): ' + (declaredKeys.join(', ') || 'none')
     + '\n          ⛔ THE RATCHET FALLS BY ASKING FOR A FIELD, NEVER BY DECLARING IT AWAY');
 
-  check('L3 THE ESTATE IS NOT EMPTY: a Range is never computed on a household with no accounts',
+  check('L3 THE ESTATE IS NOT EMPTY: the client never sends a household with no accounts',
     !emptyAccounts,
     'accounts on the payload = ' + (Array.isArray(payload.accounts) ? payload.accounts.length : 'not an array')
-    + '\n          ⛔ `accounts: []` PASSES A PRESENCE TEST. The door opened on an estate with'
-    + ' nothing in it, and the engine would have priced it.'
-    + '\n          ⛔ this is first among the six: the others shade an answer, this one invents the'
-    + ' household it is answering about');
+    + '\n          ⛔ `accounts: []` PASSES A PRESENCE TEST — an empty array satisfies one exactly'
+    + ' as well as a full one, which is why nothing client-side ever objected.'
+    + '\n          ⚠️ SEVERITY, MEASURED RATHER THAN ASSUMED: the ENGINE refuses an empty estate'
+    + ' (schemas.py, accounts min_length=1), so this was a raw 422 in the user\'s face, NOT a'
+    + ' fabricated Range. A first version of this leg claimed the engine would have priced it.'
+    + ' It would not. The defect is a missing courtesy, not a wrong number.');
 
   /* ── L4 — THE RATCHET HAS A DEADLINE, so a backlog cannot quietly become the resting state. */
   const due = decl.unaccounted_review_due ? new Date(decl.unaccounted_review_due + 'T00:00:00Z') : null;
