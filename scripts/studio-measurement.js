@@ -505,9 +505,18 @@
       if (axes) axes.innerHTML = '';
       if (rate) rate.textContent = '';
       if (zero) zero.hidden = true;
-      var g0 = el('mcTaxGrid'), l0 = el('mcTaxYLabels');
-      if (g0) g0.innerHTML = '';
-      if (l0) l0.innerHTML = '';
+      /* ⛔⛔ THE AXIS SURVIVES THE EMPTY STATE, AND THE FIRST VERSION OF THIS RESCALE BROKE THAT.
+         Before the rescale the gridlines and the 25/15/5/0% labels were STATIC MARKUP, so a tax
+         face with no data still showed its own furniture. Generating them moved their existence
+         behind "is there data", and Captain-caught 2026-09-12: with nothing loaded the face went
+         COMPLETELY BLANK — not an empty chart, an empty rectangle.
+         🔑 AN EMPTY CHART READS AS "NO DATA YET". AN EMPTY RECTANGLE READS AS BROKEN. Same absence
+            of numbers, opposite message, and only one of them is true.
+         ⚠️ DRAWING THE FURNITURE IS SAFE BECAUSE AN AXIS IS NOT A MEASUREMENT CLAIM. The default
+            ceiling asserts nothing about a household — there is no household — it states the shape
+            of the instrument that is waiting. No line, no band, no rate: those ARE claims and they
+            stay absent. */
+      renderTaxAxis(TAX_CEIL_MIN);
       return;
     }
 
@@ -613,41 +622,143 @@
   var SWARM_PATHS = 100;
   var SWARM_NS = 'http://www.w3.org/2000/svg';
 
-  /* The Mock's path shape, verbatim: a walk that fans out from a common origin, red where it ends
-     below the floor guide. ⚠️ THESE PATHS ARE DELIBERATELY NOT THE ENGINE'S TRIALS. Drawing 100 of
-     40,000 real paths would be a sample presented as the swarm, and the honest reading of a
-     sampled picture is not available to a viewer. They are an ANIMATION OF WORK HAPPENING; the
-     numbers that mean anything arrive on the panel behind it. */
-  function swarmPath(i) {
-    var x = 52, y = 168, d = 'M 52 168 ', success = true;
-    var drift = (i % 7) - 3, vol = 8 + (i % 11);
-    for (var step = 1; step <= 28; step++) {
-      x += (938 - 52) / 28;
-      y += drift * 1.6 + (Math.sin(i * 1.7 + step) * vol) - 2.2;
-      y = Math.max(34, Math.min(304, y));
-      if (y > 276) success = false;
-      d += 'L ' + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+  /* The Mock's viewBox, and the three points that give the shape its meaning. */
+  var SW_X0 = 52, SW_XMID = 520, SW_X1 = 938, SW_STEP = 46;
+  var SW_YMID = 168, SW_YTOP = 34, SW_YBOT = 304, SW_FLOOR = 276;
+  /* The resolved band, and the lower line the depleted futures settle onto. See the ruling in
+     swarmPath: a band because the answer is a range, and a SEPARATE lower line because futures that
+     ran out must not be absorbed into the ones that did not. */
+  var SW_BAND = 26, SW_FAIL_Y = 292, SW_FAIL_BAND = 9;
+
+  /* ⛔⛔ IT CONVERGES. THE MOCK'S DOES NOT, AND THAT WAS THE MOCK BEING WRONG ABOUT ITS OWN NAME.
+     Captain-caught 2026-09-12: "this is called convergence yet it ENDS with the line still
+     completely splayed." He is right, and the fix is not decoration — it is the only shape that
+     matches what the engine actually does: ONE estate, out to 40,000 futures, back to ONE answer.
+     So every path is a SPINDLE: a common origin on the left, a genuine random walk out to maximum
+     spread, then a walk back that is pulled progressively onto the single end point.
+
+     ⭐ AND THE SHAPE IS WHAT MAKES THE PACING HONEST, WHICH IS WHY IT IS ONE PATH AND NOT TWO.
+     Drawn with a stroke-dash reveal, the FIRST HALF is the fan-out and the SECOND HALF is the
+     collapse. So the animation can stop at the midpoint and wait, and the return is played BY THE
+     ANSWER ARRIVING. The ending is the result, so it cannot finish early.
+     🔑 MEASURED, NOT ASSUMED, THAT THE OLD ONE FINISHED EARLY: dash-offset ran 2200 -> 544 -> 0 in
+        about 3.3 seconds against a 10-15 second engine. The panel stayed up — L10a proved that —
+        and then FROZE for seven to twelve seconds. I gated the container's lifetime and never
+        gated that anything keeps moving.
+
+     ⚠️ THE OUTWARD WALK IS THE MOCK'S OWN, RESTORED. The first port invented it — a sinusoid,
+        because the Mock's function head sat above the window I read and I wrote the body from the
+        tail. `Math.sin(i * 1.7 + step)` phase-locks 100 paths and wove them into a visible diamond
+        lattice; the real one is `(Math.random() - 0.45) * 35`, an unbiased-downward random walk.
+        🔑 A RECONSTRUCTION THAT COMPILES IS STILL NOT A PORT.
+
+     ⚠️ THESE ARE DELIBERATELY NOT THE ENGINE'S TRIALS. Drawing 100 of 40,000 real paths would be a
+        sample presented as the swarm, and the honest reading of a sampled picture is not available
+        to a viewer. They animate WORK HAPPENING; every number that means anything arrives on the
+        panel behind it. */
+  function swarmPath() {
+    var out = [[SW_X0, SW_YMID]], back = [], y = SW_YMID, x, success = true;
+
+    for (x = SW_X0 + SW_STEP; x <= SW_XMID; x += SW_STEP) {
+      y += (Math.random() - 0.45) * 35;
+      y = Math.max(SW_YTOP, Math.min(SW_YBOT, y));
+      if (y > SW_FLOOR) success = false;
+      out.push([x, y]);
     }
-    return { d: d, success: success };
+
+    /* The return keeps walking — a future does not become CERTAIN, it becomes RESOLVED — and only
+       afterwards is each step pulled toward where it ends up. Success is not known until the walk
+       is finished, so the pull cannot be applied inside the loop that decides it. */
+    var steps = Math.max(1, Math.ceil((SW_X1 - SW_XMID) / SW_STEP));
+    for (var k = 1; k <= steps; k++) {
+      x = Math.min(SW_X1, SW_XMID + k * SW_STEP);
+      y += (Math.random() - 0.45) * 35;
+      y = Math.max(SW_YTOP, Math.min(SW_YBOT, y));
+      if (y > SW_FLOOR) success = false;
+      back.push([x, y, k / steps]);
+    }
+
+    /* ⛔⛔ IT CONVERGES TO A BAND, NEVER TO A POINT, AND THAT IS A CORRECTNESS CONSTRAINT RATHER
+       THAN A STYLE ONE. A first build pulled all hundred paths onto one pixel — the gate proved it,
+       "distinct end-Y across 12 paths = [168]" — and a single clean node ASSERTS A CONSENSUS THE
+       ENGINE DID NOT FIND. The four models disagree by $23,000-$31,000 on the same household.
+       🔑 THE PICTURE MUST NOT BE MORE CONFIDENT THAN THE ANSWER. An animation that resolves to a
+          dot has quietly made a claim the numbers underneath it cannot support, on the screen whose
+          entire subject is uncertainty.
+       ⚠️ THE BAND'S WIDTH IS A STATEMENT THAT A RANGE EXISTS, NOT A MEASUREMENT OF ITS SIZE. The
+          actual Floor-to-Ceiling span is on the panel behind, in dollars. This says only "outcomes,
+          plural" — and that is the most it is entitled to say.
+
+       ⛔ AND THE DEPLETED FUTURES STAY LEGIBLE AS HAVING EXISTED. Architect-ruled: if the red set
+          simply merged into the band, the picture would end by asserting that every future worked
+          out, AND WE WOULD HAVE BUILT A REASSURANCE MACHINE. They settle to their own lower line
+          instead — still drawn, still red, visibly a different outcome. Falling away is acceptable;
+          vanishing is not. */
+    var jitter = Math.random() * 2 - 1;
+    var endY = success
+      ? SW_YMID + jitter * SW_BAND
+      : SW_FAIL_Y + jitter * SW_FAIL_BAND;
+
+    for (var j = 0; j < back.length; j++) {
+      var e = back[j][2] * back[j][2];
+      back[j] = [back[j][0], back[j][1] * (1 - e) + endY * e];
+    }
+
+    return {
+      d: 'M ' + out.concat(back).map(function (p) {
+        return p[0].toFixed(1) + ' ' + p[1].toFixed(1);
+      }).join(' L '),
+      success: success
+    };
   }
 
+  /* ⛔ THE REVEAL IS A TRANSITION, NOT A KEYFRAME, BECAUSE IT HAS TO BE ABLE TO STOP HALFWAY.
+     The Mock animates `draw-swarm` to completion and cannot pause. A transition lets stage one run
+     to the midpoint and hold there for as long as the engine takes.
+     ⚠️ AND THE DASH LENGTH IS THE PATH'S OWN, MEASURED WITH getTotalLength(). The Mock hardcodes
+        2200 against paths that are about 909 units long, so its "draw" is really the line sliding
+        out of an oversized gap — which works by accident and breaks the moment the geometry
+        changes. Here half the measured length IS the midpoint of the spindle, exactly. */
   function renderSwarmPaths() {
     var g = el('mcConvergenceSwarmPaths');
     if (!g) return;
     g.innerHTML = '';
+    var made = [];
     for (var i = 0; i < SWARM_PATHS; i++) {
-      var meta = swarmPath(i);
+      var meta = swarmPath();
       var p = d.createElementNS(SWARM_NS, 'path');
       p.setAttribute('d', meta.d);
       p.setAttribute('fill', 'none');
       p.setAttribute('stroke', meta.success ? 'rgba(93,202,165,.17)' : 'rgba(226,75,74,.34)');
       p.setAttribute('stroke-width', '1.45');
-      p.style.strokeDasharray = '2200';
-      p.style.strokeDashoffset = '2200';
-      p.style.animation = 'draw-swarm 2.5s cubic-bezier(0.25,1,0.5,1) '
-        + (Math.random() * 0.76).toFixed(2) + 's forwards';
       g.appendChild(p);
+      var L = 0;
+      try { L = p.getTotalLength(); } catch (_e) { L = 1800; }
+      p.__mcLen = L;
+      p.__mcDelay = Math.random() * 0.9;
+      p.style.strokeDasharray = L;
+      p.style.strokeDashoffset = L;
+      made.push(p);
     }
+    return made;
+  }
+
+  /* Stage one — the fan-out, staggered so the swarm assembles rather than appearing. */
+  function swarmDiverge(paths) {
+    paths.forEach(function (p) {
+      p.style.transition = 'stroke-dashoffset 2.6s cubic-bezier(0.33,0.9,0.5,1) ' + p.__mcDelay.toFixed(2) + 's';
+      p.style.strokeDashoffset = (p.__mcLen / 2);
+    });
+  }
+
+  /* Stage two — the collapse, played by the ANSWER. Tighter and slightly faster than the fan-out,
+     so the motion reads as resolution rather than as more of the same. */
+  function swarmConverge(paths) {
+    paths.forEach(function (p) {
+      p.style.transition = 'stroke-dashoffset 1.25s cubic-bezier(0.5,0,0.2,1) '
+        + (p.__mcDelay * 0.35).toFixed(2) + 's';
+      p.style.strokeDashoffset = 0;
+    });
   }
 
   /* Run the swarm for the life of `work` (a promise). Resolves with whatever `work` resolved to,
@@ -678,12 +789,34 @@
        computation returns is the purest form of the defect this whole arc has been removing. */
     put('mcConvergenceSuccess', '');
 
-    renderSwarmPaths();
+    var paths = renderSwarmPaths() || [];
+    var swarmGroup = el('mcConvergenceSwarmPaths');
+    if (swarmGroup) swarmGroup.classList.remove('is-converged');
     overlay.hidden = false;
-    w.requestAnimationFrame(function () { overlay.classList.add('open'); });
-    [180, 400, 620, 840].forEach(function (ms, idx) {
+    overlay.classList.remove('is-resolving');
+    w.requestAnimationFrame(function () {
+      overlay.classList.add('open');
+      /* ⛔ THE FAN-OUT STARTS AFTER THE PANEL IS VISIBLE, NOT BEFORE. A transition set on a
+         display:none element still elapses, so starting it at render time meant a share of the
+         motion was spent behind a hidden panel — the user arriving partway through an animation
+         that had already been running. */
+      w.requestAnimationFrame(function () { swarmDiverge(paths); });
+    });
+
+    /* ⛔ THE TILES ARE PACED ACROSS THE FAN-OUT, NOT CROWDED INTO THE FIRST SECOND. The Mock lights
+       all four inside 840ms and then has nothing left to do for the remaining ten seconds of a real
+       run. Four engines that appear to finish before the work has started is the same lie as a
+       progress bar that completes early, told in a smaller font. */
+    [300, 1000, 1700, 2400].forEach(function (ms, idx) {
       w.setTimeout(function () { var t = el(tiles[idx]); if (t) t.classList.add('active'); }, ms);
     });
+
+    /* ⛔ AND THEN IT BREATHES RATHER THAN FREEZES. Once the swarm is fully fanned out the engine may
+       still have ten seconds to run. A static picture during a wait reads as a hung screen, which
+       is precisely what the Captain saw: "everything is just there immediately". */
+    var breathe = w.setTimeout(function () {
+      if (swarmGroup) swarmGroup.classList.add('is-holding');
+    }, 2600 + 900);
 
     var started = Date.now();
     var close = function () {
@@ -693,9 +826,22 @@
       });
     };
 
+    var stopHolding = function () {
+      w.clearTimeout(breathe);
+      if (swarmGroup) swarmGroup.classList.remove('is-holding');
+    };
+
     return settled.then(function (value) {
       var wait = Math.max(0, SWARM_MIN_MS - (Date.now() - started));
       return new Promise(function (res) { w.setTimeout(res, wait); }).then(function () {
+        /* ⭐ THE ANSWER PLAYS THE COLLAPSE. This is the whole point of the spindle: the second half
+           of every path is drawn HERE, when the engine has returned, so the animation's ending IS
+           the result rather than a timer that happened to expire. */
+        stopHolding();
+        overlay.classList.add('is-resolving');
+        swarmConverge(paths);
+        return new Promise(function (res2) { w.setTimeout(res2, 1250); }).then(function () {
+        if (swarmGroup) swarmGroup.classList.add('is-converged');
         /* ⭐ THE PROBABILITY IS THE CONFIDENCE AT THE USER'S OWN TARGET SPEND — the same number
            the panel reports as Plan confidence, read off the same capacity curve. It is not a
            second metric invented for this screen, and it MUST NOT BE: two "success" figures on
@@ -707,10 +853,13 @@
           if (badge) badge.classList.add('show');
         }
         if (status) { status.textContent = 'Convergence complete'; status.classList.remove('is-live'); }
-        return new Promise(function (res2) { w.setTimeout(res2, 420); })
+        /* The result is readable for a beat before the panel leaves. */
+        return new Promise(function (res3) { w.setTimeout(res3, 620); })
           .then(close).then(function () { return value; });
+        });
       });
     }, function (err) {
+      stopHolding();
       if (status) { status.textContent = 'Convergence complete'; status.classList.remove('is-live'); }
       return close().then(function () { throw err; });
     });

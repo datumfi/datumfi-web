@@ -1277,3 +1277,31 @@ body.light-mode .mc-convergence-stat strong em{color:#267b65}
   
   .mc-convergence-badge{right:10px!important;top:10px!important}
 }
+
+/* =========================================================================
+   THE CONVERGENCE — HOLDING AND RESOLVED STATES (2026-09-12)
+
+   ⛔ WHY A HOLDING STATE EXISTS AT ALL. The fan-out completes in about 3.5s and
+   the engine takes 10-15s. Measured: the old swarm drew itself and then FROZE
+   for seven to twelve seconds, which reads as a hung screen — exactly what the
+   Captain saw. A wait that shows no motion is indistinguishable from a wait that
+   has stopped working.
+   ⚠️ IT BREATHES; IT DOES NOT PROGRESS. A bar that advanced during the hold would
+   be inventing progress we cannot measure — the engine reports nothing until it
+   returns. Opacity says "alive". A moving indicator would say "nearly there",
+   which we do not know.
+   ⭐ AND IT IS REMOVED BY THE ANSWER, not by a timer.
+   ========================================================================= */
+@keyframes mc-swarm-breathe { 0%,100% { opacity: .62 } 50% { opacity: 1 } }
+#mcConvergenceSwarmPaths { opacity: 1; transition: opacity .4s ease }
+#mcConvergenceSwarmPaths.is-holding { animation: mc-swarm-breathe 2.8s ease-in-out infinite }
+#mcConvergenceSwarmPaths.is-converged { animation: none; opacity: 1 }
+.mc-convergence-swarm.is-resolving .mc-convergence-status { opacity: .55; transition: opacity .5s ease }
+
+/* ⚠️ REDUCED MOTION IS HONOURED, AND THE SCREEN STILL WORKS WITHOUT THE MOTION:
+   the paths render in full, the status still changes, the badge still fills. The
+   animation is how the wait is made bearable, never how the result is conveyed. */
+@media (prefers-reduced-motion: reduce) {
+  #mcConvergenceSwarmPaths.is-holding { animation: none }
+  #mcConvergenceSwarmPaths path { transition: none !important }
+}

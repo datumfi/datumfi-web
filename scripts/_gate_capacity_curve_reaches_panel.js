@@ -418,6 +418,64 @@ const REQUEST = { retirement_age: 52.6, plan_end_age: 93, datum_spend: TARGET };
     + ' · for a 7% band top=' + tax.ceilingMid + ' (want 10: 7 x 1.15 headroom = 8.05, so 8 is too tight)'
     + ' · for a 0.2% top=' + tax.ceilingLow + ' (want 5 — the floor, so rounding dust is not drama)');
 
+  /* ── L9g — THE EMPTY STATE KEEPS ITS FURNITURE. Captain-caught: replacing the static gridlines
+        and labels with generated ones made a dataless tax face render COMPLETELY BLANK — not an
+        empty chart, an empty rectangle.
+        🔑 AN EMPTY CHART READS AS "NO DATA YET". AN EMPTY RECTANGLE READS AS BROKEN. Same absence
+           of numbers, opposite message, and only one of them is true. */
+  const emptyAxis = await page.evaluate((a) => {
+    /* ⛔⛔ THE LEG ESTABLISHES ITS OWN PRECONDITION, AND IT TOOK TWO RED-FIRST RUNS TO GET HERE.
+       Attempt one asserted only that an axis existed — green even with the empty-state call
+       deleted, because an earlier leg had drawn one and the empty branch does not clear.
+       Attempt two asserted the DEFAULT 5% top — still green, because the leg immediately before
+       renders an ALL-ZERO tax series, whose ceiling is also 5%. THE STALE AXIS AND THE CORRECT
+       AXIS WERE THE SAME PICTURE, so no assertion over that state could separate them.
+       ⇒ It now renders a HIGH-tax household first, so the axis is provably NOT the default when
+         the empty state is asked for.
+       🔑 A FIXTURE WHERE THE RIGHT AND WRONG ANSWERS COINCIDE IS NOT A WEAK TEST, IT IS A TEST OF
+          SOMETHING ELSE — the same lesson the Datum fixture taught, in a second lane. */
+    const hot = Object.assign({}, a[0], { eff_rate_by_year: [0.18, 0.21, 0.19] });
+    window.DatumMeasurement.render(window.DatumMeasurement.fromEngine(hot, a[1]));
+    const before = (() => { const t = document.querySelectorAll('#mcTaxYLabels text');
+      return t.length ? t[0].textContent : null; })();
+    window.DatumMeasurement.render(null);
+    return {
+      priorTop: before,
+      grid: document.querySelectorAll('#mcTaxGrid line').length,
+      labels: document.querySelectorAll('#mcTaxYLabels text').length,
+      top: (() => { const t = document.querySelectorAll('#mcTaxYLabels text');
+        return t.length ? t[0].textContent : null; })(),
+      lowest: (() => { const t = document.querySelectorAll('#mcTaxYLabels text');
+        return t.length ? t[t.length - 1].textContent : null; })(),
+      line: document.getElementById('mcTaxLine').getAttribute('d'),
+      band: document.getElementById('mcTaxBand').getAttribute('d'),
+      rate: document.getElementById('mcTaxRate').textContent
+    };
+  }, [RESPONSE, REQUEST]);
+  /* ⛔⛔ IT ASSERTS THE DEFAULT AXIS, NOT MERELY "AN AXIS", AND ITS OWN RED-FIRST RUN FORCED THAT.
+     The first version checked only that four gridlines and four labels existed — and it stayed
+     GREEN when the empty-state axis call was deleted, because a previous leg in this same file had
+     already drawn an axis and the empty branch does not clear one. IT WAS PASSING ON LEFTOVER
+     STATE FROM AN EARLIER TEST.
+     🔑 A LEG THAT DEPENDS ON WHAT RAN BEFORE IT IS NOT TESTING THE CODE, IT IS TESTING THE ORDER.
+     ⭐ AND THE STRONGER ASSERTION IS ALSO THE MORE CORRECT ONE: after a household with a 10% or
+        25% ceiling, an empty state must RESET to the default rather than inherit the last
+        household's scale — an axis is furniture, but a STALE axis is a leftover claim about
+        somebody else. */
+  check('L9g EMPTY STATE: a dataless tax face draws the DEFAULT axis — not a stale one, and no data',
+    emptyAxis.priorTop !== null && emptyAxis.priorTop !== '5%'
+      && emptyAxis.grid === 4 && emptyAxis.labels === 4
+      && emptyAxis.top === '5%' && emptyAxis.lowest === '0%'
+      && emptyAxis.line === null && emptyAxis.band === null && emptyAxis.rate === '',
+    'axis BEFORE the empty state=' + JSON.stringify(emptyAxis.priorTop) + ' (must NOT be 5% or the leg proves nothing) · '
+    + 'gridlines=' + emptyAxis.grid + ' labels=' + emptyAxis.labels
+    + ' · top=' + JSON.stringify(emptyAxis.top) + ' (want "5%" — the default ceiling, not the'
+    + ' previous household\'s) · lowest=' + JSON.stringify(emptyAxis.lowest)
+    + '\n          line=' + JSON.stringify(emptyAxis.line) + ' band=' + JSON.stringify(emptyAxis.band)
+    + ' rate=' + JSON.stringify(emptyAxis.rate)
+    + '\n          ⛔ the axis is furniture and asserts nothing; the line, band and rate ARE claims'
+    + ' and must stay absent');
+
   check('L9b2 ZERO IS ALWAYS THE BOTTOM: the axis never fits its minimum to the data',
     tax.lowestLabel === '0%' && Math.abs(tax.lowestGridY - 206) < 0.6,
     'lowest y-label=' + JSON.stringify(tax.lowestLabel) + ' at y=' + tax.lowestGridY
@@ -506,6 +564,92 @@ const REQUEST = { retirement_age: 52.6, plan_end_age: 93, datum_spend: TARGET };
     out.downAfterReject = ov.hidden === true;
     return out;
   }, [RESPONSE, REQUEST]);
+
+  /* ── L10f/g/h — THE MOTION, NOT JUST THE CONTAINER'S LIFETIME.
+        ⛔⛔ L10a PROVED THE PANEL STAYS UP AND NOTHING MORE, AND THAT GAP SHIPPED. Measured
+           2026-09-12: dash-offset ran 2200 -> 544 -> 0 in about 3.3 seconds against a 10-15 second
+           engine, so the swarm drew itself and then FROZE for seven to twelve seconds while L10a
+           stayed green. A leg that measures a container's lifetime says nothing about whether
+           anything inside it is alive.
+        🔑 I WROTE "A PROGRESS ANIMATION THAT FINISHES BEFORE THE WORK DOES IS A SPINNER THAT LIES"
+           AND THEN SHIPPED EXACTLY THAT, ONE LEVEL DOWN. */
+  const motion = await page.evaluate(async (a) => {
+    const out = {};
+    const g = document.getElementById('mcConvergenceSwarmPaths');
+    let release;
+    const slow = new Promise((r) => { release = () => r(a[0]); });
+    const running = window.DatumMeasurement.runConvergence(slow, { request: a[1], horizon: '31 yrs' });
+    const off = () => {
+      const p = g.querySelector('path');
+      return p ? parseFloat(getComputedStyle(p).strokeDashoffset) : NaN;
+    };
+    const len = () => {
+      const p = g.querySelector('path');
+      return p ? p.getTotalLength() : NaN;
+    };
+    await new Promise((r) => setTimeout(r, 200));
+    out.startOffset = off(); out.pathLen = len();
+    await new Promise((r) => setTimeout(r, 4200));          // fan-out done, engine still running
+    out.midOffset = off();
+    out.holding = g.classList.contains('is-holding');
+    out.convergedEarly = g.classList.contains('is-converged');
+    release();
+    await running;
+    out.endOffset = off();
+    out.converged = g.classList.contains('is-converged');
+    out.stillHolding = g.classList.contains('is-holding');
+    /* The shape of the ending, split by outcome. A single shared y would be a claim of consensus;
+       a merged red set would be a claim that nothing failed. */
+    const all = [...g.querySelectorAll('path')];
+    const endOf = (p) => { const L = p.getTotalLength(); return p.getPointAtLength(L).y; };
+    const okEnds = all.filter((p) => /93,\s*202/.test(p.getAttribute('stroke'))).map(endOf);
+    const badEnds = all.filter((p) => /226,\s*75/.test(p.getAttribute('stroke'))).map(endOf);
+    const span = (xs) => (xs.length ? Math.max(...xs) - Math.min(...xs) : NaN);
+    out.okCount = okEnds.length;
+    out.badCount = badEnds.length;
+    out.okSpan = span(okEnds);
+    out.badMin = badEnds.length ? Math.min(...badEnds) : NaN;
+    out.okMax = okEnds.length ? Math.max(...okEnds) : NaN;
+    return out;
+  }, [RESPONSE, REQUEST]);
+
+  check('L10f IT HOLDS AT THE MIDPOINT: the fan-out stops halfway and waits for the engine',
+    Number.isFinite(motion.midOffset) && Number.isFinite(motion.pathLen)
+      && Math.abs(motion.midOffset - motion.pathLen / 2) < motion.pathLen * 0.06
+      && motion.convergedEarly === false,
+    'dash-offset at 4.4s=' + (motion.midOffset || 0).toFixed(0)
+    + ' · half the path length=' + ((motion.pathLen || 0) / 2).toFixed(0)
+    + ' · converged early=' + motion.convergedEarly
+    + '\n          ⛔ the old version reached 0 in ~3.3s and then froze for the rest of the wait');
+
+  check('L10g IT IS ALIVE WHILE IT WAITS: the swarm breathes rather than freezing',
+    motion.holding === true && motion.stillHolding === false,
+    'breathing during the wait=' + motion.holding + ' · still breathing after the answer=' + motion.stillHolding
+    + '\n          ⛔ a static picture during a wait is indistinguishable from a hung screen');
+
+  check('L10h IT CONVERGES: the answer plays the collapse and the swarm resolves',
+    motion.converged === true && Math.abs(motion.endOffset) < 1,
+    'converged=' + motion.converged + ' · final dash-offset=' + (motion.endOffset || 0).toFixed(1)
+    + '\n          ⛔ it is called Convergence; the Mock ends maximally SPLAYED, which is the Mock'
+    + ' being wrong about its own name');
+
+  /* ⛔⛔ L10i AND L10j ARE CORRECTNESS LEGS WEARING VISUAL CLOTHES, AND BOTH EXIST BECAUSE THE FIRST
+     BUILD FAILED THEM. It pulled every path onto a single pixel — proven by the gate's own output,
+     "distinct end-Y across 12 paths = [168]" — which asserts a consensus the engine did not find and
+     absorbs the depleted futures into the surviving ones. */
+  check('L10i IT RESOLVES TO A BAND, NOT A POINT: the picture is never more confident than the answer',
+    motion.okCount > 0 && motion.okSpan > 6,
+    'surviving paths=' + motion.okCount + ' · spread at the end=' + (motion.okSpan || 0).toFixed(1) + 'px'
+    + '\n          ⛔ a single clean node would claim agreement the four models do not have —'
+    + ' they disagree by $23,000-$31,000 on the same household');
+
+  check('L10j THE DEPLETED FUTURES STAY LEGIBLE: failures settle separately instead of vanishing',
+    motion.badCount > 0 && Number.isFinite(motion.badMin) && motion.badMin > motion.okMax,
+    'failed paths still drawn=' + motion.badCount
+    + ' · highest failed end-y=' + (motion.badMin || 0).toFixed(1)
+    + ' vs lowest-confidence survivor=' + (motion.okMax || 0).toFixed(1)
+    + '\n          ⛔ if the red set merged into the band the animation would end by asserting that'
+    + ' every future worked out — a reassurance machine');
 
   check('L10a PACED TO THE WORK: the swarm is still up 5s in when the engine has not answered',
     swarm.upEarly === true && swarm.stillUpAt5s === true && swarm.downAfter === true,

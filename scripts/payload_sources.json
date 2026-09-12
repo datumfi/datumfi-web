@@ -1,0 +1,79 @@
+{
+  "_readme": [
+    "DECLARATIONS FOR EVERY KEY THE STUDIO SENDS TO THE ENGINE.",
+    "",
+    "Modelled on datum-fi/constant_sources.json, which inverted the same burden one repo over.",
+    "Enumeration is MECHANICAL — _gate_payload_accounted.js reads the keys off the payload the",
+    "product actually builds. This file only says what each one IS.",
+    "",
+    "A key is accounted for when it is one of:",
+    "  asked     - a door refuses until the user answers it. The gate verifies this by walking",
+    "              the product's own refusals; it is not taken on trust from this file.",
+    "  machinery - infrastructure the user has no opinion about (trial count, seed, matrix mode).",
+    "              Requires `reason`.",
+    "  derived   - computed from something the user DID answer, and named here so the chain is",
+    "              legible. Requires `from` and `reason`.",
+    "",
+    "A key that is none of these is a DECISION MADE FOR THE USER and the gate goes red on it.",
+    "",
+    "THE RATCHET: max_unaccounted may only ever fall. It is 6 today because six fields reach the",
+    "engine with nobody asked — measured 2026-09-12, on the live payload, from an empty Studio.",
+    "Lowering it is done by ASKING for the field, never by declaring it away."
+  ],
+
+  "max_unaccounted": 6,
+  "unaccounted_review_due": "2026-10-15",
+
+  "keys": {
+    "seed": {
+      "kind": "machinery",
+      "reason": "Fixes the pseudo-random draw so two identical requests give identical answers. A user has no opinion about it and a changing one would make the product look unstable."
+    },
+    "n_trials": {
+      "kind": "machinery",
+      "reason": "How many paths each model runs. Shown on the Systems Panel for transparency, never as a control."
+    },
+    "ss_matrix_mode": {
+      "kind": "machinery",
+      "reason": "Selects which endpoint shape the response takes. A property of the request, not of the household."
+    },
+    "matrix_depth": {
+      "kind": "machinery",
+      "reason": "Quick or full matrix computation. A performance choice, not a modelling one."
+    },
+    "current_cape": {
+      "kind": "machinery",
+      "reason": "Today's market valuation. A fact about the world rather than about the user, and it must carry its own as-of date wherever it is displayed."
+    },
+    "custom_weights": {
+      "kind": "derived",
+      "from": "the Market Climate control",
+      "reason": "Sent only when the user picks Custom Matrix; the weights are the ones they set."
+    },
+    "co_architect_age": {
+      "kind": "derived",
+      "from": "co-dob",
+      "reason": "Age at the run date, computed from the co-architect's date of birth."
+    },
+    "co_architect_retirement_age": {
+      "kind": "derived",
+      "from": "co-ret",
+      "reason": "Computed from the co-architect's target retirement date."
+    },
+    "co_architect_plan_end_age": {
+      "kind": "derived",
+      "from": "co-dob and the plan-through age",
+      "reason": "Computed from the co-architect's own dates."
+    },
+    "ss_strategy_secondary": {
+      "kind": "derived",
+      "from": "the Social Security claiming path",
+      "reason": "The claiming age the user selected for the co-architect."
+    },
+    "ss_secondary_benefit_overrides": {
+      "kind": "derived",
+      "from": "ss-sec-62 / ss-sec-67 / ss-sec-70",
+      "reason": "The co-architect's own SSA figures, as typed."
+    }
+  }
+}
