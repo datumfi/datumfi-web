@@ -459,6 +459,129 @@ const REQUEST = { retirement_age: 52.6, plan_end_age: 93, datum_spend: TARGET };
     'tile present=' + /data-mc-tax-tile/.test(shellSrc)
     + ' · it is a div acting as a button, so tabindex and role are the whole accessibility story');
 
+  /* ── L10 THE CONVERGENCE SWARM — PACED TO THE WORK, NOT TO A CLOCK.
+        ⛔ L10a IS THE LEG THAT EARNS IT. The Mock resolves on fixed timers because it has nothing
+           to wait for. This screen exists because the engine takes 10-15 seconds, so it must
+           outlive a SLOW answer — a progress animation that finishes before the work does is a
+           spinner that lies, and it teaches the user the screen is decoration.
+        ⛔ L10c: THE PROBABILITY MUST NOT EXIST BEFORE THE ANSWER DOES. The Mock ships a fixture
+           79% present from the first frame. A probability rendered before the computation returns
+           is the purest form of the defect this whole arc has been removing. */
+  const swarm = await page.evaluate(async (a) => {
+    const M = window.DatumMeasurement;
+    const ov = document.getElementById('mcConvergenceSwarm');
+    const out = {};
+
+    // A SLOW answer: the swarm must still be up well after the Mock's 3.9s script would have ended.
+    let release;
+    const slow = new Promise((r) => { release = () => r(a[0]); });
+    const running = M.runConvergence(slow, { request: a[1], horizon: '31 yrs' });
+    await new Promise((r) => setTimeout(r, 900));
+    out.upEarly = ov.hidden === false;
+    out.badgeEarly = (document.getElementById('mcConvergenceSuccess') || {}).textContent;
+    out.pathCount = document.querySelectorAll('#mcConvergenceSwarmPaths path').length;
+    await new Promise((r) => setTimeout(r, 4200));            // past 3920ms, the Mock's whole run
+    out.stillUpAt5s = ov.hidden === false;
+    out.statusWhileWaiting = (document.getElementById('mcConvergenceStatus') || {}).textContent;
+    release();
+    await running;
+    out.downAfter = ov.hidden === true;
+    out.badgeAfter = (document.getElementById('mcConvergenceSuccess') || {}).textContent;
+    out.statusAfter = (document.getElementById('mcConvergenceStatus') || {}).textContent;
+
+    // A FAST answer must still be visible, not a flash.
+    const t0 = Date.now();
+    await M.runConvergence(Promise.resolve(a[0]), { request: a[1], horizon: '31 yrs' });
+    out.fastMs = Date.now() - t0;
+
+    // A REJECTED answer must not leave a progress screen up.
+    try { await M.runConvergence(Promise.reject(new Error('boom')), { request: a[1] }); } catch (e) { out.threw = true; }
+    out.downAfterReject = ov.hidden === true;
+    return out;
+  }, [RESPONSE, REQUEST]);
+
+  check('L10a PACED TO THE WORK: the swarm is still up 5s in when the engine has not answered',
+    swarm.upEarly === true && swarm.stillUpAt5s === true && swarm.downAfter === true,
+    'up at 0.9s=' + swarm.upEarly + ' · still up at ~5.1s=' + swarm.stillUpAt5s
+    + ' · down after the promise settles=' + swarm.downAfter
+    + '\n          ⛔ the Mock would have closed at 3920ms regardless — a spinner that lies');
+
+  check('L10b IT DOES NOT FLASH: a warm cache answering instantly still shows the sequence',
+    swarm.fastMs >= 1400,
+    'fast-path duration=' + swarm.fastMs + 'ms (floor is 1400) — without it a sub-second answer'
+    + ' renders as a glitch');
+
+  check('L10c NO PROBABILITY BEFORE THE ANSWER: the badge is empty while computing, filled after',
+    (swarm.badgeEarly === '' || swarm.badgeEarly == null) && /^\d+%$/.test(swarm.badgeAfter || ''),
+    'badge while computing=' + JSON.stringify(swarm.badgeEarly)
+    + ' · after=' + JSON.stringify(swarm.badgeAfter)
+    + '\n          ⛔ the Mock ships a fixture 79% present from the first frame');
+
+  check('L10d the status says what is happening, and the swarm draws its paths',
+    /computing/i.test(swarm.statusWhileWaiting || '') && /complete/i.test(swarm.statusAfter || '')
+      && swarm.pathCount === 100,
+    'status while waiting=' + JSON.stringify(swarm.statusWhileWaiting)
+    + ' · after=' + JSON.stringify(swarm.statusAfter) + ' · paths=' + swarm.pathCount);
+
+  check('L10e A FAILED COMPUTE CLOSES THE SCREEN: rejection propagates and leaves nothing up',
+    swarm.threw === true && swarm.downAfterReject === true,
+    'rejection reached the caller=' + swarm.threw + ' · overlay hidden=' + swarm.downAfterReject
+    + '\n          ⛔ a progress screen left up over a failure is worse than no progress screen');
+
+  /* ── L11 EVERY INTERACTIVE CONTROL HAS A LISTENER. Architect-ruled permanent, 2026-09-12, after
+        the "Show distribution" toggle was found with ZERO handlers — rendered, aria-pressed frozen,
+        and the face behind it unreachable since the day it was ported.
+        🔑 A CONTROL WITH NO LISTENER IS NOT A PARTIAL FEATURE. IT IS A PICTURE OF A CONTROL, AND
+           IT READS AS SHIPPED TO EVERYONE, INCLUDING THE PEOPLE WHO BUILT IT.
+        ⛔ IT ASSERTS A BINDING, NOT A RENDER. getEventListeners is a devtools-only API, so the
+           binding is observed the only way a page can observe it: dispatch a real click at the
+           control and require the application to CHANGE STATE. A handler that exists and does
+           nothing fails this leg, which is the correct outcome — the defect being prevented is
+           "nothing happens when you press it", not "no function was attached". */
+  const controls = await page.evaluate(async () => {
+    const res = {};
+    const fire = (node) => node.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    const sw = document.getElementById('mcVisualSwitch');
+
+    // every view tab must move the face it names
+    res.tabs = [];
+    for (const tab of document.querySelectorAll('[data-mc-view-tab]')) {
+      const want = tab.getAttribute('data-mc-view-tab');
+      window.DatumMeasurement.setView(want === 'curve' ? 'tax' : 'curve');
+      await new Promise((r) => setTimeout(r, 320));
+      fire(tab);
+      await new Promise((r) => setTimeout(r, 320));
+      res.tabs.push({ want, got: sw.getAttribute('data-view') });
+    }
+    // the tax tile must open the tax face
+    window.DatumMeasurement.setView('curve');
+    await new Promise((r) => setTimeout(r, 320));
+    const tile = document.querySelector('[data-mc-tax-tile]');
+    if (tile) { fire(tile); await new Promise((r) => setTimeout(r, 320)); }
+    res.tileOpens = sw.getAttribute('data-view');
+    // every close control must close the panel
+    document.getElementById('mcOverlay').hidden = false;
+    document.getElementById('mcOverlay').classList.add('open');
+    const closers = [...document.querySelectorAll('#mcOverlay [data-mc-close]')];
+    res.closerCount = closers.length;
+    fire(closers[0]);
+    await new Promise((r) => setTimeout(r, 400));
+    res.closed = document.getElementById('mcOverlay').hidden === true;
+    return res;
+  });
+
+  const deadTabs = (controls.tabs || []).filter((t) => t.want !== t.got);
+  check('L11a EVERY VIEW TAB IS BOUND: clicking each one actually moves the face it names',
+    deadTabs.length === 0 && controls.tabs.length === 3,
+    'tabs tested=' + controls.tabs.length + ' · not bound: ' + JSON.stringify(deadTabs)
+    + '\n          ⛔ this is the leg the old "Show distribution" toggle would have failed for months');
+  check('L11b THE TAX TILE IS BOUND: clicking it opens the tax face',
+    controls.tileOpens === 'tax',
+    'view after clicking the tile=' + JSON.stringify(controls.tileOpens));
+  check('L11c EVERY CLOSE CONTROL IS BOUND: the panel actually closes',
+    controls.closerCount >= 1 && controls.closed === true,
+    'close controls found=' + controls.closerCount + ' · panel hidden after click=' + controls.closed);
+
   /* ── L6 NO FORK. One reader of capacity_curve across every shipped script and the shell. A second
         mapper is how two surfaces come to disagree about the same household. */
   const files = [path.join(ROOT, 'studio.html'), path.join(ROOT, 'range.html')]

@@ -599,6 +599,123 @@
     }, 145);
   }
 
+  /* ══ THE CONVERGENCE SWARM ════════════════════════════════════════════════════════════════════
+     ⛔⛔ PACED TO THE WORK, NOT TO A CLOCK, AND THAT IS THE WHOLE DIFFERENCE FROM THE MOCK. The
+        Mock resolves on fixed timers because it has nothing to wait for. This screen exists
+        because the engine takes 10-15 seconds and a user needs to know the button is working
+        rather than navigate away — so it ends when the ENGINE ends.
+     🔑 A PROGRESS ANIMATION THAT FINISHES BEFORE THE WORK DOES IS A SPINNER THAT LIES, and it
+        teaches the user that the screen is decoration. One that never finishes is worse.
+     ⚠️ THE MINIMUM IS THERE FOR THE FAST CASE, NOT THE SLOW ONE. A warm engine cache can answer
+        in well under a second; without a floor the swarm would flash and vanish, reading as a
+        glitch. The minimum is the only timer in here and it never EXTENDS past the work. */
+  var SWARM_MIN_MS = 1400;
+  var SWARM_PATHS = 100;
+  var SWARM_NS = 'http://www.w3.org/2000/svg';
+
+  /* The Mock's path shape, verbatim: a walk that fans out from a common origin, red where it ends
+     below the floor guide. ⚠️ THESE PATHS ARE DELIBERATELY NOT THE ENGINE'S TRIALS. Drawing 100 of
+     40,000 real paths would be a sample presented as the swarm, and the honest reading of a
+     sampled picture is not available to a viewer. They are an ANIMATION OF WORK HAPPENING; the
+     numbers that mean anything arrive on the panel behind it. */
+  function swarmPath(i) {
+    var x = 52, y = 168, d = 'M 52 168 ', success = true;
+    var drift = (i % 7) - 3, vol = 8 + (i % 11);
+    for (var step = 1; step <= 28; step++) {
+      x += (938 - 52) / 28;
+      y += drift * 1.6 + (Math.sin(i * 1.7 + step) * vol) - 2.2;
+      y = Math.max(34, Math.min(304, y));
+      if (y > 276) success = false;
+      d += 'L ' + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+    }
+    return { d: d, success: success };
+  }
+
+  function renderSwarmPaths() {
+    var g = el('mcConvergenceSwarmPaths');
+    if (!g) return;
+    g.innerHTML = '';
+    for (var i = 0; i < SWARM_PATHS; i++) {
+      var meta = swarmPath(i);
+      var p = d.createElementNS(SWARM_NS, 'path');
+      p.setAttribute('d', meta.d);
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', meta.success ? 'rgba(93,202,165,.17)' : 'rgba(226,75,74,.34)');
+      p.setAttribute('stroke-width', '1.45');
+      p.style.strokeDasharray = '2200';
+      p.style.strokeDashoffset = '2200';
+      p.style.animation = 'draw-swarm 2.5s cubic-bezier(0.25,1,0.5,1) '
+        + (Math.random() * 0.76).toFixed(2) + 's forwards';
+      g.appendChild(p);
+    }
+  }
+
+  /* Run the swarm for the life of `work` (a promise). Resolves with whatever `work` resolved to,
+     so a caller can chain straight into rendering. Rejection is passed through unchanged — the
+     swarm closes either way, because a failed compute must not leave a progress screen up. */
+  function runConvergence(work, opts) {
+    var overlay = el('mcConvergenceSwarm');
+    var status = el('mcConvergenceStatus'), badge = el('mcConvergenceBadge');
+    var settled = Promise.resolve(work);
+    if (!overlay) return settled;
+
+    var horizon = opts && opts.horizon;
+    var tiles = ['mcConvStat1', 'mcConvStat2', 'mcConvStat3', 'mcConvStat4'];
+    tiles.forEach(function (id) {
+      var t = el(id); if (!t) return;
+      t.classList.remove('active');
+      var wgt = t.querySelector('[data-model-weight]');
+      /* ⚠️ THE HORIZON IS THE USER'S OWN ARITHMETIC OR IT IS ABSENT. No default years. */
+      if (wgt) wgt.textContent = horizon ? '× ' + horizon : '';
+    });
+    if (status) {
+      status.textContent = 'Convergence computing';
+      status.classList.add('is-live');
+    }
+    if (badge) badge.classList.remove('show');
+    /* ⛔ THE BADGE STARTS EMPTY AND IS FILLED FROM THE ANSWER, NEVER BEFORE IT. The Mock ships a
+       fixture 79% that is present from the first frame. A probability rendered before the
+       computation returns is the purest form of the defect this whole arc has been removing. */
+    put('mcConvergenceSuccess', '');
+
+    renderSwarmPaths();
+    overlay.hidden = false;
+    w.requestAnimationFrame(function () { overlay.classList.add('open'); });
+    [180, 400, 620, 840].forEach(function (ms, idx) {
+      w.setTimeout(function () { var t = el(tiles[idx]); if (t) t.classList.add('active'); }, ms);
+    });
+
+    var started = Date.now();
+    var close = function () {
+      overlay.classList.remove('open');
+      return new Promise(function (res) {
+        w.setTimeout(function () { overlay.hidden = true; res(); }, 260);
+      });
+    };
+
+    return settled.then(function (value) {
+      var wait = Math.max(0, SWARM_MIN_MS - (Date.now() - started));
+      return new Promise(function (res) { w.setTimeout(res, wait); }).then(function () {
+        /* ⭐ THE PROBABILITY IS THE CONFIDENCE AT THE USER'S OWN TARGET SPEND — the same number
+           the panel reports as Plan confidence, read off the same capacity curve. It is not a
+           second metric invented for this screen, and it MUST NOT BE: two "success" figures on
+           two screens in one flow is how a product starts contradicting itself. */
+        var s = fromEngine(value, opts && opts.request);
+        if (s && usable(s)) {
+          var conf = successAtSpend(s, Number.isFinite(datumSpend) ? datumSpend : s.datum);
+          put('mcConvergenceSuccess', pct(conf));
+          if (badge) badge.classList.add('show');
+        }
+        if (status) { status.textContent = 'Convergence complete'; status.classList.remove('is-live'); }
+        return new Promise(function (res2) { w.setTimeout(res2, 420); })
+          .then(close).then(function () { return value; });
+      });
+    }, function (err) {
+      if (status) { status.textContent = 'Convergence complete'; status.classList.remove('is-live'); }
+      return close().then(function () { throw err; });
+    });
+  }
+
   function open() {
     var o = el('mcOverlay'); if (!o) return;
     renderFromSession();
@@ -660,6 +777,7 @@
     renderEmpty: renderEmpty,
     fromEngine: fromEngine,
     setView: setView,
+    runConvergence: runConvergence,
     renderFromSession: renderFromSession,
     open: open,
     close: close,
