@@ -369,12 +369,116 @@ const FROM_CONTROL = {
   const srcAll = studioSource();
   const REGION = /\/\* ⛔⛔ ONE CONVERSION FROM SLIDER POSITION[\s\S]*?\n    \};\n/;
   const hasRegion = REGION.test(srcAll);
-  const outside = srcAll.replace(REGION, '').split('datumPosToVal').length - 1;
-  check('L10 ONE CONVERSION EXISTS: no second place turns a datum slider position into money',
-    hasRegion && outside === 0,
-    'shared conversion present=' + hasRegion + ' · datumPosToVal references outside it: ' + outside
+  const away = srcAll.replace(REGION, '');
+  /* ⭐ THE THREE NAMES ARE READ OFF THE SCALE MODULE, NOT TYPED HERE. datum-shape.js is the only
+     definition site, so the population is whatever IT exports — a fourth log slider added next year
+     is policed the day it appears, by nobody remembering to add it to this line. */
+  const SHAPE_SRC = fs.readFileSync(path.join(__dirname, 'datum-shape.js'), 'utf8');
+  const POS_FNS = [...new Set((SHAPE_SRC.match(/\b\w+PosToVal\b/g) || []))].sort();
+  const strays = POS_FNS.map((fn) => ({ fn, n: away.split(fn).length - 1 })).filter((r) => r.n > 0);
+  check('L10 ONE CONVERSION EXISTS: no second place turns a slider position into money',
+    hasRegion && POS_FNS.length >= 3 && strays.length === 0,
+    'shared conversion present=' + hasRegion + ' · scale functions found in datum-shape.js: '
+    + POS_FNS.join(', ')
+    + ' · conversions outside the shared one: '
+    + (strays.length ? strays.map((r) => r.fn + '×' + r.n).join(', ') : 'none')
     + '\n          ⛔ every spelling of this formula that has ever existed in this file was correct'
     + ' on its own line and wrong against its neighbours');
+
+  /* ── L11 — THE NUMBER IS ROUND, AT EVERY POSITION, ON EVERY SLIDER.
+        ⛔ THE CAPTAIN'S OWN WORDING IS THE SPEC: "if they toggle a slider to 10,000 the math shows
+           10,000 not 10,001." This asserts it as arithmetic rather than as a screenshot — sweep the
+           control, read what the DRAG HANDLER stored, and require it to land on the resolution that
+           quantity is decided at.
+        ⭐ IT READS dataset.exactVal, WHICH IS WHAT EVERY SURFACE CONSUMES — the payload, the HUD,
+           the edit box, the canvas and the Drafting header all read that one value. Requiring it to
+           be PRESENT is also what proves the handler ran: computing the expected number here and
+           comparing it to itself would pass with the slider unwired. */
+  const roundness = await page.evaluate(() => {
+    const SPEC = [
+      { id: 'slider-datum',     kind: 'datum',     step: 1000 },
+      { id: 'slider-portfolio', kind: 'portfolio', step: 1000 },
+      { id: 'slider-contrib',   kind: 'contrib',   step: 100  }
+    ];
+    const out = [];
+    for (const sp of SPEC) {
+      const el = document.getElementById(sp.id);
+      if (!el) { out.push({ kind: sp.kind, missing: true }); continue; }
+      const keepPos = el.value, keepEx = el.dataset.exactVal;
+      for (let i = 0; i < 12; i++) {
+        const pos = 20000 + Math.round(i * (95000 - 20000) / 11);
+        delete el.dataset.exactVal;
+        el.value = String(pos);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        const stored = el.dataset.exactVal;
+        const v = Number(stored);
+        const wrote = stored !== undefined && stored !== '' && Number.isFinite(v);
+        const round = wrote && (v < sp.step * 10 ? Number.isInteger(v) : v % sp.step === 0);
+        if (!wrote || !round) out.push({ kind: sp.kind, pos, stored, step: sp.step, wrote });
+      }
+      el.value = keepPos;
+      if (keepEx === undefined) delete el.dataset.exactVal; else el.dataset.exactVal = keepEx;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    return out;
+  });
+  check('L11 THE NUMBER IS ROUND: every slider position stores a value at its declared resolution',
+    Array.isArray(roundness) && roundness.length === 0,
+    (roundness.length === 0
+      ? '36 positions across datum ($1,000) · portfolio ($1,000) · contrib ($100) — all clean'
+      : roundness.length + ' bad: ' + roundness.slice(0, 6).map((r) => r.missing
+          ? r.kind + ' SLIDER NOT FOUND'
+          : r.kind + ' pos ' + r.pos + ' stored ' + JSON.stringify(r.stored)
+            + (r.wrote ? ' (not a multiple of ' + r.step + ')' : ' (HANDLER WROTE NOTHING)')).join(' · '))
+    + '\n          ⛔ $10,001 where the user chose $10,000 is not a rounding preference — it is the'
+    + ' product disagreeing with the control the user just moved');
+
+  /* ── L12 — AND THE ROUND NUMBER IS REACHABLE. L11's blind spot, closed rather than confessed.
+        ⛔ L11 ASKS "IS THE OUTPUT TIDY?" AND A COARSER STEP MAKES IT TIDIER. Raise contrib's step
+           from $100 to $1,000 and every value is still a multiple of 100, so L11 stays GREEN while
+           $12,500 — an ordinary contribution — becomes UNSELECTABLE, silently corrected to $13,000.
+           A LEG THAT A DEFECT CAN SATISFY BY GETTING WORSE IS NOT A CONTROL.
+        This asks the opposite question: put the control exactly where a user aiming at a round
+        figure would put it, and require that figure back. Tidiness and reachability pull in
+        opposite directions, so the pair pins the step from both sides. */
+  const reach = await page.evaluate(() => {
+    const S = window.DatumShape && DatumShape.scales;
+    if (!S) return [{ kind: 'scales', missing: true }];
+    const SPEC = [
+      { id: 'slider-datum',     kind: 'datum',     toPos: (v) => S.datumValToPos(v / 1000),  targets: [40000, 65000, 120000] },
+      { id: 'slider-portfolio', kind: 'portfolio', toPos: (v) => S.portValToPos(v / 1e6),    targets: [250000, 750000, 2000000] },
+      /* ⭐ $12,500 IS IN THIS LIST ON PURPOSE — it is the value that dies first if the step is
+         widened, and the only one of the nine that a $1,000 step would not already satisfy. */
+      { id: 'slider-contrib',   kind: 'contrib',   toPos: (v) => S.contribValToPos(v),       targets: [12500, 25000, 40000] }
+    ];
+    const bad = [];
+    for (const sp of SPEC) {
+      const el = document.getElementById(sp.id);
+      if (!el) { bad.push({ kind: sp.kind, missing: true }); continue; }
+      const keepPos = el.value, keepEx = el.dataset.exactVal;
+      for (const want of sp.targets) {
+        delete el.dataset.exactVal;
+        el.value = String(Math.max(0, Math.min(100000, Math.round(sp.toPos(want)))));
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        const got = Number(el.dataset.exactVal);
+        if (got !== want) bad.push({ kind: sp.kind, want, got: el.dataset.exactVal });
+      }
+      el.value = keepPos;
+      if (keepEx === undefined) delete el.dataset.exactVal; else el.dataset.exactVal = keepEx;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    return bad;
+  });
+  check('L12 AND IT IS REACHABLE: aiming the control at a round figure returns that figure',
+    Array.isArray(reach) && reach.length === 0,
+    (reach.length === 0
+      ? '9 targets — datum 40k/65k/120k · portfolio 250k/750k/2M · contrib 12.5k/25k/40k — all exact'
+      : reach.length + ' unreachable: ' + reach.map((r) => r.missing
+          ? r.kind + ' NOT FOUND'
+          : r.kind + ' wanted ' + r.want + ' got ' + JSON.stringify(r.got)).join(' · '))
+    + '\n          ⛔ a step wide enough to tidy the number is also wide enough to delete the answer');
+
+
 
   results.forEach((r) => console.log('  ' + r));
   console.log('\nSCORE ' + passes + ' / ' + (passes + fails) + ' ' + (fails === 0 ? 'GREEN' : 'RED'));

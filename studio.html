@@ -15502,13 +15502,13 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            HUD and canvas always agree (spend-input is a mirror only).
            ⛔ THAT SENTENCE WAS ALREADY HERE ON 2026-09-12 AND IT WAS FALSE IN EVERY PAIRING —
               request 100001, box 100000, HUD 100000.747, canvas 100.00074. Both halves now go
-              through _datumSnapDollars, which is what makes the claim true rather than aspirational. */
+              through _sliderSnapDollars, which is what makes the claim true rather than aspirational. */
         const datumSpend = (() => {
           const sDat = document.getElementById('slider-datum');
           if (sDat) {
             const ex = sDat.dataset.exactVal;
             if (ex !== undefined && ex !== '') return Math.round(parseFloat(ex)) || 100000;
-            var _snapped = window._datumSnapDollars(parseInt(sDat.value, 10));
+            var _snapped = window._sliderSnapDollars('datum', parseInt(sDat.value, 10));
             if (Number.isFinite(_snapped)) return _snapped;
           }
           return parseInt(spendVal.replace(/[^\d.]/g, ''), 10) || 100000;
@@ -16742,14 +16742,43 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           RESOLUTION is the decision, and $1,000 is it: the engine's own spend tiers round to $1,000,
           so nothing analytical is lost and the user is sent the number they were shown.
        ⛔ TYPED VALUES ARE NEVER SNAPPED. This converts a POSITION. A figure the user typed is a
-          FACT, lives in dataset.exactVal, and every caller below reads that FIRST and untouched. */
-    window._datumSnapDollars = function (pos) {
+          FACT, lives in dataset.exactVal, and every caller below reads that FIRST and untouched.
+          ⚠️ ONE PLACE WAS SNAPPING A TYPED FACT and it went with this change: the Drafting-header
+             mirror applied its \`Math.round(pv/1000)*1000\` AFTER choosing between exactVal and the
+             position, so a user who typed $750,006 saw the header quietly correct them to $750,000.
+             THE SNAP BELONGS TO THE POSITION BRANCH ONLY.
+       ⭐ EXTENDED TO ALL THREE LOG SLIDERS (2026-09-12, same day, on the Captain's ruling that the
+          math is the point and the cone is not). The census found the identical fork on PORTFOLIO —
+          five sites, three resolutions, round-trip error growing with the number: $5 at $100k, $26
+          at $500k, $140 at $5M, $149 at $12M, so the edit box read $11,999,851 while the header
+          beside it read $12,000,000. CONTRIB was the mild one ($0-$2, because contribPosToVal
+          already rounds internally) and is here anyway: A SLIDER THAT IS CURRENTLY HARMLESS IS THE
+          NEXT ONE SOMEBODY COPIES. */
+    window._sliderSnapDollars = function (which, pos) {
       var S = (window.DatumShape && DatumShape.scales) || null;
-      if (!S || typeof S.datumPosToVal !== 'function') return NaN;
+      var SPEC = {
+        /* step: the resolution this QUANTITY is decided at, and each one is argued, not inherited.
+           datum     $1,000 — the engine's own spend tiers round to $1,000, so nothing analytical is
+                              lost and the user is sent exactly the figure on their screen.
+           portfolio $1,000 — matches the Drafting-header mirror, which already snapped to $1k on its
+                              own (naming "$750,006") while four other portfolio sites did not.
+           contrib     $100 — $1,000 would make a real $12,500 contribution UNREACHABLE. A step must
+                              be finer than the decisions people actually make with the control. */
+        datum:     { fn: 'datumPosToVal',   scale: 1000, step: 1000 },
+        portfolio: { fn: 'portPosToVal',    scale: 1e6,  step: 1000 },
+        contrib:   { fn: 'contribPosToVal', scale: 1,    step: 100  }
+      }[which];
+      if (!S || !SPEC || typeof S[SPEC.fn] !== 'function') return NaN;
       var n = Number(pos);
       if (!Number.isFinite(n)) return NaN;
-      var k = S.datumPosToVal(n);
-      return Number.isFinite(k) ? Math.round(k) * 1000 : NaN;
+      var v = S[SPEC.fn](n) * SPEC.scale;
+      if (!Number.isFinite(v)) return NaN;
+      /* ⚠️ THE SMALL-VALUE BRANCH IS NOT A SPECIAL CASE, IT IS THE SAME RULE. The noise is
+         RELATIVE (a log scale), so it shrinks with the number: $149 at $12M, $5 at $100k, five
+         CENTS at $1,000. Once the value is under ten steps the nearest DOLLAR is already exact,
+         and snapping further would round a real $150 contribution to $200 — destroying a value in
+         the name of tidying it. */
+      return v < SPEC.step * 10 ? Math.round(v) : Math.round(v / SPEC.step) * SPEC.step;
     };
 
     // ── SHAPE VIEW: Estate<->Shape flip (deterministic FV only, no Monte Carlo) ──
@@ -16817,7 +16846,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         if (exP !== undefined && exP !== '') {
           out.portfolioVol = (parseFloat(exP) || 0) / 1e6;
         } else if (SC) {
-          out.portfolioVol = SC.portPosToVal(parseInt(sPort.value, 10));
+          out.portfolioVol = window._sliderSnapDollars('portfolio', parseInt(sPort.value, 10)) / 1e6;
         }
       }
 
@@ -16828,7 +16857,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         if (exC !== undefined && exC !== '') {
           out.annualContrib = parseFloat(exC) || 0;
         } else if (SC) {
-          out.annualContrib = SC.contribPosToVal(parseInt(sCon.value, 10));
+          out.annualContrib = window._sliderSnapDollars('contrib', parseInt(sCon.value, 10));
         }
       }
 
@@ -16839,7 +16868,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         if (exD !== undefined && exD !== '') {
           out.targetSpend = (parseFloat(exD) || 0) / 1000;
         } else if (SC) {
-          out.targetSpend = window._datumSnapDollars(parseInt(sDat.value, 10)) / 1000;
+          out.targetSpend = window._sliderSnapDollars('datum', parseInt(sDat.value, 10)) / 1000;
         }
       }
 
@@ -17269,21 +17298,21 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     function updatePortLabel() {
       var sl = $('slider-portfolio'); var lbl = $('val-portfolio'); if (!sl || !lbl || !SC) return;
       var ex = sl.dataset.exactVal;
-      var dollars = (ex !== undefined && ex !== '') ? (parseFloat(ex) || 0) : SC.portPosToVal(parseInt(sl.value,10)) * 1e6;
+      var dollars = (ex !== undefined && ex !== '') ? (parseFloat(ex) || 0) : window._sliderSnapDollars('portfolio', parseInt(sl.value,10));
       if (ex === undefined || ex === '') sl.dataset.exactVal = String(Math.round(dollars));
       lbl.textContent = fmtCap(Math.round(dollars / 1000));
     }
     function updateContribLabel() {
       var sl = $('slider-contrib'); var lbl = $('val-contrib'); if (!sl || !lbl || !SC) return;
       var ex = sl.dataset.exactVal;
-      var dollars = (ex !== undefined && ex !== '') ? (parseFloat(ex) || 0) : SC.contribPosToVal(parseInt(sl.value,10));
+      var dollars = (ex !== undefined && ex !== '') ? (parseFloat(ex) || 0) : window._sliderSnapDollars('contrib', parseInt(sl.value,10));
       if (ex === undefined || ex === '') sl.dataset.exactVal = String(Math.round(dollars));
       lbl.textContent = '$' + Math.round(dollars).toLocaleString('en-US');
     }
     function updateDatumLabel() {
       var sl = $('slider-datum'); var lbl = $('val-datum'); if (!sl || !lbl || !SC) return;
       var ex = sl.dataset.exactVal;
-      var dollars = (ex !== undefined && ex !== '') ? (parseFloat(ex) || 0) : window._datumSnapDollars(parseInt(sl.value,10));
+      var dollars = (ex !== undefined && ex !== '') ? (parseFloat(ex) || 0) : window._sliderSnapDollars('datum', parseInt(sl.value,10));
       if (ex === undefined || ex === '') sl.dataset.exactVal = String(Math.round(dollars));
       var k = Math.round(dollars / 1000);
       lbl.textContent = (k >= 1000 ? '$' + (k/1000).toFixed(2).replace(/\.00$/,'') + 'M' : '$' + k + 'k') + ' / yr';
@@ -17876,10 +17905,10 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       if (!spendEl || !sDat) return;
       var ex = sDat.dataset.exactVal, n = 0;
       if (ex !== undefined && ex !== '') n = Math.round(parseFloat(ex));
-      /* The snap this line used to describe by itself now lives in _datumSnapDollars, because the
+      /* The snap this line used to describe by itself now lives in _sliderSnapDollars, because the
          note was RIGHT and LOCAL: it named $100,001 exactly, fixed the box the reader was looking at,
          and five other sites kept the old arithmetic — including the one that talks to the engine. */
-      else if (SC) n = window._datumSnapDollars(parseInt(sDat.value, 10));
+      else if (SC) n = window._sliderSnapDollars('datum', parseInt(sDat.value, 10));
       if (n > 0) spendEl.value = '$' + n.toLocaleString('en-US');
     }
 
@@ -17985,17 +18014,17 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           getClampedValid: function (v) { var lo = Math.max(75, Math.round(parseFloat(slAct.value)) + 20); return clampN(v, lo, 105); },
           toSlider: function (v) { return v; } },
         { valId: 'val-portfolio',   slider: slPort, w: '140px', isCurrency: true,
-          getEditVal: function () { return '$' + Math.round(SC.portPosToVal(parseInt(slPort.value,10)) * 1e6).toLocaleString('en-US'); },
+          getEditVal: function () { return '$' + window._sliderSnapDollars('portfolio', parseInt(slPort.value,10)).toLocaleString('en-US'); },
           clean: function (s) { return s.replace(/[^0-9.]/g, ''); },
           validate: function (v) { return v >= 1000 && v <= 50000000; },
           toSlider: function (v) { return SC.portValToPos(v / 1e6); } },
         { valId: 'val-contrib',     slider: slCont, w: '140px', isCurrency: true,
-          getEditVal: function () { return '$' + SC.contribPosToVal(parseInt(slCont.value,10)).toLocaleString('en-US'); },
+          getEditVal: function () { return '$' + window._sliderSnapDollars('contrib', parseInt(slCont.value,10)).toLocaleString('en-US'); },
           clean: function (s) { return s.replace(/[^0-9.]/g, ''); },
           validate: function (v) { return v >= 0 && v <= 200000; },
           toSlider: function (v) { return SC.contribValToPos(v); } },
         { valId: 'val-datum',       slider: slDat,  w: '140px', isCurrency: true,
-          getEditVal: function () { return '$' + window._datumSnapDollars(parseInt(slDat.value,10)).toLocaleString('en-US'); },
+          getEditVal: function () { return '$' + window._sliderSnapDollars('datum', parseInt(slDat.value,10)).toLocaleString('en-US'); },
           clean: function (s) { return s.replace(/[^0-9.]/g, ''); },
           validate: function (v) { return v >= 20000 && v <= 1000000; },
           toSlider: function (v) { return SC.datumValToPos(v / 1000); } }
@@ -18097,7 +18126,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       var sPort = $('slider-portfolio');
       if (sPort) sPort.addEventListener('input', function () {
         var n = parseInt(sPort.value, 10);
-        sPort.dataset.exactVal = String(Math.round(SC.portPosToVal(n) * 1e6));
+        sPort.dataset.exactVal = String(window._sliderSnapDollars('portfolio', n));
         if (!isNaN(_prev.port)) {
           if (n > _prev.port) impulse(WAVE_IMP_PORT, 0, +1, null, WAVE_LEAN_MAG, null);
           else if (n < _prev.port) impulse(0, WAVE_IMP_PORT, null, -1, null, -WAVE_LEAN_MAG);
@@ -18108,7 +18137,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       var sCon = $('slider-contrib');
       if (sCon) sCon.addEventListener('input', function () {
         var n = parseInt(sCon.value, 10);
-        sCon.dataset.exactVal = String(SC.contribPosToVal(n));
+        sCon.dataset.exactVal = String(window._sliderSnapDollars('contrib', n));
         if (!isNaN(_prev.cont)) {
           if (n > _prev.cont) impulse(0, WAVE_IMP_CONT, null, +1, null, WAVE_LEAN_MAG);
           else if (n < _prev.cont) impulse(WAVE_IMP_CONT, 0, -1, null, -WAVE_LEAN_MAG, null);
@@ -18119,7 +18148,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       var sDat = $('slider-datum');
       if (sDat) sDat.addEventListener('input', function () {
         var n = parseInt(sDat.value, 10);
-        sDat.dataset.exactVal = String(window._datumSnapDollars(n));
+        sDat.dataset.exactVal = String(window._sliderSnapDollars('datum', n));
         if (!isNaN(_prev.dat)) {
           if (n > _prev.dat) impulse(WAVE_IMP_DATUM, 0, +1, null, WAVE_LEAN_MAG, null);
           else if (n < _prev.dat) impulse(0, WAVE_IMP_DATUM, null, -1, null, -WAVE_LEAN_MAG);
@@ -21163,16 +21192,17 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       var SCb = window.DatumShape && DatumShape.scales;
       var sP = document.getElementById('slider-portfolio');
       if (portEl && !portEl.value && sP) {
-        // At load exactVal can only be the position-derived cache, which carries
-        // log-scale noise ($750,006) -- snap the mirrored value to $1k.
+        /* This line USED to snap here, naming "$750,006" — right about the noise, and one of the
+           two local fixes that between them hid the fork for months. The snap now belongs to the
+           position branch inside _sliderSnapDollars, so a TYPED $750,006 survives being mirrored. */
         var pv = (sP.dataset.exactVal !== undefined && sP.dataset.exactVal !== '') ? parseFloat(sP.dataset.exactVal)
-               : (SCb ? SCb.portPosToVal(parseInt(sP.value, 10)) * 1e6 : 0);
-        if (pv > 0) portEl.value = fmt(Math.round(pv / 1000) * 1000);
+               : (SCb ? window._sliderSnapDollars('portfolio', parseInt(sP.value, 10)) : 0);
+        if (pv > 0) portEl.value = fmt(pv);
       }
       var sCn = document.getElementById('slider-contrib');
       if (contEl && !contEl.value && sCn) {
         var cv = (sCn.dataset.exactVal !== undefined && sCn.dataset.exactVal !== '') ? parseFloat(sCn.dataset.exactVal)
-               : (SCb ? SCb.contribPosToVal(parseInt(sCn.value, 10)) : 0);
+               : (SCb ? window._sliderSnapDollars('contrib', parseInt(sCn.value, 10)) : 0);
         if (cv > 0) contEl.value = fmt(cv);
       }
       // FIX #1 (RC-A) — push the loaded rooms INTO the live state BEFORE bind, so bind's immediate
