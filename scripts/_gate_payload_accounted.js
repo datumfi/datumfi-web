@@ -62,7 +62,7 @@ function check(label, cond, detail) {
 /* Shapes, not facts. These answer a door; they never stand in for a judgement about the household. */
 const ANSWERS = {
   'pri-dob': '03 / 1974', 'target-ret': '07 / 2042', 'co-dob': '11 / 1976', 'co-ret': '05 / 2044',
-  'spend-input': '$100,000', 'plan-through': '93',
+  'spend-input': '$100,000', 'plan-through': '93', 'plan-end-age': '03 / 2064',
   'ss-pri-62': '1,800', 'ss-pri-67': '2,400', 'ss-pri-70': '3,000',
   'ss-sec-62': '1,500', 'ss-sec-67': '2,000', 'ss-sec-70': '2,600',
   'hc-monthly': '1,150', 'pri-location': 'Alabama', 'filing-status': 'Single / Individual'
@@ -78,8 +78,12 @@ const FROM_CONTROL = {
   filing_status: 'filing-status',
   ss_primary_benefit_overrides: 'ss-pri-67',
   accounts: 'sec-drafting',
-  datum_spend: 'spend-input',
-  plan_end_age: 'plan-through',
+  /* ⭐ BOTH MOVED 2026-09-12 WHEN THE DEFAULTS WERE REMOVED. datum_spend used to be named
+     against #spend-input and plan_end_age against a 'plan-through' target, and NEITHER CONTROL
+     EVER REFUSED — so both keys were correctly counted as UNASKED however the map read. A name in
+     this map has never been evidence; only a refusal observed during the walk is. */
+  datum_spend: 'sec-sketch',
+  plan_end_age: 'plan-end-age',
   healthcare_annual: 'hc-monthly'
 };
 
@@ -177,6 +181,24 @@ const FROM_CONTROL = {
         addInstance('taxable');
         const a = window.state.accounts.filter((x) => x.baseId === 'taxable').pop();
         a.value = 750000;
+      });
+      await page.waitForTimeout(110);
+      continue;
+    }
+
+    /* ⛔ THE DATUM'S ANSWER IS AN ACTION, NOT A FIELD — the refusal points at the Sketch
+       SECTION (or, on a cold estate, at the step that unlocks it), and what a user does there is
+       MOVE THE SLIDER. Dispatching a real input event is what a drag does, and it is the drag
+       handler that records the answer. Setting dataset.exactVal directly would forge the very
+       provenance the refusal exists to check — the harness would be writing the user's answer for
+       them, which is the seeding defect wearing an answer's clothes. */
+    const datum = r.errs.find((e) => e.t === 'sec-sketch' || (e.t === 'sec-drafting' && /spend each year/.test(e.m)));
+    if (datum) {
+      await page.evaluate(() => {
+        const sd = document.getElementById('slider-datum');
+        if (!sd) return;
+        sd.value = '41141';
+        sd.dispatchEvent(new Event('input', { bubbles: true }));
       });
       await page.waitForTimeout(110);
       continue;
@@ -326,15 +348,20 @@ const FROM_CONTROL = {
       sDat.value = String(pos);
       sDat.dispatchEvent(new Event('input', { bubbles: true }));
       const shown = parseInt(String(box.value).replace(/[^0-9]/g, ''), 10);
-      /* ⛔⛔ THE SECOND DELETE IS THE WHOLE LEG, AND ITS FIRST RED-FIRST RUN PROVED IT.
-         Dispatching 'input' makes the drag handler WRITE dataset.exactVal — and the payload reads
-         exactVal BEFORE it reads the position. So a sweep that stops here measures the typed-fact
-         branch, while the defect lives on the POSITION branch, which is the only one a COLD Studio
-         has: nobody has dragged anything, so there is no exactVal to read. M37 restored the real
-         100001 arithmetic and this leg stayed GREEN until the delete below was added.
-         🔑 THE FIXTURE HAD SUPPLIED THE PRECONDITION THAT HIDES THE BUG — the same shape as the
-            refusal walk that seeded an account and then reported no account requirement. */
-      delete sDat.dataset.exactVal;
+      /* ⭐ THE SECOND  THAT USED TO LIVE HERE IS GONE, AND ITS REMOVAL IS THE RECORD OF
+         A DEFECT BEING CLOSED STRUCTURALLY RATHER THAN WATCHED. It was added hours earlier because
+         the payload read exactVal FIRST and the 100001 defect lived on the POSITION branch, so the
+         leg had to force that branch to see anything. The cold-default purge DELETED THE POSITION
+         BRANCH: an untouched datum is now a refusal, not a fallback. Keeping the delete would test
+         a state the product no longer has, and it did — 12 of 12 'disagreements' that were really
+         one omitted key.
+         ⚠️ AND THIS LEG IS WEAKER THAN IT WAS. SAY SO RATHER THAN LET IT KEEP ITS OLD REPUTATION.
+            The screen and the payload now both read dataset.exactVal, so they agree largely by
+            construction; what it still catches is the spend box formatting or parsing differently
+            from what is sent. THE ORIGINAL DEFECT IS HELD BY L10 NOW — one conversion, no second
+            place to compute money — which is a structural guarantee rather than a swept sample.
+            A LEG WHOSE DEFECT HAS BEEN DESIGNED OUT SHOULD BE DEMOTED IN THE RECORD, NOT QUIETLY
+            LEFT TO LOOK AS STRONG AS IT ONCE WAS. */
       let sent = null;
       try { const r = window._buildStudioRequest(); sent = r && r.datum_spend; } catch (e) {}
       rows.push({ pos, shown, sent });

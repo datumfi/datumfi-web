@@ -3766,9 +3766,9 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             <div class="control-group" id="grp-plan-through" style="margin-bottom:0;">
               <div class="control-header">
                 <label class="control-label" for="sl-plan-through">Plan Through Age</label>
-                <span class="control-value" id="val-plan-through">93 yrs</span>
+                <span class="control-value" id="val-plan-through">Not set</span>
               </div>
-              <input type="range" id="sl-plan-through" min="75" max="105" value="93" step="1">
+              <input type="range" id="sl-plan-through" min="75" max="105" value="90" step="1">
               <div class="lev-tooltip">How long you're planning for your money to last — a shorter retirement raises your boundaries, a longer one lowers them, so set it to the age you genuinely want to be covered through.</div>
             </div>
           </div>
@@ -3800,11 +3800,11 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             <div class="control-group" id="grp-datum" style="margin-bottom:0;">
               <div class="control-header" style="flex-direction: column; align-items: flex-start;">
                 <div style="display:flex; justify-content:flex-end; width:100%; align-items:flex-end;">
-                  <span class="control-value" id="val-datum" style="color: var(--teal-mid);">$100k / yr</span>
+                  <span class="control-value" id="val-datum" style="color: var(--teal-mid);">Not set</span>
                 </div>
                 <div style="font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em;">Your target annual retirement spending — the point you choose to test inside your Shape.</div>
               </div>
-              <input type="range" id="slider-datum" min="0" max="100000" value="41141" step="1" tabindex="5">
+              <input type="range" id="slider-datum" min="0" max="100000" value="50000" step="1" tabindex="5">
             </div>
 
             <div class="dialogue-block" style="border-bottom:none; padding-bottom:0;">
@@ -4090,7 +4090,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         <div id="sec-datum" class="section-content" style="display: block;">
           <div class="datum-group">
             <div class="input-label">Target Annual Spend</div>
-            <input type="text" class="datum-input curr-format" id="spend-input" data-field="datum_spend" value="$100,000" onfocus="this.select()" oninput="updateSVGs()">
+            <input type="text" class="datum-input curr-format" id="spend-input" data-field="datum_spend" value="" onfocus="this.select()" oninput="updateSVGs()">
             <div class="metaphor-hint">The benchmark elevation for your financial future.</div>
           </div>
         </div>
@@ -4705,10 +4705,10 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             <div class="control-group" style="margin-bottom:0;">
               <div class="control-header">
                 <label class="control-label" for="d2-slider-plan-through">Plan Through Age</label>
-                <span class="swf-val-wrap"><span class="swf-was" id="swf-was-plan-through"></span><span class="control-value" id="d2-val-plan-through">93 yrs</span></span>
+                <span class="swf-val-wrap"><span class="swf-was" id="swf-was-plan-through"></span><span class="control-value" id="d2-val-plan-through">Not set</span></span>
               </div>
               <div class="d2-slider-wrap">
-                <input type="range" id="d2-slider-plan-through" min="75" max="105" value="93" step="1">
+                <input type="range" id="d2-slider-plan-through" min="75" max="105" value="90" step="1">
                 <div class="d2-ghost-tick" id="d2-tick-plan-through"><div class="d2-ghost-tick-line"></div></div>
               </div>
               <div class="lev-tooltip">How long you're planning for your money to last — a shorter retirement raises your boundaries, a longer one lowers them, so set it to the age you genuinely want to be covered through.</div>
@@ -4748,12 +4748,12 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             <div class="control-group" style="margin-bottom:0;">
               <div class="control-header" style="flex-direction: column; align-items: flex-start;">
                 <div style="display:flex; justify-content:flex-end; width:100%; align-items:baseline;">
-                  <span class="swf-was" id="swf-was-datum"></span><span class="control-value" id="d2-val-datum" style="color: var(--teal-mid);">$100k / yr</span>
+                  <span class="swf-was" id="swf-was-datum"></span><span class="control-value" id="d2-val-datum" style="color: var(--teal-mid);">Not set</span>
                 </div>
                 <div style="font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em;">Your target annual retirement spending — the point you choose to test inside your Shape.</div>
               </div>
               <div class="d2-slider-wrap">
-                <input type="range" id="d2-slider-datum" min="0" max="100000" value="41141" step="1">
+                <input type="range" id="d2-slider-datum" min="0" max="100000" value="50000" step="1">
                 <div class="d2-ghost-tick" id="d2-tick-datum"><div class="d2-ghost-tick-line"></div></div>
               </div>
             </div>
@@ -15374,7 +15374,25 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            starts pulling a household's adjustment toward zero with every gate green.
            ⚠️ THE THREE CONDITIONS ARE VERBATIM FROM THE CHAIN THIS REPLACES — no clause added,
               removed or reordered. This is a naming, not a rule change. */
-        const _reachesEngine = a =>
+        /* ⛔ ONE PREDICATE PER ANSWER, READ FROM THE STATE THE PRODUCT ALREADY KEEPS — no new flag and
+   no codec slot, which is the whole reason removing the defaults was CHEAPER than refusing around
+   them. A default sitting inside the answer domain needs a provenance flag to be detectable at
+   all; with the default gone, absence is just absence.
+   ⚠️ AND BOTH PERSIST ALREADY, which is the half that is normally missed: a saved datum restores
+      into dataset.exactVal and a saved horizon into prof.plan_end_date, so a user who answers,
+      saves and reloads is NOT asked again. The salary-zero repair is the precedent and its lesson
+      is written at that site — BOTH HALVES HAD TO MOVE, and either alone is a half-repair that
+      still loses the answer. */
+const _datumAnswered = () => {
+  const el = document.getElementById('slider-datum');
+  const ex = el && el.dataset.exactVal;
+  return !!(ex !== undefined && ex !== null && String(ex).trim() !== '');
+};
+const _planThroughAnswered = () => {
+  const el = document.getElementById('plan-end-age');
+  return !!(el && String(el.value || '').trim());
+};
+const _reachesEngine = a =>
              !FILTERED_TYPES.has(a.baseId)
           && !_conduitIsInformational(a)   // §7.5 count-once guard — an informational Rollover 401(k)'s dollars are counted inside its destination plan, never twice (bank R91; safe-by-default per Captain Fork A)
           && ((a.value || 0) > 0 || (a.inflow || 0) > 0);
@@ -15452,6 +15470,30 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           _errs.push({ field: 'Your Estate', message: ESTATE_REQUIRED, target: 'sec-drafting' });
         }
 
+        /* ⛔⛔ THE TWO MONEY-BEARING DEFAULTS, REMOVED — Captain-ruled 2026-09-12: "they must pick
+           it." datum_spend shipped as the Captain's own $100,000 and plan_end_age as his 93, and
+           BOTH WERE INVISIBLE because a default that lives inside the answer domain cannot be
+           detected as absent. Neither door had ever asked.
+           ⭐ MEASURED BEFORE REMOVAL, so this is a number and not a principle: sweeping
+              plan_end_age across one solo household moves confidence 9.87 points at 78 and -7.91
+              at 105 — ABOUT 17.8 POINTS ACROSS THE CONTROL, roughly double the filing-status lever.
+              The 93 was not a harmless convenience; it was the largest single input we have priced.
+           ⚠️ THE DOOR FOR TARGET SPEND DEPENDS ON WHETHER THE ESTATE EXISTS, AND THAT IS NOT A
+              DETAIL. The Sketch control lives behind the estate-empty / s2-estate-locked classes — on a cold
+              Studio it cannot be reached at all. A DOOR THAT OPENS ONTO A LOCKED ROOM IS WORSE
+              THAN NO DOOR, because the person now believes they have been helped. So when the
+              estate is empty the door sends them to the step that UNLOCKS it, which is the estate
+              refusal immediately above; refreshEstateGate() clears the lock the moment one account
+              exists, so that step is the real precondition and not a guess. */
+        if (!_datumAnswered()) {
+          _errs.push({ field: 'Target spend', message: TARGET_SPEND_REQUIRED,
+                       target: _hasEstate() ? 'sec-sketch' : 'sec-drafting' });
+        }
+        if (!_planThroughAnswered()) {
+          _errs.push({ field: 'Plan-through age', message: PLAN_THROUGH_REQUIRED, target: 'plan-end-age' });
+        }
+
+
         /* ⛔⛔ SOCIAL SECURITY IS REQUIRED FROM 2026-09-10, IN THE SAME COMMIT THE ENGINE STOPPED
            SUBSTITUTING IT. Until today engine/income.py answered a blank field from a hardcoded
            PIA table belonging to ONE REAL HOUSEHOLD -- measured, that handed an unrelated
@@ -15507,14 +15549,25 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           const sDat = document.getElementById('slider-datum');
           if (sDat) {
             const ex = sDat.dataset.exactVal;
-            if (ex !== undefined && ex !== '') return Math.round(parseFloat(ex)) || 100000;
-            var _snapped = window._sliderSnapDollars('datum', parseInt(sDat.value, 10));
-            if (Number.isFinite(_snapped)) return _snapped;
+            if (ex !== undefined && ex !== '') { const _v = Math.round(parseFloat(ex)); return Number.isFinite(_v) && _v > 0 ? _v : null; }
+            /* ⛔ NO POSITION FALLBACK. An untouched slider is not an answer, and the refusal
+               above is what the user gets instead. Returning the position here would rebuild the
+               exact defect this commit removes, one layer deeper. */
+            return null;
           }
-          return parseInt(spendVal.replace(/[^\d.]/g, ''), 10) || 100000;
+          /* ⛔ AND THE OTHER 100000. Two fallbacks, one default; removing either alone leaves the
+             number a live path to the wire. */
+          const _typed = parseInt(spendVal.replace(/[^\d.]/g, ''), 10);
+          return Number.isFinite(_typed) && _typed > 0 ? _typed : null;
         })();
         // 2A — read the slider (single PTA-age source), not the plan-end-age field (now a date mirror).
-        const planEndAge  = Math.min(120, Math.max(_planEndAgeMin, parseInt((document.getElementById('sl-plan-through')?.value) || '', 10) || 93));
+        /* ⛔ THE `|| 93` IS GONE. It was the last place the Captain's plan-through age could
+           reach the engine, and it would have survived every other removal in this commit —
+           a fallback inside an expression is exactly the shape that outlives the default it
+           was written to protect. */
+        const planEndAge  = _planThroughAnswered()
+          ? Math.min(120, Math.max(_planEndAgeMin, parseInt((document.getElementById('sl-plan-through')?.value) || '', 10)))
+          : null;
 
         const activeClimate = document.querySelector('.climate-option.active');
         const climateLabel  = activeClimate?.dataset?.outlook || '';
@@ -15632,7 +15685,13 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            ⛔ AN UNMAPPED OR UNANSWERED STATUS SENDS NOTHING — it must never guess. The engine
               still defaults to mfj for a request that omits the key, and that default is a
               DATED TRANSITION OBJECT (see the staleness register), not a resting state. */
-        const body = { current_age: currentAge, retirement_age: retireAge, datum_spend: datumSpend, market_outlook: outlookValue, ss_strategy_primary: ssStrategy, accounts, plan_end_age: planEndAge };
+        /* §4 of the bank: "An empty control sends NOTHING. If the payload cannot be built
+           honestly, IT IS NOT BUILT. Do not substitute, do not coerce, do not fall back. A MISSING
+           ANSWER IS A MISSING KEY." So the keys are omitted rather than sent null — a null is a
+           value, and the engine would have to decide what it means. */
+        const body = { current_age: currentAge, retirement_age: retireAge, market_outlook: outlookValue, ss_strategy_primary: ssStrategy, accounts };
+        if (datumSpend !== null && datumSpend !== undefined) body.datum_spend = datumSpend;
+        if (planEndAge !== null && planEndAge !== undefined) body.plan_end_age = planEndAge;
         if (filingStatus) body.filing_status = filingStatus;
         /* ⛔⛔ RETIREMENT LOCATION REACHES THE ENGINE (2026-09-09). `location: 'FL'` was DELETED from
            this payload on 2026-09-05 as hygiene — the engine declared no such field and dropped it,
@@ -15861,8 +15920,17 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         // plan-end-age date mirror; the field is no longer the source. Capped at the slider max (105).
         var sPlan = document.getElementById('sl-plan-through');
         if (sPlan) {
+          /* ⛔ THE SEEDING BRANCH IS GONE. It read: if the slider still sat on the default, move
+             it to defaultPlanEnd — i.e. entering a DOB silently ANSWERED the plan-through question
+             on the user's behalf, and the answer was 93 + their birth year wearing a date's
+             clothes. There is no actuarial content in it; it was one household's number.
+             ⚠️ CLAMPING SURVIVES AND MUST: a plan-through age below retirement+20 is refused by
+                the engine, so an answer the person gave is pulled into the range their own
+                household allows. CORRECTING AN ANSWER IS NOT THE SAME ACT AS SUPPLYING ONE. */
+          var _peBox = document.getElementById('plan-end-age');
+          var _answered = !!(_peBox && String(_peBox.value || '').trim());
           var cur = parseInt(sPlan.value, 10);
-          if (isNaN(cur) || cur === _planEndAgeDefault) cur = defaultPlanEnd;
+          if (!_answered) cur = Math.round((75 + 105) / 2);
           else if (cur < minPlanEnd) cur = minPlanEnd;
           else if (cur > 105) cur = 105;
           sPlan.value = cur;
@@ -16290,6 +16358,27 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
          refusal may describe them. A refusal that explains the architecture is written for the
          builder, not for the person stuck at the door. */
       var ESTATE_REQUIRED        = 'At least one account with a balance.';
+      /* ⛔ ARCHITECT-AUTHORED, WIRED VERBATIM. Engine Spec.xlsx · 'Empty State Copy Bank' · §6.3.
+         ⭐ "We will not put a number on it for you" IS THE HOUSE SENTENCE FOR EVERY REMOVED
+            DEFAULT — the same promise as the Social Security line, and it must stay word for word.
+         ⚠️ §6.5: A REFUSAL NAMES A FIELD USING THE EXACT WORDS ON THE CONTROL IT SENDS YOU TO. The
+            field names below are "Target spend" (§6.6, measured in the Mock at #sketch-datum) and
+            "Plan-through age" (§6.2) — not "Target Annual Spend", which belongs to the Endurance
+            section the Mock deletes. ANCHOR THE COPY TO THE FIELD'S MEANING, LET THE MOCK SUPPLY
+            THE NOUN; that is what survives the port instead of being re-done after it. */
+      var TARGET_SPEND_REQUIRED  = 'How much do you expect to spend each year in retirement? We will not put a number on it for you.';
+      var PLAN_THROUGH_REQUIRED  = 'How long should we model? Choose the age you want the estate to last to. We will not choose it for you.';
+      /* §3.2 — "Any control that cannot be blank must carry an explicit 'Not set' readout and rest
+         at a position that carries no recommendation." A slider has no empty value, so its READOUT
+         is where the absence has to be said. */
+      /* ⛔ window-SCOPED ON PURPOSE, AND THE FIRST VERSION OF THIS LINE TOOK THE PRODUCT DOWN.
+       Declared as a bare  here it is invisible to the label updaters, which live in a
+       DIFFERENT function scope — so updateDatumLabel threw ReferenceError during init and
+       wireSliders() NEVER RAN. Measured in a browser: the page did not crash, nothing was
+       visibly broken, and the datum slider simply had no input listener. A DEAD CONTROL THAT
+       LOOKS ALIVE, produced by a one-line scope mistake, in the same commit that exists to stop
+       controls lying. Addressed explicitly the way _sliderSnapDollars is. */
+      window.DATUM_NOT_SET = 'Not set';
       /* ⭐ AUTHORED BY THE ARCHITECT 2026-09-09, SHIPPED VERBATIM. L47 — I do not write brand voice,
          and this line was deliberately NOT invented when the field was wired the same day.
          ⛔ AND COPYING ITS NEIGHBOUR WOULD HAVE ASSERTED SOMETHING FALSE. FILING_STATUS_REQUIRED
@@ -17312,8 +17401,8 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     function updateDatumLabel() {
       var sl = $('slider-datum'); var lbl = $('val-datum'); if (!sl || !lbl || !SC) return;
       var ex = sl.dataset.exactVal;
-      var dollars = (ex !== undefined && ex !== '') ? (parseFloat(ex) || 0) : window._sliderSnapDollars('datum', parseInt(sl.value,10));
-      if (ex === undefined || ex === '') sl.dataset.exactVal = String(Math.round(dollars));
+      if (ex === undefined || ex === '') { lbl.textContent = window.DATUM_NOT_SET; return; }
+      var dollars = parseFloat(ex) || 0;
       var k = Math.round(dollars / 1000);
       lbl.textContent = (k >= 1000 ? '$' + (k/1000).toFixed(2).replace(/\.00$/,'') + 'M' : '$' + k + 'k') + ' / yr';
     }
@@ -17326,7 +17415,14 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
        occur today only because the warning never appears at all, and an authored sentence that is
        false at the moment it is read is the product lying in its own voice — here about the horizon
        of someone's retirement, after they have already corrected it. */
-    function updatePlanThroughLabel(){ var s = $('sl-plan-through');   var l = $('val-plan-through');if (s && l) l.textContent = s.value + ' yrs'; var w = $('plan-end-warn'); if (w) { w.textContent = ''; w.style.display = 'none'; } }
+    function updatePlanThroughLabel(){
+      var s = $('sl-plan-through'); var l = $('val-plan-through');
+      /* The date mirror is the record of the answer; the slider is only where it is held. */
+      var _pe = $('plan-end-age');
+      var _chosen = !!(_pe && String(_pe.value || '').trim());
+      if (s && l) l.textContent = _chosen ? (s.value + ' yrs') : window.DATUM_NOT_SET;
+      var w = $('plan-end-warn'); if (w) { w.textContent = ''; w.style.display = 'none'; }
+    }
     function updateTaxLabel()        { var s = $('slider-tax');        var l = $('val-tax');        if (s && l) l.textContent = s.value + '%'; }
 
     function refreshAllLabels() {
