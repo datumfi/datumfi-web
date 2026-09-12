@@ -267,6 +267,18 @@ loosening the parser.
    ⚠️ READING OUTSIDE THE GRID IS LICENSED ONLY BY SATURATION (first rate ≥ 0.999 / last ≤ 0.001);
    anywhere else the scenario is REFUSED. A clamp that quietly repeats the nearest value is a
    measurement claim about a spend nobody computed.
+   ⛔⛔ THE DATUM IS `success_rates.datum_spend` — THE USER'S OWN TARGET — AND NEVER `tiers.keystone`.
+   Captain-caught 2026-09-12 after one commit read the tier. MEASURED: sweeping `datum_spend`
+   $40k→$100k leaves the ladder at 43,000/57,000/67,000 UNCHANGED while the success rate runs
+   99%→8%. The ladder is what the ESTATE CAN SUPPORT; the Datum is WHAT THE USER ASKED FOR. They
+   are different questions and both sit between the Floor and the Ceiling, so they look equally
+   plausible on screen.
+   🔑 THE WRONG ANSWER IS SELF-CONCEALING, WHICH IS WHY IT IS PINNED HERE. `keystone` IS "spend at
+   90% success" by definition, so reading it makes the headline confidence report ~90% FOR EVERY
+   HOUSEHOLD FOREVER (measured 89.3 / 88.2 / 89.4) — a constant that moves for nobody, on the
+   number a user is most likely to repeat out loud. A VALUE THAT CANNOT VARY IS NOT A WEAK
+   MEASUREMENT; IT IS A LABEL. `_gate_capacity_curve_reaches_panel` L1b/L1c hold it, and only
+   because their fixture makes the target and the tier DIFFERENT numbers.
 <!-- SACRED-LIST-END -->
 
 THIS LIST AND `SACRED{}` IN `scripts/build-dist.mjs` MUST MATCH EXACTLY — every host declared here

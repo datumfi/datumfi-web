@@ -196,7 +196,42 @@
     var cc = res.capacity_curve;
     if (!t || !cc) return null;
 
-    var floor = Number(t.bedrock), datum = Number(t.keystone), ceiling = Number(t.capstone);
+    var floor = Number(t.bedrock), ceiling = Number(t.capstone);
+
+    /* ⛔⛔ THE DATUM IS THE USER'S OWN TARGET SPEND. IT IS NOT A TIER, AND THE TIER THAT LOOKS
+       LIKE IT IS A TRAP. This read `t.keystone` for one commit. Captain-caught 2026-09-12:
+       "that's the user's desired spending, aren't they just picking a Target spend between the
+       floor and ceiling?" — and he is right. MEASURED in the engine immediately after:
+
+           datum_spend    floor    keystone    ceiling
+              40,000     43,000    57,000     67,000
+              60,000     43,000    57,000     67,000
+             100,000     43,000    57,000     67,000
+
+       THE LADDER DOES NOT MOVE. It is a property of the household's STRUCTURE — what the estate
+       can support — and it is computed without reference to what the user wants. `datum_spend`
+       changes exactly one thing: the confidence reported AT it (99% -> 8% across that range).
+       `keystone` is documented in engine/tiers.py:141 as "spend at 90% success" — the ENGINE'S
+       recommendation, a fourth rung on the ladder, not the user's chosen line.
+
+       ⛔ AND THE DEFECT WOULD HAVE LOOKED LIKE A FEATURE, WHICH IS WHY IT IS WRITTEN DOWN AT
+          LENGTH. If the Datum is always the 90% tier, then the confidence read at the Datum is
+          ~90% BY DEFINITION — measured 89.3% / 88.2% / 89.4% on three dissimilar households. The
+          panel's headline confidence would have read about 89% FOR EVERY USER, FOREVER, while
+          moving plausibly in response to nothing. A constant wearing a measurement's clothes, on
+          the one number a person would quote back to their spouse.
+       🔑 A VALUE THAT CANNOT VARY IS NOT A WEAK MEASUREMENT. IT IS A LABEL.
+
+       ⚠️ TAKEN FROM THE RESPONSE, NOT THE REQUEST, AND THAT ORDER IS DELIBERATE. The engine
+          ECHOES the spend it actually computed against in `success_rates.datum_spend`, so the
+          response is the authority on what these numbers describe. The stored request is the
+          fallback for an older payload that predates the echo; if neither exists there is no
+          spending line to draw and the panel refuses. A panel whose whole subject is "your
+          spending line" must not invent one. */
+    var _sr = res.success_rates;
+    var datum = Number(_sr && _sr.datum_spend);
+    if (!Number.isFinite(datum) && req) datum = Number(req.datum_spend);
+
     if (!Number.isFinite(floor) || !Number.isFinite(datum) || !Number.isFinite(ceiling)) return null;
 
     var grid = cc.spend_grid, rates = cc.success_rates;

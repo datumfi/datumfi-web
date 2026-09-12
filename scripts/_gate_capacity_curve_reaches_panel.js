@@ -70,21 +70,31 @@ const near = (a, b, tol) => Number.isFinite(a) && Math.abs(a - b) < (tol || 1e-9
    ⛔ AND THE NUMBER THE RAW-ARRAY DEFECT PRODUCES AT THE FLOOR IS 0.739130..., because 47 points
       spread over the 46,000 window puts index 12 at $43,000. A 15-POINT CONFIDENCE ERROR, on a
       chart that would look completely normal. */
-const FLOOR = 43000, KEYSTONE = 57000, CAPSTONE = 65000;
+/* ⛔ TARGET AND KEYSTONE ARE DELIBERATELY DIFFERENT NUMBERS, AND THE GATE IS WORTHLESS IF THEY
+   EVER AGREE. The Datum is the user's own target spend; `keystone` is the engine's "spend at 90%
+   success" tier. They sit in the same region of the ladder, so a fixture where they coincide
+   cannot tell a correct mapper from one reading the wrong field. $54,000 vs $57,000 also lands on
+   two DIFFERENT rounded percentages (84% vs 83%), so the confidence slot separates them too. */
+const FLOOR = 43000, KEYSTONE = 57000, CAPSTONE = 65000, TARGET = 54000;
 const AT_WIN_LO = 1 - 12775 / 230000;
 const AT_WIN_HI = 1 - 58775 / 230000;
 const AT_FLOOR  = 1 - 24775 / 230000;
+const AT_TARGET = 1 - 35775 / 230000;   // 0.84446 -> 84%
+const AT_KEYSTONE = 1 - 38775 / 230000; // 0.83141 -> 83%
 const RAW_ARRAY_AT_FLOOR = 1 - 12 / 46;
 
 const RESPONSE = {
   tiers: { blended: { bedrock: FLOOR, foundation: 52000, keystone: KEYSTONE, capstone: CAPSTONE } },
+  /* The engine echoes the spend it actually computed against. This is the authority on what the
+     panel's numbers describe, which is why the mapper reads it in preference to the request. */
+  success_rates: { parametric: 0.82, bootstrap: 0.90, cape: 0.91, regime: 0.77, datum_spend: TARGET },
   capacity_curve: {
     spend_grid:    Array.from({ length: 47 }, (_, i) => 18225 + 5000 * i),
     success_rates: Array.from({ length: 47 }, (_, i) => 1 - i / 46),
     median_ending: Array.from({ length: 47 }, (_, i) => 2000000 - 40000 * i)
   }
 };
-const REQUEST = { retirement_age: 52.6, plan_end_age: 93 };
+const REQUEST = { retirement_age: 52.6, plan_end_age: 93, datum_spend: TARGET };
 
 (async () => {
   await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
@@ -119,15 +129,44 @@ const REQUEST = { retirement_age: 52.6, plan_end_age: 93 };
       ok,
       floor: txt('mcFloorValue'), datum: txt('mcDatumValue'), ceiling: txt('mcCeilingValue'),
       horizon: txt('mcHorizon'), terminal: txt('mcTerminal'), climate: txt('mcClimate'),
+      success: txt('mcSuccess'),
       curveD: (document.getElementById('mcCurveLine') || {}).getAttribute
         ? document.getElementById('mcCurveLine').getAttribute('d') : null
     };
   }, [RESPONSE, REQUEST]);
   check('L1 THE CLAIM: the stored engine response reaches the panel and draws a curve',
-    warm.ok === true && warm.floor === '$43k' && warm.datum === '$57k' && warm.ceiling === '$65k'
+    warm.ok === true && warm.floor === '$43k' && warm.ceiling === '$65k'
       && typeof warm.curveD === 'string' && warm.curveD.length > 20,
     'ok=' + warm.ok + ' floor=' + warm.floor + ' datum=' + warm.datum + ' ceiling=' + warm.ceiling
     + ' curve path len=' + (warm.curveD ? warm.curveD.length : null));
+
+  /* ── L1b THE DATUM IS THE USER'S LINE, NOT THE ENGINE'S TIER. CAPTAIN-CAUGHT 2026-09-12, after
+        the first version of this mapper read `tiers.keystone` and this gate did not notice.
+        ⛔ WHY THE GATE MISSED IT: the fixture is the instrument. Both candidates sit between the
+           Floor and the Ceiling and look equally plausible on screen, so a leg that only checks
+           "a number appeared" cannot separate them. It took a fixture where the two DISAGREE.
+        ⛔⛔ AND THE WRONG ANSWER IS SELF-CONCEALING, WHICH IS THE REAL LESSON. `keystone` is
+           defined as "spend at 90% success", so reading it makes the confidence slot report ~90%
+           BY CONSTRUCTION — measured 89.3% / 88.2% / 89.4% on three dissimilar households. The
+           headline number would have been a CONSTANT that moved for nobody, on the figure a user
+           is most likely to repeat out loud. The second leg below is what catches that: it asserts
+           the confidence belongs to the USER'S spend, not to the tier.
+        🔑 MEASURED, NOT ASSUMED, THAT THESE ARE DIFFERENT QUESTIONS: sweeping datum_spend from
+           $40,000 to $100,000 leaves the ladder at 43,000/57,000/67,000 UNCHANGED while the
+           success rate runs 99% to 8%. The ladder is what the estate can support; the Datum is
+           what the user asked for. */
+  check('L1b THE DATUM: the panel shows the USER\'S target spend, not the engine\'s 90%-success tier',
+    warm.datum === '$54k',
+    'mcDatumValue=' + JSON.stringify(warm.datum) + ' want "$54k" (the user\'s target)'
+    + (warm.datum === '$57k'
+      ? '\n          ⛔ THIS IS tiers.keystone — the ENGINE\'S recommendation shown where the USER\'S chosen line belongs'
+      : ''));
+  check('L1c and the confidence belongs to THAT spend — so it can vary, instead of reading ~90% for everyone',
+    warm.success === Math.round(AT_TARGET * 100) + '%',
+    'mcSuccess=' + JSON.stringify(warm.success) + ' want "' + Math.round(AT_TARGET * 100) + '%"'
+    + (warm.success === Math.round(AT_KEYSTONE * 100) + '%'
+      ? '\n          ⛔ this is the confidence at the KEYSTONE TIER, which is ~90% by definition for every household alive'
+      : ''));
 
   /* ── L2 THE AXIS LEG — the one this file exists for. */
   const axis = await page.evaluate((a) => {
