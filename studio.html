@@ -4216,7 +4216,21 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
                 <div>
                   <div class="input-label">Cost /mo</div>
-                  <input type="text" id="hc-pre65-monthly" class="small-field curr-format" value="$1,150" placeholder="e.g. 1,150" onfocus="this.select()">
+                  <!-- ⛔⛔ THE THIRD MONEY-BEARING DEFAULT, FOUND 2026-09-13 AND REMOVED. It shipped
+                       `value="$1,150"` — $13,800/yr of healthcare cost NOBODY ENTERED, on every
+                       cold Studio, colouring every stranger's Range. Clause 2, and the same species
+                       as the Captain's own $100,000 datum_spend and his 93 plan-through age.
+                       ⛔ IT SURVIVED BOTH EARLIER SWEEPS BECAUSE IT MADE ITS OWN DOOR UNREACHABLE.
+                          `_readHealthcareMonthly()` returns null only when the box is EMPTY, so a
+                          pre-filled box meant the Healthcare refusal NEVER FIRED — measured: a cold
+                          Studio produced 8 doors and Healthcare was not among them. A DEFAULT THAT
+                          SILENCES THE QUESTION IT ANSWERS CANNOT BE FOUND BY ASKING THE QUESTION.
+                       🔑 FOUND ONLY BECAUSE A GATE ASSERTED THE DOOR'S SENTENCE AND THE DOOR WAS
+                          NOT THERE. The copy was correct, the schema was correct, and the field in
+                          between quietly answered for the user.
+                       ⚠️ NOTHING IS LOST: the placeholder already carried the example, which is
+                          where an illustration belongs. A PLACEHOLDER SUGGESTS; A VALUE ASSERTS. -->
+                  <input type="text" id="hc-pre65-monthly" class="small-field curr-format" value="" placeholder="e.g. 1,150" onfocus="this.select()">
                 </div>
               </div>
               <div id="hc-pre65-warn" style="display:none;font-size:9px;color:var(--gold);font-family:var(--font-mono);margin-top:6px;line-height:1.5;"></div>
@@ -15846,7 +15860,28 @@ const _reachesEngine = a =>
           return;
         }
         if (retWarnEl) retWarnEl.style.display = 'none';
-        var minPlanEnd    = Math.min(105, Math.max(75, Math.ceil(retireAge + 20)));
+        /* ⛔⛔ THE FLOOR IS max(current_age, retirement_age) — CAPTAIN-RULED 2026-09-13, Spec
+           A248(c)+(e). This line read `Math.min(105, Math.max(75, Math.ceil(retireAge + 20)))`,
+           WHICH IS THE OLD SCHEMA RULE COPIED INTO THE CLIENT, and both halves of it are deleted:
+             · `75` was a LIFESPAN GUESS. It told a household planning to 72 on purpose — or one
+               with a diagnosis — that their own horizon was invalid.
+             · `retireAge + 20` was worse because it SCALED: retire at 70 and the product demanded
+               you plan to 90 or be refused.
+           ⭐ THE CAPTAIN CORRECTED THE ARCHITECT'S PROPOSAL MID-RULING and his floor is the one
+              here: "shouldnt it be any year before retirment year? You can plan through a year
+              before you start retirmentment." A floor of "no lower than current age" would have
+              let a 40-year-old retiring at 65 plan through 41 — A RANGE COMPUTED OVER ZERO
+              DECUMULATION YEARS, an empty simulation with a number on it.
+           🔑 IT IS DERIVED FROM WHAT THE MODEL MEANS, NOT FROM AN ACTUARIAL TABLE.
+           ⛔ AND IT MUST MATCH schemas.validate_ages EXACTLY. §6.10's rule — "a range the product
+              will not accept should not be offered" — INVERTS when the client is the stricter of
+              the two: the schema now accepts 72 and a client floor of 87 would hide it. The two
+              floors are one rule in two repositories and they move together or not at all. */
+        var minPlanEnd    = Math.min(105, Math.max(Math.ceil(currentAge), Math.ceil(retireAge)));
+        /* ⚠️ THE UNANSWERED RESTING POSITION IS NOW THE MIDPOINT OF THIS HOUSEHOLD'S OWN RANGE,
+           not of a fixed 75-105 bar. §3.2 asks for "a position that carries no recommendation",
+           and the middle of what is actually allowed is the only position that keeps meaning that
+           once the floor stops being the same number for everyone. */
         var defaultPlanEnd = Math.min(105, Math.max(93, minPlanEnd));
         _planEndAgeMin = minPlanEnd;
         // 2A — operate on the sl-plan-through slider (the single PTA-age source) and refresh the
@@ -15874,7 +15909,7 @@ const _reachesEngine = a =>
           var _peBox = document.getElementById('plan-end-age');
           var _answered = !!(_peBox && String(_peBox.value || '').trim());
           var cur = parseInt(sPlan.value, 10);
-          if (!_answered) cur = Math.round((75 + 105) / 2);
+          if (!_answered) cur = Math.round((minPlanEnd + 105) / 2);
           else if (cur < minPlanEnd) cur = minPlanEnd;
           else if (cur > 105) cur = 105;
           sPlan.value = cur;
@@ -15886,11 +15921,40 @@ const _reachesEngine = a =>
       window._updatePlanEndAge = _updatePlanEndAge;
       _updatePlanEndAge();
 
+      /* ⛔⛔ ARCHITECT-AUTHORED 2026-09-13, SHIPPED VERBATIM — Spec A252. THIS MESSAGE DID NOT NEED
+         TO EXIST WHILE THE FLOOR WAS A FLAT 75: a person below 75 was below a number that was the
+         same for everybody, and silently clamping them was defensible. THE FLOOR NOW MOVES PER
+         HOUSEHOLD, so a silent correction is the product changing a person's answer to a different
+         number for a reason it never states.
+         ⛔ `{retirement_age}` IS ECHOED AND MUST BE. A fixed number in this sentence would be a NEW
+            HARDCODE — the exact defect class this whole arc exists to remove — and it would be
+            wrong for every household but one.
+         ⛔ NOT "minimum age is X". NOT "invalid". It names what the person did, why it cannot hold,
+            and what to do instead. */
+      function _planEndBelowFloorMsg(retirementAge) {
+        return 'That is before you retire at ' + retirementAge
+             + '. A plan has to run past the day it starts — choose an age after that.';
+      }
+      /* ⚠️ THE CLAMP SURVIVES AND THE SILENCE DOES NOT. The existing doctrine — "CORRECTING AN
+         ANSWER IS NOT THE SAME ACT AS SUPPLYING ONE" — still holds: the value is pulled into the
+         household's valid range rather than left to be refused by the engine. What changes is that
+         the correction now SAYS SO. A control that quietly rewrites what somebody typed, and shows
+         them a different number than the one they entered with no explanation, is a control that
+         has made a decision on their behalf. */
       function _clampPlanEndAge(el, isBlur) {
         var val = parseInt(el.value, 10);
         if (isNaN(val) || val === 0) return;
+        var warn = document.getElementById('plan-end-warn');
         if (val > 120) { el.value = 120; }
-        else if (isBlur && val < _planEndAgeMin) { el.value = _planEndAgeMin; }
+        else if (isBlur && val < _planEndAgeMin) {
+          el.value = _planEndAgeMin;
+          if (warn) {
+            warn.textContent = _planEndBelowFloorMsg(_planEndAgeMin);
+            warn.style.display = 'block';
+          }
+          return;
+        }
+        if (warn) warn.style.display = 'none';
       }
       window._clampPlanEndAge = _clampPlanEndAge;
 
@@ -16238,6 +16302,47 @@ const _reachesEngine = a =>
             green in every gate because no gate clicked this button in a refusal state. */
       window._datumRefusalBodyHtml = _datumRefusalBodyHtml;
 
+      /* ⛔⛔ A 422 IS NOT A FAILURE, AND UNTIL NOW THIS FILE COULD NOT TELL THE DIFFERENCE.
+         MEASURED 2026-09-13: both fetch sites did `if (!r.ok) { _reportComputeFailure(...) }`,
+         and `grep -c "http_422|status === 422|detail.condition"` over this file returned ZERO.
+         So every refusal — a missing SS figure, a state we have not modelled — was captured to
+         Sentry as a `DatumComputeFailure` AND rendered to the user as nothing at all.
+         ⛔ THAT IS SENTRY POISONING ARRIVING FROM THE OTHER END. The engine side was rebuilt
+            this same day precisely so a knowable refusal would stop masquerading as a crash;
+            the client then re-created the defect one layer up. A 500 SAYS "OUR BUG"; A 422 SAYS
+            "WE CANNOT ANSWER THAT YET" — and an alert stream taught that the second is the
+            first goes blind to real crashes hiding inside the noise.
+         ⚠️ IT MATTERS NOW IN A WAY IT DID NOT LAST WEEK: the state-tax wiring made 30 of 51
+            jurisdictions refuse by name. This went from an edge case to roughly half the
+            country, which is what turned a latent defect into a shipping blocker.
+         🔑 §82.2318 — AN INCREASE IN TRUTH AND A REGRESSION IN PRESENTATION ARE BOTH REAL AND
+            NEITHER SHIPS. A wrong Range is a lie; a blank screen teaches nothing and cannot be
+            told from a crash. The refusal copy and this path ship in the same commit as the
+            refusal itself.
+         ⛔ ROUTING IS BY `detail.code`, NEVER BY PARSING THE SENTENCE. The engine owns the
+            words; this function only decides where they go. */
+      function _datumRenderEngineRefusal(payload) {
+        var d = payload && payload.detail;
+        if (!d || typeof d !== 'object' || !d.code || !d.condition) return false;
+        var body = String(d.condition);
+        if (d.change) body += '<br><br>' + String(d.change);
+        _revealPaint('Not yet', body);
+        return true;
+      }
+      window._datumRenderEngineRefusal = _datumRenderEngineRefusal;
+
+      /* Returns true when the response was a REFUSAL and has been rendered — the caller must
+         then NOT report it as a compute failure. Returns false for anything else, which keeps
+         every genuine fault (500, malformed body, network) on the Sentry path exactly as
+         before. ⚠️ THE `.json()` CAN THROW on an empty or HTML body; a throw here would turn a
+         real 500 into a silent nothing, which is the defect this function exists to remove. */
+      function _datumHandleRefusal(r, text) {
+        if (r.status !== 422) return false;
+        var payload = null;
+        try { payload = JSON.parse(text); } catch (_) { return false; }
+        return _datumRenderEngineRefusal(payload);
+      }
+
       function _revealStatus(err, field, fallbackTitle, fallbackBody) {
         /* The collected block wins whenever there is one. The single-error path survives beneath it
            for refusals that carry no field name — weights that do not sum, for instance, whose whole
@@ -16319,7 +16424,20 @@ const _reachesEngine = a =>
          NOTHING. Captain-ruled: the user has not seen the Range or the claiming map yet, so no
          refusal may describe them. A refusal that explains the architecture is written for the
          builder, not for the person stuck at the door. */
-      var ESTATE_REQUIRED        = 'At least one account with a balance.';
+      /* ⛔⛔ REWRITTEN BY THE ARCHITECT 2026-09-13, SHIPPED VERBATIM — Spec A252 · §82.2320, AND IT
+         LANDS IN THE SAME COMMIT AS THE SCHEMA CHANGE THAT FALSIFIED IT. The old line read
+         ~~"At least one account with a balance."~~ and Captain-ruling A248(d) had just told the
+         engine to ACCEPT a household with no accounts — so this door was refusing, in the product's
+         own voice, exactly the household the engine had been told to let in.
+         🔑 §82.2320 — A SCHEMA RULING IS A COPY RULING. No schema ruling is complete until the
+            refusal queue has been read back against it. The copy bank IS a gate, and it had never
+            re-run over the ruling that broke it.
+         ⭐ IT NAMES BOTH HONEST WAYS OUT, not just the one we built first.
+         ⚠️ THE SECOND BRANCH ROUTES TO A STATED REFUSAL TODAY, NOT TO A RANGE — earned income is
+            not modelled engine-side (`earned_income_not_modelled`). THE STRING PROMISES NO RANGE,
+            which is why it stays true on the day it lands rather than becoming a new false
+            sentence pointing at a door that opens onto nothing. */
+      var ESTATE_REQUIRED        = 'Either an account with a balance, or what you earn — the plan needs one of the two to have something to work with.';
       /* ⛔ ARCHITECT-AUTHORED, WIRED VERBATIM. Engine Spec.xlsx · 'Empty State Copy Bank' · §6.3.
          ⭐ "We will not put a number on it for you" IS THE HOUSE SENTENCE FOR EVERY REMOVED
             DEFAULT — the same promise as the Social Security line, and it must stay word for word.
@@ -16376,10 +16494,20 @@ const _reachesEngine = a =>
             was wrong. */
       var SS_BENEFIT_REQUIRED    = 'Your Social Security estimates — the monthly amount at 62, at 67, and at 70. All three are on your SSA.gov statement. We will not put a number on it for you.';
       var SS_BENEFIT_REQUIRED_CO = "Your co-architect's Social Security estimate — the monthly amount from their SSA.gov statement. We will not put a number on it for you.";
-      /* ⚠️ PLACEHOLDER COPY — WIRER, NOT ARCHITECT, FLAGGED LIKE ITS TWO SIBLINGS ABOVE. The
-         FIELD's copy is the designer's and is carried verbatim in the markup; this REFUSAL
-         sentence had no source, so it is modelled on LOCATION_REQUIRED and awaits ratification. */
-      var HEALTHCARE_REQUIRED = 'What health cover costs you before Medicare — it is one of the largest line items in an early retirement, and we will not put a number on it for you.';
+      /* ⭐⭐ RATIFIED BY THE ARCHITECT 2026-09-13 AND NO LONGER A PLACEHOLDER. It was Wirer copy,
+         flagged as such since it shipped, and the review found the em-dash construction and voice
+         matched its ten siblings. RATIFIED WITH ONE REQUIRED CHANGE, and the change is the point.
+         ⛔⛔ THE ZERO CLAUSE IS NOT DECORATION — IT IS LAW 229 ON THE VERY FIELD WHOSE FLOOR WAS
+            JUST DELETED. Captain-ruling A248(a) removed `gt=0` from healthcare_annual because
+            TRICARE, VA care and fully-paid retiree coverage are real and ZERO IS THEIR REAL
+            NUMBER. Without "if it costs you nothing, say zero", this door would go on refusing a
+            true sentence about a real person while the schema behind it had already stopped.
+         🔑 THE DOOR AND THE FLOOR ARE ONE RULING IN TWO REPOSITORIES. Fixing either alone leaves
+            the product contradicting itself: a schema that accepts what the screen says is invalid.
+         ⚠️ IT WAS NEVER MARKED [COPY-OWED] AND NO GREP COULD HAVE FOUND IT — that marker is one
+            day old. A PUNCH LIST BUILT FROM A MARKER ONLY FINDS DEBT INCURRED AFTER THE MARKER
+            EXISTED. Now part of §82.2320. */
+      var HEALTHCARE_REQUIRED = 'What health cover costs you before Medicare — it is one of the largest line items in an early retirement. If it costs you nothing, say zero; we will not put a number on it for you.';
       var TAKE_ME_THERE = 'Take me there';
       /* ⚠ RENDERED ONLY WHEN THE TARGET RESOLVES. A door onto an element that is not in the document
          is worse than no door — it promises and does nothing. An unresolvable target renders exactly
@@ -16572,7 +16700,15 @@ const _reachesEngine = a =>
                   method: 'POST', headers: {'Content-Type': 'application/json'},
                   body: JSON.stringify(req)
                 }).then(function(r) {
-                  if (!r.ok) { _reportComputeFailure('http_' + r.status, 'HTTP ' + r.status + ' from /api/calculate'); return null; }
+                  /* ⛔ REFUSAL FIRST, FAILURE SECOND. A 422 carrying {code, condition, change} is
+                     RENDERED and NOT reported; anything else keeps the original Sentry path. */
+                  if (!r.ok) {
+                    return r.text().then(function (t) {
+                      if (_datumHandleRefusal(r, t)) { window._datumWasRefusal = true; return null; }
+                      _reportComputeFailure('http_' + r.status, 'HTTP ' + r.status + ' from /api/calculate');
+                      return null;
+                    });
+                  }
                   return r.json();
                 }).catch(function(err) { _reportComputeFailure('network', (err && err.message) || String(err)); return null; }),
                 new Promise(function(_, reject) { setTimeout(function() { reject(new Error('timeout')); }, 30000); })
@@ -16655,7 +16791,17 @@ const _reachesEngine = a =>
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(req)
           }).then(function(r) {
-              if (!r.ok) { _reportComputeFailure('http_' + r.status, 'HTTP ' + r.status + ' from /api/calculate'); return null; }
+              /* ⛔ REFUSAL FIRST, FAILURE SECOND — the twin of the branch in the reduced-motion
+                 path above. BOTH SITES OR NEITHER: a refusal rendered on one path and captured as
+                 a crash on the other is the same defect, half-fixed, and invisible to whichever
+                 path the tester happens to take. */
+              if (!r.ok) {
+                return r.text().then(function (t) {
+                  if (_datumHandleRefusal(r, t)) { window._datumWasRefusal = true; return null; }
+                  _reportComputeFailure('http_' + r.status, 'HTTP ' + r.status + ' from /api/calculate');
+                  return null;
+                });
+              }
               return r.json();
             })
             .catch(function(err) { _reportComputeFailure('network', (err && err.message) || String(err)); return null; })
