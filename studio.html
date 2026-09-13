@@ -16286,6 +16286,24 @@ const _reachesEngine = a =>
          than a reconstruction of it. A gate that rebuilds the copy it is checking is checking its
          own rebuild. */
       window._datumCollectedRefusal = _datumCollectedRefusal;
+      /* ⛔⛔ PUBLISHED FOR THE SAME REASON ITS SIBLING IS, AND ITS ABSENCE WAS A LIVE HANG.
+         Captain-found in production 2026-09-13 via Sentry:
+             ReferenceError: _datumRefusalBodyHtml is not defined
+             at HTMLButtonElement.startMatrixJob
+         The SS-matrix door calls this from a DIFFERENT <script> BLOCK, where the name does not
+         exist. Its neighbour on the very next line of that call site was guarded
+         (`typeof _datumCollectedRefusal === 'function'`) AND published; this one was neither —
+         the author thought about the first call and not the second.
+         ⛔ THE THROW LANDED INSIDE setStatus(statusBox(...))'s ARGUMENT LIST, so setStatus NEVER
+            RAN: no error on screen, no refusal list, the button frozen on "Starting claiming
+            map…" forever. A CRASH WHILE BUILDING AN ARGUMENT DELETES THE CALL THAT WOULD HAVE
+            REPORTED IT.
+         🔑 AND IT IS THE REFUSAL PATH ITSELF — this branch only runs when the user is missing
+            fields, so THE CODE WHOSE ONLY JOB IS TO SAY WHAT IS MISSING WAS THE CODE THAT DIED.
+            The more incomplete the form, the more certainly it failed.
+         ⚠️ Same species as the DATUM_NOT_SET defect: declared in one scope, read in another,
+            green in every gate because no gate clicked this button in a refusal state. */
+      window._datumRefusalBodyHtml = _datumRefusalBodyHtml;
 
       function _revealStatus(err, field, fallbackTitle, fallbackBody) {
         /* The collected block wins whenever there is one. The single-error path survives beneath it
@@ -19671,7 +19689,13 @@ const _reachesEngine = a =>
           _reqErr || _block ? 'rgba(212,175,55,0.15)' : 'rgba(226,75,74,0.3)',
           _reqErr || _block ? 'var(--gold)'            : 'var(--danger)',
           _block ? _block.title : (_reqErr ? (_reqErrField || 'Input Error') : 'Cannot build map request'),
-          _block ? _datumRefusalBodyHtml(_block) : (_reqErr || 'Check your inputs and try again.'),
+          /* Reached through window, and GUARDED, exactly like _datumCollectedRefusal four lines
+             up. The unguarded bare name threw here in production — see the note beside the
+             publish. The fallback is the honest one: if the renderer is unreachable we still
+             say something, rather than losing the whole setStatus call to a ReferenceError. */
+          (_block && window._datumRefusalBodyHtml)
+            ? window._datumRefusalBodyHtml(_block)
+            : (_reqErr || 'Check your inputs and try again.'),
           /* F79 — THE SAME DOOR ON BOTH SURFACES. This slot already carried Try Again, so the
              action row is in-house; the door goes FIRST because it resolves the refusal while Try
              Again only re-attempts it. Renders nothing when there is no target, so an untargeted
