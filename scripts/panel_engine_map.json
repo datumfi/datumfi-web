@@ -1,0 +1,115 @@
+{
+  "_readme": [
+    "THE SYSTEMS PANEL MANIFEST LAID AGAINST THE ENGINE'S REQUEST MODEL. TWO LISTS THAT HAD NEVER",
+    "BEEN COMPARED UNTIL 2026-09-13.",
+    "",
+    "⛔ THIS FILE IS THE ONLY AUTHORED PART OF THE RECONCILIATION AND IT IS CHECKED IN BOTH",
+    "   DIRECTIONS, exactly like SACRED{} and the Sacred host list: every panel leaf read off the",
+    "   running Mock must appear in `panel`, and every field on the engine's request model must be",
+    "   either the target of a panel row or declared in `engine_only`. A row that drifts out of",
+    "   either list turns the census RED rather than quietly shrinking it.",
+    "",
+    "⛔ NEITHER SIDE IS TYPED HERE. The panel side is read off window.DATUMAE_MODEL_SCHEDULE in a",
+    "   real browser; the engine side is read off the running pydantic model. This file only says",
+    "   what each pairing IS.",
+    "",
+    "BUCKETS:",
+    "  ENGINE_HAS      - the panel shows it and the engine has a field for it. `engine` names it.",
+    "  ENGINE_LACKS    - the panel shows it and THE ENGINE HAS NOWHERE TO PUT IT. A build.",
+    "  ALT_SPELLING    - a second spelling of another row's answer (a date beside an age, a monthly",
+    "                    cadence beside an annual figure). Not a separate model input; `same_as`",
+    "                    names the row it restates. A control here still has to agree with its twin.",
+    "  DERIVED_DISPLAY - computed for the screen from answers already given, or derived inside the",
+    "                    engine from another field. Nothing to send.",
+    "  CONFIG          - selects WHICH fields exist rather than being one of them.",
+    "  MACHINERY       - infrastructure the user has no opinion about.",
+    "  UI_STATE        - panel bookkeeping. Never leaves the browser.",
+    "  PANEL_SILENT    - (engine_only) the engine accepts it and NO panel row shows it. This is the",
+    "                    bucket nobody had ever looked at."
+  ],
+
+  "panel": {
+    "planMode":                    { "bucket": "CONFIG", "note": "Solo or joint. Decides whether the co_architect_* fields exist at all, which is why the payload gate had to learn to enter dual." },
+
+    "primary.dob":                 { "bucket": "ENGINE_HAS", "engine": "current_age" },
+    "primary.retirementAge":       { "bucket": "ENGINE_HAS", "engine": "retirement_age" },
+    "primary.planThroughAge":      { "bucket": "ENGINE_HAS", "engine": "plan_end_age" },
+    "primary.retirementDate":      { "bucket": "ALT_SPELLING", "same_as": "primary.retirementAge" },
+    "primary.planThroughDate":     { "bucket": "ALT_SPELLING", "same_as": "primary.planThroughAge" },
+
+    "co.dob":                      { "bucket": "ENGINE_HAS", "engine": "co_architect_age" },
+    "co.retirementAge":            { "bucket": "ENGINE_HAS", "engine": "co_architect_retirement_age", "note": "⛔ The engine ACCEPTS it and the product NEVER ASKS for it — no door refuses on the co-architect's retirement date. Clause 1 asymmetry. A BUILD, NEVER A DELETE (law 191)." },
+    "co.planThroughAge":           { "bucket": "ENGINE_HAS", "engine": "co_architect_plan_end_age", "note": "⛔ Filled by a MIRROR that copies the primary's plan-through age, so two people are modelled as dying at the same age — against the engine's own field description, 'stated, never assumed equal'. Collapses the survivor window to zero." },
+    "co.retirementDate":           { "bucket": "ALT_SPELLING", "same_as": "co.retirementAge" },
+    "co.planThroughDate":          { "bucket": "ALT_SPELLING", "same_as": "co.planThroughAge" },
+    "co.claimAge":                 { "bucket": "ENGINE_HAS", "engine": "ss_strategy_secondary", "note": "⛔ Pre-selected in live markup and declared kind:'derived'. Nobody picks it." },
+    "co.claimAmount":              { "bucket": "ENGINE_HAS", "engine": "ss_secondary_benefit_overrides" },
+
+    "tax.filingStatus":            { "bucket": "ENGINE_HAS", "engine": "filing_status" },
+    "tax.location":                { "bucket": "ENGINE_HAS", "engine": "location" },
+    "tax.stateTax":                { "bucket": "DERIVED_DISPLAY", "note": "The engine derives the state rate from location; the panel shows it back so the user can see what their answer implied." },
+
+    "balances.ira":                { "bucket": "ENGINE_HAS", "engine": "accounts" },
+    "balances.workplace":          { "bucket": "ENGINE_HAS", "engine": "accounts" },
+    "balances.taxable":            { "bucket": "ENGINE_HAS", "engine": "accounts" },
+    "pensionAmount":               { "bucket": "DERIVED_DISPLAY", "note": "Household total of the two pension rows below." },
+    "pensionPrimaryAmount":        { "bucket": "ENGINE_HAS", "engine": "accounts", "note": "A pension rides in as an account whose annual_contribution carries the annual income." },
+    "pensionCoAmount":             { "bucket": "ENGINE_HAS", "engine": "accounts" },
+    "pensionCola":                 { "bucket": "DERIVED_DISPLAY", "note": "Household summary of the two per-person COLA rows." },
+    "pensionColaPrimary.mode":     { "bucket": "ENGINE_HAS", "engine": "pension_cola", "note": "mode 'not_sure' is an honest empty state — it must send nothing, never 0." },
+    "pensionColaPrimary.rate":     { "bucket": "ENGINE_HAS", "engine": "pension_cola", "note": "⚠️ PERCENT ON SCREEN, FRACTION ON THE WIRE. 2 means 2%; the engine bounds 0..0.2. 0.2% sent unconverted arrives as 20%, sits ON the bound and PASSES." },
+    "pensionColaCo.mode":          { "bucket": "ENGINE_HAS", "engine": "pension_cola" },
+    "pensionColaCo.rate":          { "bucket": "ENGINE_HAS", "engine": "pension_cola" },
+
+    "ss.claimAge":                 { "bucket": "ENGINE_HAS", "engine": "ss_strategy_primary", "note": "⛔ Pre-selected in live markup. Nobody picks it." },
+    "ss.claimAmount":              { "bucket": "ENGINE_HAS", "engine": "ss_primary_benefit_overrides" },
+    "ss.householdAmount":          { "bucket": "DERIVED_DISPLAY", "note": "Primary + co-architect, for the screen." },
+    "ss.haircut":                  { "bucket": "ENGINE_HAS", "engine": "ss_haircut", "note": "⛔ The engine defaults 0.0 — it assumes Social Security is never cut — and nothing on the live product shows that the position was taken. Right value, wrong address." },
+
+    "targetSpend":                 { "bucket": "ENGINE_HAS", "engine": "datum_spend" },
+
+    "healthcare.preMedicare":      { "bucket": "ENGINE_HAS", "engine": "healthcare_annual", "note": "Monthly on screen, annual on the wire." },
+    "healthcare.inflation":        { "bucket": "ENGINE_LACKS", "note": "⛔⛔ NO HEALTHCARE INFLATION EXISTS ANYWHERE IN THE ENGINE — measured 2026-09-13 across every module. healthcare_annual sits FLAT forever, and because the engine models real dollars that silently asserts healthcare inflates at exactly CPI. ⚠️ The panel's 4.5%/yr is NOMINAL; the field the engine needs is EXCESS OVER CPI (~2-2.5%), or general inflation is double-counted." },
+
+    "allocation.equity":           { "bucket": "ENGINE_LACKS", "note": "⛔⛔ THE PRIORITY OF THE ARC. The engine has NO allocation field; it runs a hardcoded glide (GLIDE_START_EQ 0.79 -> GLIDE_END_EQ 0.50 over 30 years, CASH_PCT 0.03) sourced to the Captain's own workbook cells I&A B265-B267. ⚠️ An equity_pct PARAMETER exists but feeds only the MEAN RETURN; volatility comes from glide_vol() which reads the constants and ignores it — so wiring the obvious parameter opens the door HALFWAY. Two defaults already disagree: income 0.80, models 0.79." },
+    "allocation.bond":             { "bucket": "ENGINE_LACKS", "note": "Same wall as allocation.equity." },
+    "allocation.cash":             { "bucket": "ENGINE_LACKS", "note": "Same wall as allocation.equity. Already declared kind:'unsourced' in the engine's constant ledger with a note saying the user cannot touch it." },
+
+    "cape":                        { "bucket": "ENGINE_HAS", "engine": "current_cape", "note": "A world fact. Needs a value PLUS an as-of date PLUS a staleness policy, never a bare number." },
+    "bridgeMode":                  { "bucket": "ENGINE_HAS", "engine": "bridge_access_mode", "note": "Already a labelled dropdown in the Mock. Right value, wrong address — the default lives in schemas.py instead of on the panel." },
+    "marketModel":                 { "bucket": "ENGINE_HAS", "engine": "market_outlook", "note": "House default Datumae Blend, applied by the panel as a labelled assumption — never by a class='active' attribute." },
+
+    "contributions.totalAnnual":   { "bucket": "DERIVED_DISPLAY", "note": "Sum of the per-account rows." },
+    "contributions.accounts.ira.amount":       { "bucket": "ENGINE_HAS", "engine": "accounts" },
+    "contributions.accounts.ira.annual":       { "bucket": "ALT_SPELLING", "same_as": "contributions.accounts.ira.amount" },
+    "contributions.accounts.ira.cadence":      { "bucket": "ALT_SPELLING", "same_as": "contributions.accounts.ira.amount" },
+    "contributions.accounts.ira.continueAfterRetirement":      { "bucket": "ENGINE_LACKS", "note": "AccountInput carries type, balance, annual_contribution and rule_of_55_eligible. There is no 'keep contributing after retirement' flag; contributions accrue during accumulation only." },
+    "contributions.accounts.workplace.amount": { "bucket": "ENGINE_HAS", "engine": "accounts" },
+    "contributions.accounts.workplace.annual": { "bucket": "ALT_SPELLING", "same_as": "contributions.accounts.workplace.amount" },
+    "contributions.accounts.workplace.cadence":{ "bucket": "ALT_SPELLING", "same_as": "contributions.accounts.workplace.amount" },
+    "contributions.accounts.workplace.continueAfterRetirement": { "bucket": "ENGINE_LACKS", "note": "Same gap as the IRA row." },
+    "contributions.accounts.taxable.amount":   { "bucket": "ENGINE_HAS", "engine": "accounts" },
+    "contributions.accounts.taxable.annual":   { "bucket": "ALT_SPELLING", "same_as": "contributions.accounts.taxable.amount" },
+    "contributions.accounts.taxable.cadence":  { "bucket": "ALT_SPELLING", "same_as": "contributions.accounts.taxable.amount" },
+    "contributions.accounts.taxable.continueAfterRetirement":   { "bucket": "ENGINE_LACKS", "note": "The Mock says taxable CAN continue after retirement. The engine cannot express it." },
+    "contributionGrowth":          { "bucket": "ENGINE_LACKS", "note": "⛔ The engine models contributions as a LEVEL annuity — portfolio x growth + contribution x (growth-1)/r — so they never escalate. A 401(k) contribution tracks the limit and the salary, and the limit rises most years. The control already exists in the Mock at 0-8%, step 0.25, default 2%. Must accept 0 for a user who wants flat." },
+
+    "machinery.trials":            { "bucket": "MACHINERY", "engine": "n_trials" },
+    "machinery.seed":              { "bucket": "MACHINERY", "engine": "seed" },
+    "machinery.matrixMode":        { "bucket": "MACHINERY", "engine": "ss_matrix_mode" },
+    "machinery.depth":             { "bucket": "MACHINERY", "engine": "matrix_depth" },
+    "machinery.trialsPerModel":    { "bucket": "DERIVED_DISPLAY", "note": "Shown for transparency; the engine takes one trial count." },
+    "machinery.totalPaths":        { "bucket": "DERIVED_DISPLAY", "note": "trials x models, for the screen." },
+    "machinery.overrides":         { "bucket": "DERIVED_DISPLAY", "note": "Reports whether any spreadsheet override is in play." },
+
+    "floorLoad":                   { "bucket": "ENGINE_HAS", "engine": "floor_scenarios_required", "note": "⭐ THE DOOR LANDED 2026-09-13. Until then compute_bedrock tested all_survived as a literal, so the Ceiling was shapeable from Python and the Floor was not shapeable at any price. The engine now also returns floor_notches saying which positions leave a range to show." },
+    "specReviewed":                { "bucket": "UI_STATE", "note": "Whether the user has acknowledged the panel. Never leaves the browser." }
+  },
+
+  "engine_only": {
+    "current_ss_plan":                  { "bucket": "PANEL_SILENT", "note": "Marks one SS-matrix cell as the household's current plan. The SS matrix has its own surface; no Systems Panel row shows it." },
+    "custom_weights":                   { "bucket": "PANEL_SILENT", "note": "Per-model blend weights for the Custom Matrix option. RULED RETIRED alongside market_outlook 'custom' — the five-button control replaces it. Still on the model." },
+    "accum_years_override":             { "bucket": "PANEL_SILENT", "note": "YEARFRAC-precise accumulation years, for exact spreadsheet cell matching. A development affordance, never a user input." },
+    "portfolio_at_retirement_override": { "bucket": "PANEL_SILENT", "note": "Exact portfolio FV from a spreadsheet cell. Same status as accum_years_override." }
+  }
+}
