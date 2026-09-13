@@ -32,7 +32,8 @@
 <link rel="stylesheet" href="/styles/header.css?v=1">
 <style>
   :root {    --bg-darker: #050a14;
-    }
+    
+}
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { overflow-x: hidden; overflow-y: auto; background-color: var(--bg-navy); color: var(--white); font-family: var(--font-serif); -webkit-font-smoothing: antialiased; }
@@ -103,6 +104,14 @@
   .range-column { fill: rgba(93, 202, 165, 0.08); transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
   .range-label { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.15em; text-transform: uppercase; pointer-events: none; transition: fill 0.3s ease, y 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
   .range-val { font-family: var(--font-serif); font-size: 36px; font-style: italic; font-weight: bold; pointer-events: none; transition: fill 0.3s ease, y 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
+  /* §6.9 — the survivor disclosure. Reads as a STATEMENT OF FACT about the number above it, not
+     as a warning: no red, no icon, no alert framing. The product is not apologising for pricing
+     the window correctly — it is naming a house assumption at the place that assumption moves
+     money. ⚠️ [hidden] is honoured explicitly because this rule sets display. */
+  .survivor-disclosure { max-width: 900px; margin: 4px auto 0; padding: 12px 20px 0;
+    font-family: var(--font-mono); font-size: 11px; line-height: 1.6;
+    color: rgba(255,255,255,0.55); text-align: center; letter-spacing: 0.02em; }
+  .survivor-disclosure[hidden] { display: none; }
   .hover-detail { opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
   .hover-bg { fill: rgba(9, 18, 33, 0.85); backdrop-filter: blur(4px); stroke: transparent; stroke-width: 1px; transition: stroke 0.3s ease; }
   .boundary-group, .datum-group { cursor: default; pointer-events: auto; }
@@ -434,6 +443,22 @@
               </g>
           </svg>
       </div>
+      <!-- ⛔⛔ §6.9 — THE SURVIVOR DISCLOSURE. Architect-authored, shipped verbatim, RULED 12 Sep.
+           It sits HERE, directly under the Range, because the copy bank ruling is explicit that it
+           "lives where the stepped-down number is shown" — not where the old note sat. The number
+           above it is the one the survivor window moved.
+           ⛔ IT MUST SHIP BEFORE ANY USER SEES A STEPPED-DOWN TIER. MEASURED 12 Sep: the survivor
+              build moved a two-horizon household from 71,000 / 85,000 / 93,000 to 66,000 / 81,000 /
+              91,000 — DOWN ON ALL THREE TIERS, with the Floor moving too. The failure mode is not a
+              bug; it is a household watching their number drop with no sentence on screen saying why.
+           ⛔ THE 75% IS A HOUSE ASSUMPTION, NOT A FACT ABOUT THIS HOUSEHOLD, AND IT MOVES MONEY —
+              so it is named on screen at the place it acts (§6.4 applied to the survivor window).
+              Its single definition is SURVIVOR_SPEND_FACTOR; no literal lives at any call site.
+           ⚠️ EMPTY AND HIDDEN UNTIL THE ENGINE SAYS OTHERWISE. `hidden` is the resting state and
+              populateRangeFromAPI is the only thing that clears it, so a household with no survivor
+              window — and a response from an engine too old to carry the field — shows nothing at
+              all rather than an empty box or a sentence about a year nobody has. -->
+      <div id="survivor-disclosure" class="survivor-disclosure" hidden></div>
   </div>
 
   <div class="scroll-foreground" id="range-main">
@@ -964,8 +989,46 @@
         }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
     }
 
+    /* ⛔⛔ §6.9 — THE SURVIVOR DISCLOSURE. Architect-authored 12 Sep, SHIPPED VERBATIM.
+       TRIGGER: survivor_calendar_year IS NOT null. Nothing else.
+       ⛔ THE OLD TRIGGER WAS WRONG AND WOULD HAVE SILENTLY SKIPPED MOST AFFECTED HOUSEHOLDS.
+          It read "joint household AND the two plan-through ages differ." MEASURED: a couple who
+          both plan to the SAME age but differ in age by 2.2 years DOES open a 2.2-year window —
+          the older one's horizon arrives first. The described population was a strict SUBSET of
+          the real one.
+       🔑 LAW 183 — BIND THE COPY TO THE MECHANISM, NEVER TO A RESTATEMENT OF IT. The engine
+          computes the window and hands back the year; this reads that year. A client that
+          re-derived "is there a window?" from ages would be a second implementation of the rule,
+          free to drift from the one that actually moved the money.
+       ⛔ BLAST RADIUS, MEASURED: every couple with an age gap — nearly every dual household.
+          Not only couples who planned differently. That makes it MORE urgent, not less.
+       ⚠️ `=== null` IS NOT USED, AND `== null` IS DELIBERATE: it catches both null and undefined,
+          and undefined is what a response from an engine predating the field looks like. Those two
+          mean the same thing here — "no window was reported" — and both must render nothing. */
+    function _renderSurvivorDisclosure(data) {
+        var el = document.getElementById('survivor-disclosure');
+        if (!el) return;
+        var yr = data && data.params ? data.params.survivor_calendar_year : null;
+        if (yr == null) { el.hidden = true; el.textContent = ''; return; }
+        el.textContent = 'After ' + yr + ', this plans for one person: the larger Social Security '
+                       + 'benefit, single-filer tax, one person’s healthcare, and 75% of your '
+                       + 'spending.';
+        el.hidden = false;
+    }
+    /* ⛔ PUBLISHED, FOR THE SAME REASON `_datumRefusalBodyHtml` had to be (Captain-found in
+       production 13 Sep as a live ReferenceError): a function that exists only inside this
+       closure is UNREACHABLE BY ANY INSTRUMENT, and a disclosure nobody can test is a disclosure
+       nobody can prove shipped. It is the gate the whole engine queue is stacked behind — it does
+       not get to be untestable. */
+    window._renderSurvivorDisclosure = _renderSurvivorDisclosure;
+
     // ─── populateRangeFromAPI (ported + extended from index.html populateScreen4) ──
     function populateRangeFromAPI(data) {
+        /* ⛔ FIRST LINE OF THE FUNCTION THAT PAINTS THE STEPPED-DOWN NUMBER. The disclosure and the
+           number it describes are written by one call, so there is no path that renders one without
+           the other — which is the only structural way "must ship before any user sees a stepped-down
+           tier" can hold, rather than holding by discipline. */
+        _renderSurvivorDisclosure(data);
         CAPSTONE        = data.tiers.blended.capstone;
         BEDROCK         = data.tiers.blended.bedrock;
         LEGACY_P50      = data.legacy.blended_p50;

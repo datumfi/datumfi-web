@@ -3672,7 +3672,35 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                   <span class="architect-complete-title">Complete Profile</span>
                   <span class="architect-complete-sub">Build Master Suite</span>
                 </button>
-                  <div class="architect-lastsurvivor-tip architect-field-co" id="architect-lastsurvivor-note">Your Range runs to the later of your two plan-through ages. It is one household planning to a single horizon &mdash; not a forecast of who outlives whom, and not a survivor&#39;s plan. We don&#39;t model the year a household becomes one person: no change in spending, no change in tax filing, no change in Social Security. Those shifts are real, and this plan does not price them.</div>
+                  <!-- ⛔⛔ §6.11 — architect-lastsurvivor-note WAS DELETED HERE, 2026-09-13, IN THE
+                       SAME COMMIT THAT SHIPPED §6.9. RULED 12 Sep: it ships together or not at all.
+                       It read: "Your Range runs to the later of your two plan-through ages... We
+                       don't model the year a household becomes one person: no change in spending,
+                       no change in tax filing, no change in Social Security. Those shifts are real,
+                       and this plan does not price them."
+                       ⛔ EVERY CLAUSE OF IT WAS FALSE. As of 9fefa49 the engine prices ALL THREE.
+                       ⛔⛔ IT WAS THE MOST DANGEROUS COPY IN THE PRODUCT, FOR TWO COMPOUNDING
+                          REASONS. (1) It rendered via `architect-field-co` — visible EXACTLY when
+                          the co-architect toggle is on, which is PRECISELY the population whose
+                          tiers had just moved. The one sentence that was false was shown only to
+                          the people it was false about. (2) It read in the REASSURING direction: a
+                          user saw it and believed their plan was NOT stepped down while their tiers
+                          already were. Law 180 — the generous direction is the dangerous one, and
+                          the one nobody ever reports.
+                       ⛔ NOTHING REPLACES IT IN PLACE, AND NO SOFTENING SENTENCE IS WRITTEN. §6.9
+                          is its replacement, and §6.9 lives where the stepped-down number is shown
+                          (range.html, under the Range) — not here. A product that quietly starts
+                          doing a thing well does not owe an announcement; it owes an accurate
+                          description at the place the thing happens.
+                       🔑 THE GENERAL FORM, AND THE REASON THIS COMMENT IS LONGER THAN THE NOTE WAS:
+                          AN HONEST DISCLOSURE OF A LIMITATION BECOMES A LIE THE MOMENT THE
+                          LIMITATION IS REPAIRED — and the commit that repairs it is the LEAST
+                          LIKELY COMMIT TO GO LOOKING FOR IT, because its author is thinking about
+                          what they built, not about what the product previously confessed. A
+                          "we don't model X yet" note is A CLAIM WITH AN EXPIRY DATE AND NO CLOCK.
+                       ⛔ STANDING DUTY (law 181): ANY COMMIT THAT BUILDS A PREVIOUSLY-UNBUILT THING
+                          MUST GREP THE PRODUCT FOR SENTENCES SAYING IT IS UNBUILT AND RETIRE THEM
+                          IN THAT SAME COMMIT. -->
                 </div>
               </div>
             </div>
