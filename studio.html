@@ -15178,6 +15178,18 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         out.ss_strategy_secondary = _map[((_btn && _btn.textContent) || '').trim()] || 'full_67';
         return out;
       }
+      /* ⛔⛔ EXPOSED BECAUSE THE SECOND CALLER LIVES IN A SHALLOWER SCOPE AND COULD NOT SEE IT.
+         f4b0a64 (2026-09-01) unified this derivation so the Range and the SS Matrix "cannot
+         disagree about who lives in the house" — and moved buildMatrixRequest's call to a name
+         its scope chain does not contain. A closure resolves at DEFINITION, not at call site,
+         so the matrix threw `_coArchitectFacts is not defined` from that commit onward.
+      ⛔ MEASURED, NOT INFERRED: a fully-answered JOINT household clicking "Test Claiming Paths"
+         got a page error and a status line stuck on "Starting claiming map…" forever — no error
+         on screen, no refusal, no result. Solo was unaffected, which is why it survived twelve
+         days and 53 commits to this file.
+      🔑 THE UNIFICATION WAS RIGHT AND THE REACH WAS WRONG. One derivation with two callers is
+         still the correct shape; it just has to be reachable from both. */
+      window._coArchitectFacts = _coArchitectFacts;
 
       // SS override helper — reads monthly inputs, returns {state, dict}
       // state: 'full' | 'fra_only' | 'partial' | 'empty'
@@ -19577,7 +19589,19 @@ const _reachesEngine = a =>
            endpoints can never again describe different families from the same screen.
            ⚠ base already carries these from buildStudioRequest; re-assigning AFTER the gate above
            is deliberate, so a value that failed validation cannot survive into the matrix body. */
-        var _mcFacts = _coArchitectFacts();
+        /* ⛔ CALLED THROUGH window ON PURPOSE, AND IT IS NOT STYLE. This function is defined one
+           scope deeper than here; a BARE `_coArchitectFacts()` resolved only via the global object
+           and therefore silently depended on an assignment somewhere else in the file. Spelling
+           the reach makes the dependency visible to the next reader and makes its absence throw
+           a name that says where to look, instead of "is not defined". */
+        if (typeof window._coArchitectFacts !== 'function') {
+          /* ⛔ LOUD, NEVER SILENT. Skipping here would send the matrix a household with no second
+             person while the toggle says there is one — FINDING 67 restored on the other endpoint.
+             A missing derivation is a programming fault, not a household fact. */
+          throw new Error('_coArchitectFacts is not reachable from buildMatrixRequest — the matrix '
+            + 'cannot describe a co-architect it cannot derive');
+        }
+        var _mcFacts = window._coArchitectFacts();
         if (_mcFacts) Object.assign(base, _mcFacts);
       }
 
