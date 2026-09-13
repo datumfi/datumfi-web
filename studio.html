@@ -4375,29 +4375,9 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
               <div class="climate-desc">Trusts the full historical record more — markets have always eventually recovered.</div>
             </div>
             
-            <div class="climate-option" id="custom-climate-btn" data-outlook="Custom Matrix" onclick="openCustomMatrix(event)">
-               <div class="climate-tooltip" id="custom-tt">
-                <div class="tt-title">Active Methodology & Weighting</div>
-                <div class="tt-row"><span>User Defined Matrix</span><span class="tt-val">100%</span></div>
-              </div>
-              <div class="hvac-header">
-                <span class="climate-name">Custom Matrix</span>
-                <span class="hvac-badge">[ OVR ]</span>
-              </div>
-              <div class="climate-desc">Manually define your exact confidence weighting across all 4 models.</div>
-              
-              <div class="custom-climate-box" id="custom-climate-box" onclick="event.stopPropagation();">
-                <div class="custom-row"><label>Historical</label><input type="number" class="c-weight" value="25" min="0" max="100"></div>
-                <div class="custom-row"><label>Parametric</label><input type="number" class="c-weight" value="25" min="0" max="100"></div>
-                <div class="custom-row"><label>Regime</label><input type="number" class="c-weight" value="25" min="0" max="100"></div>
-                <div class="custom-row"><label>CAPE</label><input type="number" class="c-weight" value="25" min="0" max="100"></div>
-                <div class="custom-footer">
-                  <span class="sum-counter valid" id="c-sum">100 / 100</span>
-                  <button class="custom-save valid" id="c-save" type="button" onclick="closeCustomMatrix(event)">Confirm Matrix</button>
-                </div>
-
-              </div>
-            </div>
+            <!-- ⛔ THE CUSTOM MATRIX TILE WAS REMOVED 2026-09-13 — retired by the five-button
+                 Market Climate control. It took four weights from the user and sent them as
+                 market_outlook:'custom'. The Mock has no such tile; this was live-only. -->
 
           </div>
         </div>
@@ -15102,7 +15082,8 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         'Valuations Matter': 'valuations_matter',
         'Cautious':          'cautious',
         'Optimistic':        'optimistic'
-        // 'Custom Matrix' handled inline in buildStudioRequest — sends market_outlook:'custom' + custom_weights
+        // 'Custom Matrix' was retired 2026-09-13. The label map below is KEPT so a blueprint saved
+        // before that date still RENDERS its stored outlook; nothing builds or sends 'custom' now.
       };
 
       // STU-010: engine enum map — Groups 1 (retirement) + 2 (liquid) + 3 (pension)
@@ -15329,7 +15310,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       var CO_ARCH_DOB_UNREADABLE = "Your co-architect's date of birth could not be read, so this plan cannot be built for both of you.";
       var CO_ARCH_DOB_MISSING    = "Your co-architect's date of birth is missing, so this plan cannot be built for both of you.";
 
-      // STU-010 + STU-022: enum mapping, Group 4 filter, custom_weights for Custom Matrix
+      // STU-010: enum mapping and Group 4 filter. (STU-022 custom_weights retired 2026-09-13.)
       function buildStudioRequest() {
         window._buildRequestError = null;
         window._buildRequestErrorField = null;
@@ -15403,18 +15384,11 @@ const _reachesEngine = a =>
            regresses and an untargetable reason is never forced into a target it does not have. */
         if (_dobError) _errs.push({ field: 'Date of Birth', message: _dobError, target: 'pri-dob' });
         if (_retError) _errs.push({ field: 'Target Retirement Date', message: _retError, target: 'target-ret' });
-        /* The weights check is VALIDATED HERE, alongside the dates, so a cold Studio reports it in
-           the same breath. It reads only the DOM and depends on nothing above it. The payload the
-           weights BUILD is still assembled further down, where it is used. */
-        var _clA = document.querySelector('.climate-option.active');
-        if (((_clA && _clA.dataset && _clA.dataset.outlook) || '') === 'Custom Matrix') {
-          var _wv = Array.prototype.map.call(document.querySelectorAll('.c-weight'), function (el) { return parseFloat(el.value) || 0; });
-          var _wt = _wv.reduce(function (a, b) { return a + b; }, 0);
-          /* ⚠ A LOCATION WITHOUT A FIELD. This fires on a SUM ACROSS FOUR .c-weight inputs, so no
-             single one is the offending input — the door lands on the GROUP. Diffuseness is a
-             spectrum, not a flag: a reason can have a place without having a field. */
-          if (Math.abs(_wt - 100) > 1) _errs.push({ field: null, message: WEIGHTS_MUST_SUM, target: 'custom-climate-box' });
-        }
+        /* ⛔ THE CUSTOM-WEIGHTS REFUSAL IS GONE WITH THE TILE IT GUARDED (2026-09-13). It required
+           a .climate-option.active whose outlook read "Custom Matrix", which no longer exists, and
+           it summed .c-weight inputs that no longer exist either. A REFUSAL THAT CANNOT FIRE IS NOT
+           A SAFEGUARD, IT IS A LANDMINE: left in place it would have summed an empty set to zero.
+           WEIGHTS_MUST_SUM is retained as authored copy for whoever rules on this next. */
         /* ⛔ THE CO-ARCHITECT GATE LIVES HERE, WITH THE OTHER REASONS, AND THE PLACEMENT IS THE
            FIX. The old check sat SEVENTY LINES BELOW, after the abort — so a reason pushed there
            would have printed the authored sentence ABOVE a single-person ladder that contradicts it.
@@ -15572,47 +15546,23 @@ const _reachesEngine = a =>
         const activeClimate = document.querySelector('.climate-option.active');
         const climateLabel  = activeClimate?.dataset?.outlook || '';
 
-        // STU-022: Custom Matrix — validate weights, build custom_weights payload
-        let outlookValue, customWeights;
-        if (climateLabel === 'Custom Matrix') {
-          const cWeightEls = document.querySelectorAll('.c-weight');
-          const vals = Array.from(cWeightEls).map(el => parseFloat(el.value) || 0);
-          const total = vals.reduce((s, v) => s + v, 0);
-          if (Math.abs(total - 100) > 1) {
-            /* F72 — ROUTED THROUGH THE SAME GLOBAL AS EVERY OTHER REFUSAL. This used to light its
-               own element on a 4s timer, so the Reveal button had THREE ways to refuse in TWO
-               voices, one of them silent. One failure, one voice, one channel.
-               ⚠️ THE SENTENCE IS THE ONE THAT ALREADY SHIPPED in #c-weight-error, moved verbatim —
-                  no copy is authored here. Its element is gone; keeping both would put the same
-                  authored sentence in two places, which is the divergence datum-footer.js exists
-                  to prevent. */
-            /* Defensive only — F77 validates this above, with the dates, so a cold Studio hears
-               about it in the same refusal. Kept as a guard on the assembly path rather than
-               deleted: this is the branch that would build weights nobody checked. */
-            /* ⛔ ONE REASON, TWO EMISSION SITES, AND BOTH GET THE DOOR OR NEITHER DOES. If only
-               the site above were targeted, the SAME refusal would open a door on one path and not
-               the other — the F72 asymmetry in miniature, inside the commit built to abolish it. */
-            window._buildRequestErrors = [{ field: null, message: WEIGHTS_MUST_SUM, target: 'custom-climate-box' }];
-            window._buildRequestError = WEIGHTS_MUST_SUM;
-            window._buildRequestErrorField = null;
-            return null; // caller must halt — weights invalid
-          }
-          // UI order: Historical→bootstrap, Parametric, Regime, CAPE (Engine Spec v1.7 §4)
-          outlookValue  = 'custom';
-          customWeights = { bootstrap: vals[0] / 100, parametric: vals[1] / 100, regime: vals[2] / 100, cape: vals[3] / 100 };
-        } else {
-          /* ⚠️ THE `|| 'valuations_matter'` FALLBACK IS NOT THE TRUTHY-ZERO CLASS — the operand is a
-             STRING, and '' is genuinely absent rather than a meaningful answer. Left as-is deliberately.
-             ⛔ BUT NOTE THE TELL, because it is the same shape as the tax presets: THE DEFAULT AND THE
-                FALLBACK ARE THE SAME VALUE, so "the user chose Valuations Matter" and "we could not read
-                the control" are indistinguishable downstream — exactly as Avg-20 was both the checked
-                button and the slider default.
-             ⛔ AND THIS INPUT IS DEAD AT HEAD (pre-existing): changing the preset does not move the
-                answer. The measurement and its cause are banked at the climate markup (~:4242), with the
-                per-model and per-preset spreads. RECORDED, NOT REPAIRED — the paused Monte Carlo arc
-                replaces this control. 🗓️ This note dies with the presets. */
-          outlookValue = OUTLOOK_MAP[climateLabel] || 'valuations_matter';
-        }
+        /* ⛔ CUSTOM MATRIX RETIRED 2026-09-13. The five-button Market Climate control replaced it;
+           the design retired it, the workbook recorded it retired, AND THE PRODUCT KEPT ASKING.
+           Studio Mock.html contains ZERO occurrences of "Custom Matrix" — the tile was live here
+           only, and a user could still click it and hand us four weights nobody had ruled on.
+           MEASURED before removal: choosing it moved keystone 204,000 -> 214,000 and the ceiling
+           239,000 -> 243,000, so this was not a dormant branch.
+        ⚠️ THE SCHEMA FIELD custom_weights STILL EXISTS AND IS STILL ACCEPTED BY THE ENGINE. That
+           removal is an engine change and waits behind §6.9. Until then the field is a door with
+           nothing walking through it — accepted, never sent. */
+        /* ⚠️ THE `|| 'valuations_matter'` FALLBACK IS NOT THE TRUTHY-ZERO CLASS — the operand is a
+           STRING, and '' is genuinely absent rather than a meaningful answer. Left as-is deliberately.
+           ⛔ BUT NOTE THE TELL: THE DEFAULT AND THE FALLBACK ARE THE SAME VALUE, so "the user chose
+              Valuations Matter" and "we could not read the control" are indistinguishable downstream.
+           ⛔ AND THIS INPUT IS DEAD AT HEAD (pre-existing): changing the preset does not move the
+              answer. Banked at the climate markup with the per-model and per-preset spreads.
+              RECORDED, NOT REPAIRED. 🗓️ This note dies with the presets. */
+        const outlookValue = OUTLOOK_MAP[climateLabel] || 'valuations_matter';
 
         const activeSS   = document.querySelector('.ss-btn.active strong');
         /* ⚠ A DEAD DEFAULT MUST STILL AGREE WITH ITS LIVE CONTROL. This read 'optimal_70' while
@@ -15795,7 +15745,7 @@ const _reachesEngine = a =>
            ⚠️ NO DOOR STRING IS AUTHORED HERE AND NONE IS NEEDED: TAKE_ME_THERE is a single shared
               constant every queue entry reuses — the label never varies. This entry supplies only
               a target id. Read the mechanism, not the five entries, before asking for a sixth. */
-        if (customWeights) body.custom_weights = customWeights;
+        /* custom_weights IS NO LONGER SENT — the Custom Matrix tile was retired 2026-09-13. */
         /* ⛔ FINDING 67 — tell the engine who actually lives here. Without these keys
            `co_architect_age = None` makes the engine model a SINGLE household while still taxing it
            as married. Nothing is sent when the co-architect is off or their DOB is unreadable. */
