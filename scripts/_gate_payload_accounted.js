@@ -732,6 +732,122 @@ async function walkRefusals(page) {
     + ' AT FOR THE OTHER, IS THE ENGINE\'S CO-ARCHITECT BLIND SPOT REPRODUCED IN THE UI.'
     + '\n          ⛔ THE FIX IS A DOOR, NEVER A DELETION. Apply the removal test before proposing one.');
 
+
+  /* ══════════════════════════════════════════════════════════════════════════════════════════
+     CONFIGURATION JOINT -> SOLO. BEREAVEMENT. DIVORCE. THE THIRD CONFIGURATION, AND UNTIL
+     2026-09-13 NOTHING IN THIS REPOSITORY HAD EVER ENTERED IT.
+     ⛔⛔ IT IS NOT "DUAL AGAIN WITH A FLAG OFF". It is a TRANSITION, and transitions have a
+        property states do not: THEY CAN LEAVE THINGS BEHIND. A household that was two and is now
+        one is the only configuration in which a value can belong to a person who is no longer in
+        the model, and the product has no other route to that state.
+     🔑 THE DANGEROUS BUCKET IS NOT WHAT THE TOGGLE DESTROYS — IT IS WHAT SURVIVES. A co-architect
+        value still riding the payload after the co-architect is gone is Clause 2 wearing a
+        different face: somebody else's number colouring this person's Range, where that somebody
+        was a real second person in this very session.
+     ⚠️ ADDING A CO-ARCHITECT ACCOUNT FIRST IS SETTING UP THE CONDITION, NOT SEEDING AN ANSWER, and
+        the distinction is the one this whole file turns on. Nothing here answers a refusal. It
+        makes the household ACTUALLY JOINT in the one respect the off-branch acts on — the listener
+        splices every account whose base type is 'coarch'. A FIXTURE WITH NO CO-ARCHITECT ACCOUNT
+        CANNOT MEASURE A BRANCH THAT ONLY DELETES CO-ARCHITECT ACCOUNTS: it would report a clean
+        transition and prove nothing. */
+  await dualPage.evaluate(() => {
+    addInstance('taxable_co');
+    const a = window.state.accounts.filter((x) => x.baseId === 'taxable_co').pop();
+    if (a) a.value = 250000;
+  });
+  await dualPage.waitForTimeout(150);
+
+  const beforeOff = await dualPage.evaluate(() => {
+    window._buildRequestErrors = [];
+    let body = null;
+    try { body = window._buildStudioRequest(); } catch (e) { /* refusal */ }
+    return {
+      payload: body,
+      accounts: (window.state.accounts || []).map((a) => a.baseId),
+      accountCount: (window.state.accounts || []).length
+    };
+  });
+
+  /* THE TRANSITION — the button a user clicks, never the hidden checkbox. */
+  await dualPage.evaluate(() => {
+    const b = document.querySelector('[data-co-architect-toggle]');
+    if (b) b.click();
+  });
+  await dualPage.waitForTimeout(600);
+
+  const afterOff = await dualPage.evaluate(() => {
+    const tog = document.getElementById('co-arch-toggle');
+    const fields = document.getElementById('co-arch-fields');
+    window._buildRequestErrors = [];
+    let body = null;
+    try { body = window._buildStudioRequest(); } catch (e) { /* refusal */ }
+    return {
+      payload: body,
+      stillChecked: !!(tog && tog.checked),
+      fieldsShown: !!(fields && getComputedStyle(fields).display !== 'none'),
+      accounts: (window.state.accounts || []).map((a) => a.baseId),
+      accountCount: (window.state.accounts || []).length,
+      refusals: (window._buildRequestErrors || []).map((e) => e.field).filter(Boolean)
+    };
+  });
+
+  check('L19 INSTRUMENT: the walk ACTUALLY LEFT DUAL — the household is one again',
+    !afterOff.stillChecked && !afterOff.fieldsShown,
+    'store checked=' + afterOff.stillChecked + ' · co-arch fields displayed=' + afterOff.fieldsShown
+    + '\n          ⛔ IF THIS LEG IS RED, EVERY NUMBER BELOW IT DESCRIBES A HOUSEHOLD THAT IS STILL TWO.');
+
+  const destroyed = beforeOff.accounts.filter((b) => {
+    const a = afterOff.accounts.slice();
+    const i = a.indexOf(b);
+    return i === -1;
+  });
+  check('L20 THE TRANSITION DESTROYS THE CO-ARCHITECT ESTATE, AND THIS NAMES WHAT IT TOOK',
+    beforeOff.accountCount > afterOff.accountCount,
+    'accounts before ' + beforeOff.accountCount + ' -> after ' + afterOff.accountCount
+    + '  · destroyed: ' + (destroyed.join(', ') || 'NOTHING')
+    + '\n          ⚠️ THIS LEG IS A RECORD, NOT A COMPLAINT. Deleting a co-architect account when the'
+    + ' co-architect is removed is defensible. What is NOT defensible is doing it with no warning'
+    + ' and no undo, and that is a product ruling nobody has made.'
+    + '\n          ⛔ IF NOTHING WAS DESTROYED THE FIXTURE NEVER MADE THE HOUSEHOLD JOINT and every'
+    + ' leg below is measuring a transition that did not happen.');
+
+  /* ⛔ THE CENSUS. Every key across BOTH payloads lands in exactly one bucket and the buckets sum
+     to the union, in both directions — the same law the engine-surface census holds. */
+  const dualKeysT  = beforeOff.payload ? Object.keys(beforeOff.payload) : [];
+  const soloKeysT  = afterOff.payload  ? Object.keys(afterOff.payload)  : [];
+  const union      = [...new Set([...dualKeysT, ...soloKeysT])];
+  const secondPerson = (k) => primaryCounterpart(k) !== null;
+
+  const cleared = [], survived = [], appeared = [], carried = [];
+  for (const k of union) {
+    const inDual = dualKeysT.includes(k), inSolo = soloKeysT.includes(k);
+    if (secondPerson(k)) { (inSolo ? survived : cleared).push(k); }
+    else if (inSolo && !inDual) appeared.push(k);
+    else carried.push(k);
+  }
+
+  check('L21 NO CO-ARCHITECT VALUE SURVIVES THE CO-ARCHITECT — the dangerous bucket',
+    survived.length === 0,
+    'second-person keys cleared by the transition (' + cleared.length + '): ' + (cleared.join(', ') || 'none')
+    + '\n          ⛔ STILL ON THE SOLO PAYLOAD (' + survived.length + '): ' + (survived.join(', ') || 'none')
+    + '\n          🔑 A VALUE THAT OUTLIVES THE PERSON IT DESCRIBES IS SOMEBODY ELSE\'S NUMBER'
+    + ' COLOURING THIS HOUSEHOLD\'S RANGE — Clause 2, reached through a door only this transition opens.');
+
+  check('L22 THE TRANSITION CENSUS SUMS BOTH WAYS',
+    (cleared.length + survived.length + appeared.length + carried.length) === union.length
+      && appeared.length === 0 && soloKeysT.length > 0,
+    'dual payload ' + dualKeysT.length + ' keys · solo-after payload ' + soloKeysT.length + ' keys'
+    + ' · union ' + union.length
+    + '\n          cleared=' + cleared.length + '  survived=' + survived.length
+    + '  appeared=' + appeared.length + '  carried=' + carried.length
+    + '   [' + (cleared.length + survived.length + appeared.length + carried.length) + ' of ' + union.length + ']'
+    + (appeared.length ? '\n          ⛔ APPEARED AFTER THE TRANSITION: ' + appeared.join(', ')
+        + ' — a key the solo payload carries and the dual one did not' : '')
+    + (soloKeysT.length === 0 ? '\n          ⛔ THE SOLO PAYLOAD DID NOT BUILD: '
+        + (afterOff.refusals.join(', ') || 'no refusal named')
+        + ' — the transition left the household unable to ask for a Range at all' : ''));
+
+
   /* ── THE OBSERVED PAYLOADS ARE WRITTEN OUT, SO A SECOND INSTRUMENT CAN JOIN THEM AGAINST THE
      ENGINE'S OWN FIELD LIST WITHOUT WALKING THE PRODUCT A THIRD TIME.
      ⛔ THIS GATE ANSWERS "IS ANYTHING HERE UNACCOUNTED?" — a question about the keys that ARE sent.
