@@ -84,8 +84,122 @@ const FROM_CONTROL = {
      this map has never been evidence; only a refusal observed during the walk is. */
   datum_spend: 'sec-sketch',
   plan_end_age: 'plan-end-age',
-  healthcare_annual: 'hc-monthly'
+  healthcare_annual: 'hc-monthly',
+
+  /* ── THE SECOND PERSON'S CONTROLS, ADDED 2026-09-13 WHEN THIS GATE LEARNED TO ENTER DUAL.
+     ⛔⛔ THE ABSENCE OF THESE FIVE LINES WAS NOT AN OVERSIGHT IN A MAP; IT WAS THE INSTRUMENT
+        INHERITING THE DEFECT IT EXISTS TO FIND. This gate walked SOLO ONLY, so every key that
+        exists only when a second person does was OUTSIDE ITS POPULATION ENTIRELY — not measured
+        and found clean, NEVER LOOKED AT. It reported 3 while the true figure was 4, and the
+        fourth was named from memory by the Captain with no code in front of him.
+     🔑 A GATE THAT MEASURES ONLY THE PRIMARY CONFIGURATION IS THE SAME DEFECT AS AN ENGINE THAT
+        MODELS ONLY THE PRIMARY ARCHITECT, ONE LEVEL UP. Clause 1 and Clause 2 met inside the tool.
+     ⚠️ ss_strategy_secondary IS DELIBERATELY ABSENT FROM THIS MAP, AND SO IS ss_strategy_primary.
+        Both are tempting to point at 'ss-sec-67' / 'ss-pri-67' because those controls sit in the
+        same panel — but that refusal is about the BENEFIT FIGURES, not the claiming choice. Naming
+        them here would mark a key ASKED on the strength of a refusal raised about something else,
+        which is the laundering this gate exists to count. THE CLAIMING CHOICE HAS NO DOOR YET. */
+  co_architect_age: 'co-dob',
+  co_architect_retirement_age: 'co-ret',
+  co_architect_plan_end_age: 'co-plan-end',
+  ss_secondary_benefit_overrides: 'ss-sec-67'
 };
+
+/* ⛔ THE PAIRING RULE FOR CLAUSE 1, APPLIED MECHANICALLY IN L15. Given any key name, return the
+   name of its FIRST-PERSON counterpart, or null if it is not a second-person field at all.
+   ⭐ IT IS A RULE, NOT A LIST, WHICH IS THE ONLY REASON IT STAYS TRUE. A sixth co-architect field
+      wired next year is paired the day it appears, by nobody remembering to add it here.
+   ⚠️ ONE NORMALISATION IS STATED RATHER THAN HIDDEN: stripping `co_architect_` from
+      `co_architect_age` yields `age`, and the engine's first-person spelling is `current_age`.
+      That single irregularity is handled explicitly; everything else pairs by the rule. */
+function primaryCounterpart(key) {
+  if (/^co_architect_/.test(key)) {
+    const stem = key.replace(/^co_architect_/, '');
+    return stem === 'age' ? 'current_age' : stem;
+  }
+  /* Covers BOTH spellings the engine uses — a trailing `_secondary` (ss_strategy_secondary) and an
+     infixed one (ss_secondary_benefit_overrides) — so neither needs its own line. */
+  if (/_secondary(_|$)/.test(key)) return key.replace(/_secondary(_|$)/, '_primary$1');
+  return null;
+}
+
+/* ── THE WALK, AS A FUNCTION SO BOTH CONFIGURATIONS SHARE ONE COPY OF IT.
+   ⛔ IT WAS INLINE UNTIL 2026-09-13 BECAUSE THERE WAS ONLY EVER ONE CONFIGURATION TO WALK. The
+      second caller is what forced it out, and copying the loop instead would have been the exact
+      defect L10 polices in the product one layer down: two spellings of one procedure, each
+      correct on its own line, drifting apart the first time either is touched.
+   ⚠️ NOTHING ABOUT THE PROCEDURE CHANGED IN THE MOVE. It still answers ONLY what the product has
+      already refused on, and still records the demand BEFORE satisfying it. */
+async function walkRefusals(page) {
+    const asked = new Set();
+    let payload = null, rounds = 0, stuck = null;
+    for (; rounds < 24; rounds++) {
+      const r = await page.evaluate(() => {
+        window._buildRequestErrors = [];
+        let body = null;
+        try { body = window._buildStudioRequest(); } catch (e) { /* a throw is a refusal too */ }
+        return {
+          body: body,
+          errs: (window._buildRequestErrors || []).map((e) => ({ m: String(e.message || e), t: e.target || null }))
+        };
+      });
+      if (r.body && !r.errs.length) { payload = r.body; break; }
+      if (!r.errs.length) { stuck = 'the builder returned nothing and queued no refusal'; break; }
+      r.errs.forEach((e) => { if (e.t) asked.add(e.t); });
+
+      /* ⛔⛔ ANSWERING A REFUSAL IS NOT THE SAME ACT AS SEEDING A PRECONDITION, AND THE WHOLE
+         CREDIBILITY OF THIS GATE TURNS ON THE DIFFERENCE.
+           SEEDING supplies a value BEFORE the product asks, so the demand is never observed — that
+           is the defect that hollowed out the previous script's list.
+           ANSWERING supplies it BECAUSE the product refused, AFTER the demand has been recorded in
+           `asked`. The requirement is measured first and satisfied second.
+         ⇒ The estate is not a form field, so its answer is an ACTION: add an account and give it a
+           balance, which is exactly what the refusal instructs a user to do. It reaches here only
+           once `sec-drafting` is already in `asked`. */
+      const estate = r.errs.find((e) => e.t === 'sec-drafting');
+      if (estate) {
+        await page.evaluate(() => {
+          addInstance('taxable');
+          const a = window.state.accounts.filter((x) => x.baseId === 'taxable').pop();
+          a.value = 750000;
+        });
+        await page.waitForTimeout(110);
+        continue;
+      }
+
+      /* ⛔ THE DATUM'S ANSWER IS AN ACTION, NOT A FIELD — the refusal points at the Sketch
+         SECTION (or, on a cold estate, at the step that unlocks it), and what a user does there is
+         MOVE THE SLIDER. Dispatching a real input event is what a drag does, and it is the drag
+         handler that records the answer. Setting dataset.exactVal directly would forge the very
+         provenance the refusal exists to check — the harness would be writing the user's answer for
+         them, which is the seeding defect wearing an answer's clothes. */
+      const datum = r.errs.find((e) => e.t === 'sec-sketch' || (e.t === 'sec-drafting' && /spend each year/.test(e.m)));
+      if (datum) {
+        await page.evaluate(() => {
+          const sd = document.getElementById('slider-datum');
+          if (!sd) return;
+          sd.value = '41141';
+          sd.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        await page.waitForTimeout(110);
+        continue;
+      }
+
+      const next = r.errs.find((e) => e.t && ANSWERS[e.t]);
+      if (!next) { stuck = 'no answer known for: ' + r.errs.map((e) => e.t).join(', '); break; }
+      await page.evaluate((a) => {
+        const el = document.getElementById(a[0]); if (!el) return;
+        if (el.tagName === 'SELECT') {
+          for (const o of el.options) if (o.textContent.trim() === a[1]) { el.value = o.value; break; }
+        } else { el.focus(); el.value = a[1]; }
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.blur();
+      }, [next.t, ANSWERS[next.t]]);
+      await page.waitForTimeout(110);
+    }
+  return { asked, payload, rounds, stuck };
+}
 
 (async () => {
   const decl = JSON.parse(fs.readFileSync(DECL, 'utf8'));
@@ -149,76 +263,12 @@ const FROM_CONTROL = {
     + '\n          ⛔ a one-item list under "a few things" is how a collected refusal starts reading'
     + ' like a form validator');
 
-  /* ── THE WALK. Nothing seeded. Answer exactly what the product refuses on, and record it. */
-  const asked = new Set();
-  let payload = null, rounds = 0, stuck = null;
-  for (; rounds < 24; rounds++) {
-    const r = await page.evaluate(() => {
-      window._buildRequestErrors = [];
-      let body = null;
-      try { body = window._buildStudioRequest(); } catch (e) { /* a throw is a refusal too */ }
-      return {
-        body: body,
-        errs: (window._buildRequestErrors || []).map((e) => ({ m: String(e.message || e), t: e.target || null }))
-      };
-    });
-    if (r.body && !r.errs.length) { payload = r.body; break; }
-    if (!r.errs.length) { stuck = 'the builder returned nothing and queued no refusal'; break; }
-    r.errs.forEach((e) => { if (e.t) asked.add(e.t); });
+  /* ── THE WALK, CONFIGURATION SOLO. Nothing seeded; answer exactly what the product refuses on. */
+  const soloWalk = await walkRefusals(page);
+  const asked = soloWalk.asked, payload = soloWalk.payload, rounds = soloWalk.rounds,
+        stuck = soloWalk.stuck;
 
-    /* ⛔⛔ ANSWERING A REFUSAL IS NOT THE SAME ACT AS SEEDING A PRECONDITION, AND THE WHOLE
-       CREDIBILITY OF THIS GATE TURNS ON THE DIFFERENCE.
-         SEEDING supplies a value BEFORE the product asks, so the demand is never observed — that
-         is the defect that hollowed out the previous script's list.
-         ANSWERING supplies it BECAUSE the product refused, AFTER the demand has been recorded in
-         `asked`. The requirement is measured first and satisfied second.
-       ⇒ The estate is not a form field, so its answer is an ACTION: add an account and give it a
-         balance, which is exactly what the refusal instructs a user to do. It reaches here only
-         once `sec-drafting` is already in `asked`. */
-    const estate = r.errs.find((e) => e.t === 'sec-drafting');
-    if (estate) {
-      await page.evaluate(() => {
-        addInstance('taxable');
-        const a = window.state.accounts.filter((x) => x.baseId === 'taxable').pop();
-        a.value = 750000;
-      });
-      await page.waitForTimeout(110);
-      continue;
-    }
-
-    /* ⛔ THE DATUM'S ANSWER IS AN ACTION, NOT A FIELD — the refusal points at the Sketch
-       SECTION (or, on a cold estate, at the step that unlocks it), and what a user does there is
-       MOVE THE SLIDER. Dispatching a real input event is what a drag does, and it is the drag
-       handler that records the answer. Setting dataset.exactVal directly would forge the very
-       provenance the refusal exists to check — the harness would be writing the user's answer for
-       them, which is the seeding defect wearing an answer's clothes. */
-    const datum = r.errs.find((e) => e.t === 'sec-sketch' || (e.t === 'sec-drafting' && /spend each year/.test(e.m)));
-    if (datum) {
-      await page.evaluate(() => {
-        const sd = document.getElementById('slider-datum');
-        if (!sd) return;
-        sd.value = '41141';
-        sd.dispatchEvent(new Event('input', { bubbles: true }));
-      });
-      await page.waitForTimeout(110);
-      continue;
-    }
-
-    const next = r.errs.find((e) => e.t && ANSWERS[e.t]);
-    if (!next) { stuck = 'no answer known for: ' + r.errs.map((e) => e.t).join(', '); break; }
-    await page.evaluate((a) => {
-      const el = document.getElementById(a[0]); if (!el) return;
-      if (el.tagName === 'SELECT') {
-        for (const o of el.options) if (o.textContent.trim() === a[1]) { el.value = o.value; break; }
-      } else { el.focus(); el.value = a[1]; }
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-      el.blur();
-    }, [next.t, ANSWERS[next.t]]);
-    await page.waitForTimeout(110);
-  }
-
-  check('L0 INSTRUMENT: the door opened from an EMPTY Studio with nothing seeded',
+  check('L0 INSTRUMENT: the door opened from an EMPTY Studio with nothing seeded — CONFIGURATION SOLO',
     payload !== null && !stuck,
     payload ? ('opened after ' + rounds + ' refusals: ' + [...asked].join(', ')) : ('STUCK — ' + stuck)
     + '\n          ⛔ if this leg ever needs a seeded value to pass, THAT VALUE IS THE FIRST FINDING');
@@ -233,7 +283,7 @@ const FROM_CONTROL = {
 
   /* ── L1 — THE ENUMERATION IS MECHANICAL. Keys come off the payload the product built. */
   const keys = Object.keys(payload);
-  check('L1 ENUMERATED FROM THE PAYLOAD, NOT FROM A LIST',
+  check('L1 ENUMERATED FROM THE PAYLOAD, NOT FROM A LIST — CONFIGURATION SOLO',
     keys.length > 0,
     keys.length + ' key(s) sent: ' + keys.join(', ')
     + '\n          a hand-kept list of what to check is the same defect as a hand-kept cache signature');
@@ -254,7 +304,7 @@ const FROM_CONTROL = {
      empty estate is the most confident wrong answer this product can produce. */
   const emptyAccounts = Array.isArray(payload.accounts) && payload.accounts.length === 0;
 
-  check('L2 NOTHING IS SENT ON A USER\'S BEHALF WITHOUT BEING ASKED FOR OR DECLARED',
+  check('L2 NOTHING IS SENT ON A USER\'S BEHALF WITHOUT BEING ASKED FOR OR DECLARED — CONFIGURATION SOLO',
     unaccounted.length <= (decl.max_unaccounted || 0),
     unaccounted.length + ' unaccounted (ratchet allows ' + (decl.max_unaccounted || 0) + '):'
     + unaccounted.map((k) => {
@@ -505,6 +555,203 @@ const FROM_CONTROL = {
           : r.kind + ' wanted ' + r.want + ' got ' + JSON.stringify(r.got)).join(' · '))
     + '\n          ⛔ a step wide enough to tidy the number is also wide enough to delete the answer');
 
+
+
+
+  /* ══════════════════════════════════════════════════════════════════════════════════════════
+     CONFIGURATION DUAL — EVERYTHING ABOVE THIS LINE MEASURED ONE HALF OF THE PRODUCT.
+     ⛔⛔ THIS GATE SHIPPED ON 2026-09-12 AND WALKED SOLO ONLY. It reported THREE unaccounted keys.
+        The true figure was FOUR. The fourth was not newly broken and it was not missed by a
+        careless reader — IT WAS NEVER INSIDE THE POPULATION. ss_strategy_secondary exists only
+        when a second person does, and this instrument had never once turned the household to two.
+     ⛔ THE CAPTAIN NAMED IT FROM MEMORY, WITHOUT CODE IN FRONT OF HIM, while the gate said three.
+        A count from an instrument that cannot enter half the product is not a conservative count;
+        it is a confident one about a smaller thing than the sentence claims.
+     🔑 SO THE RULE THIS BLOCK EXISTS TO ENFORCE IS NOT "ALSO CHECK DUAL". IT IS THAT EVERY NUMBER
+        THIS FILE PRINTS CARRIES THE CONFIGURATION IT WAS MEASURED IN. A bare N is the defect.
+     ⚠️ TURNING THE HOUSEHOLD TO TWO IS A CONFIGURATION, NOT AN ANSWER, AND THE DISTINCTION IS THE
+        SAME ONE THE WALK ALREADY TURNS ON. Seeding supplies a value before the product asks.
+        Declaring that two people live here is the user telling the product WHICH PRODUCT THEY ARE
+        USING — the precondition for the second person's fields to exist at all. It is done by
+        CLICKING THE BUTTON A USER CLICKS, never by writing the hidden checkbox, for exactly the
+        reason the datum slider is dragged rather than assigned. */
+  const dualPage = await ctx.newPage();
+  await dualPage.goto('http://127.0.0.1:' + PORT + '/studio.html', { waitUntil: 'load' });
+  await dualPage.waitForTimeout(1400);
+  await dualPage.evaluate(() => { const b = document.getElementById('studioStartScratch'); if (b) b.click(); }).catch(() => {});
+  await dualPage.waitForTimeout(600);
+  await dualPage.waitForFunction(() => typeof window._studioEnterRoom === 'function', null, { timeout: 9000 });
+  await dualPage.evaluate(() => window._studioEnterRoom('data'));
+  await dualPage.waitForTimeout(700);
+  await dualPage.evaluate(() => {
+    const b = document.querySelector('[data-co-architect-toggle]');
+    if (b) b.click();
+  });
+  await dualPage.waitForTimeout(500);
+
+  /* ⛔⛔ L13 IS THE MOST IMPORTANT LEG IN THIS BLOCK AND IT MEASURES THE HARNESS, NOT THE PRODUCT.
+     A dual walk that quietly stayed solo would report SOLO'S NUMBER UNDER A DUAL HEADING — which is
+     strictly worse than not measuring dual at all, because the gap would then look CLOSED. That is
+     the empty-green species in its purest form: an instrument reporting on a configuration it never
+     entered. It asserts the STORE flipped and the second person's fields are actually on screen,
+     because either alone is satisfiable without the other. */
+  const dualOn = await dualPage.evaluate(() => {
+    const tog = document.getElementById('co-arch-toggle');
+    const fields = document.getElementById('co-arch-fields');
+    const dobBox = document.getElementById('co-dob');
+    return {
+      checked: !!(tog && tog.checked),
+      fieldsShown: !!(fields && getComputedStyle(fields).display !== 'none'),
+      dobReachable: !!(dobBox && dobBox.offsetParent !== null)
+    };
+  });
+  check('L13 INSTRUMENT: the walk ACTUALLY ENTERED DUAL — the household is two and the second person is on screen',
+    dualOn.checked && dualOn.fieldsShown && dualOn.dobReachable,
+    'store checked=' + dualOn.checked + ' · co-arch fields displayed=' + dualOn.fieldsShown
+    + ' · #co-dob reachable=' + dualOn.dobReachable
+    + '\n          ⛔ IF THIS LEG IS EVER RED, EVERY DUAL NUMBER BELOW IT IS A SOLO NUMBER WEARING'
+    + ' A DUAL LABEL. Read nothing under it.');
+
+  const dualWalk = await walkRefusals(dualPage);
+
+  check('L14 INSTRUMENT: the door opened in DUAL from an EMPTY Studio with nothing seeded',
+    dualWalk.payload !== null && !dualWalk.stuck,
+    dualWalk.payload
+      ? ('opened after ' + dualWalk.rounds + ' refusals: ' + [...dualWalk.asked].join(', '))
+      : ('STUCK — ' + dualWalk.stuck)
+    + '\n          ⛔ a configuration the harness cannot walk is a configuration nobody is measuring');
+
+  const dualKeys = dualWalk.payload ? Object.keys(dualWalk.payload) : [];
+  const dualOnly = dualKeys.filter((k) => !keys.includes(k));
+
+  check('L15 ENUMERATED FROM THE DUAL PAYLOAD — CONFIGURATION DUAL',
+    dualKeys.length > 0,
+    dualKeys.length + ' key(s) sent in dual: ' + dualKeys.join(', ')
+    + '\n          keys that exist ONLY when a second person does (' + dualOnly.length + '): '
+    + (dualOnly.join(', ') || 'none')
+    + '\n          ⛔ EVERY KEY ON THAT SECOND LINE WAS OUTSIDE THIS GATE\'S POPULATION UNTIL TODAY');
+
+  const dAsked = [], dDeclared = [], dUnaccounted = [];
+  for (const k of dualKeys) {
+    const control = FROM_CONTROL[k];
+    if (control && dualWalk.asked.has(control)) { dAsked.push(k); continue; }
+    const d = decl.keys && decl.keys[k];
+    if (d && (d.kind === 'machinery' || d.kind === 'derived') && d.reason) { dDeclared.push(k); continue; }
+    dUnaccounted.push(k);
+  }
+
+  check('L16 NOTHING IS SENT ON A USER\'S BEHALF WITHOUT BEING ASKED FOR OR DECLARED — CONFIGURATION DUAL',
+    dUnaccounted.length <= (decl.max_unaccounted || 0),
+    dUnaccounted.length + ' unaccounted IN DUAL (ratchet allows ' + (decl.max_unaccounted || 0) + '):'
+    + dUnaccounted.map((k) => {
+      const v = dualWalk.payload[k];
+      const shown = (v && typeof v === 'object')
+        ? (Array.isArray(v) ? '[' + v.length + ' items]' : '[object]') : String(v);
+      return '\n            · ' + k.padEnd(30) + '= ' + shown.slice(0, 44);
+    }).join('')
+    + '\n          ASKED (' + dAsked.length + '): ' + dAsked.join(', ')
+    + '\n          DECLARED (' + dDeclared.length + '): ' + (dDeclared.join(', ') || 'none')
+    + '\n          ⛔ THE RATCHET FALLS BY ASKING FOR A FIELD, NEVER BY DECLARING IT AWAY');
+
+  /* ── L17 — THE WORD "DERIVED" IS NOT A PLACE TO PUT THINGS.
+     ⛔⛔ THIS IS THE LEG THAT MAKES TEACHING THE GATE DUAL *SUFFICIENT* RATHER THAN MERELY
+        NECESSARY, AND THE DISTINCTION COST A SESSION TO SEE. Walking dual puts
+        ss_strategy_secondary inside the population for the first time — and L16 STILL CLEARS IT,
+        because payload_sources.json declares it kind="derived", "the strategy the user picked."
+        ⛔ THE USER DID NOT PICK IT. THE MARKUP DID: studio.html ships
+           `<button class="ss-sec-btn active"><strong>67</strong>` and the reader falls back to
+           `|| 'full_67'` behind that. Nobody touched a control; a value went out anyway.
+     🔑 DERIVED MEANS COMPUTED FROM SOMETHING A HUMAN ANSWERED. IF NOTHING WAS ANSWERED, NOTHING
+        WAS DERIVED — IT WAS ASSUMED, and the word was doing the work a ratchet used to do with no
+        number attached to it. A LABEL THAT EXEMPTS A KEY FROM COUNTING IS A RATCHET SPELLED IN
+        PROSE.
+     ⚠️ THE TEST IS MECHANICAL AND IT IS DELIBERATELY NOT "DOES `from` READ CONVINCINGLY". Prose
+        cannot be checked. A derived key that is PRESENT on a payload must be traceable to a control
+        the product actually REFUSED ON during that same walk. Absent keys are not in the
+        population — custom_weights is absent unless a user picks Custom Matrix, which is exactly
+        what an honest derivation looks like from here.
+     ⇒ THE TWO HONEST REMEDIES, AND NEITHER IS AN EDIT TO THIS FILE: give the field a door, or
+       reclassify it and let the ratchet count it. */
+  const laundered = [];
+  for (const [cfg, walk, kl] of [['SOLO', { asked }, keys], ['DUAL', dualWalk, dualKeys]]) {
+    for (const k of kl) {
+      const d = (decl.keys || {})[k];
+      if (!d || d.kind !== 'derived') continue;
+      const control = FROM_CONTROL[k];
+      if (control && walk.asked.has(control)) continue;   // genuinely answered — the chain holds
+      laundered.push(cfg + ': ' + k + ' = ' + JSON.stringify(walk === dualWalk ? dualWalk.payload[k] : payload[k]).slice(0, 40)
+        + (control ? ' (control ' + control + ' never refused)' : ' (no control named at all)'));
+    }
+  }
+  check('L17 "DERIVED" NAMES A REAL HUMAN ANSWER: no key is exempted from counting by a word',
+    laundered.length === 0,
+    (laundered.length === 0
+      ? 'every derived key on both payloads traces to a control the product refused on'
+      : laundered.length + ' declared derived but nobody answered anything:'
+        + laundered.map((s) => '\n            · ' + s).join(''))
+    + '\n          ⛔ A KEY DECLARED DERIVED WITH NO ANSWERED SOURCE IS UNACCOUNTED WEARING A LABEL.'
+    + ' Fix it with a door or with the ratchet — never with the declaration.');
+
+  /* ── L18 — CLAUSE 1, AS AN INSTRUMENT RATHER THAN AN INTENTION.
+     "EVERY FIELD PERTINENT TO THE PRIMARY IS PERTINENT TO THE CO-ARCHITECT — there is no such
+     thing as a second-person field that matters less."
+     ⛔⛔ THE ANSWER THIS PROGRAMME KEEPS REACHING FOR IS DELETION. When a second-person field
+        measures inert, the proposal comes back "remove it from the profile". THE REMOVAL TEST
+        SETTLES IT: say the same sentence about the PRIMARY. "retirement_age measures inert, delete
+        it" is absurd on its face — so it was always absurd about co_architect_retirement_age.
+        INERT MEANS ITS CONSUMER WAS NEVER BUILT. THAT IS A BUILD, NOT A DELETE.
+     ⭐ THE POPULATION IS A RULE, NOT A LIST: every key either payload sends, or that
+        payload_sources.json declares, whose name pairs to a first-person counterpart. A sixth
+        co-architect field wired next year is measured the day it appears.
+     ⚠️ WHAT IT PROVES AND WHAT IT DOES NOT: it proves the product DEMANDS the same things of both
+        people. It says nothing about whether the ENGINE then consumes what it is told — that is a
+        different measurement, in a different repo, and co_architect_retirement_age is already known
+        to fail it. A door with nothing behind it is a separate defect from no door. */
+  const universe = [...new Set([...Object.keys(decl.keys || {}), ...keys, ...dualKeys])];
+  const gaps = [], symmetric = [], held = [];
+  for (const second of universe.sort()) {
+    const first = primaryCounterpart(second);
+    if (!first) continue;
+    const pCtl = FROM_CONTROL[first], sCtl = FROM_CONTROL[second];
+    const pAsked = !!(pCtl && asked.has(pCtl));
+    const sAsked = !!(sCtl && dualWalk.asked.has(sCtl));
+    const row = first + ' -> ' + second;
+    if (pAsked && !sAsked) gaps.push(row + '  (the primary is demanded at #' + pCtl + '; the co-architect is '
+      + (sCtl ? 'never refused at #' + sCtl : 'not wired to any control') + ')');
+    else if (pAsked && sAsked) held.push(row);
+    else symmetric.push(row + '  (neither person is asked — a Clause 2 defect on BOTH sides, not a Clause 1 gap)');
+  }
+  check('L18 CLAUSE 1 — WHAT THE PRODUCT DEMANDS OF THE PRIMARY, IT DEMANDS OF THE CO-ARCHITECT',
+    gaps.length === 0,
+    held.length + ' pair(s) symmetric and demanded of both: ' + (held.join(', ') || 'none')
+    + '\n          ' + gaps.length + ' ASYMMETRIC — asked of the primary, never of the second person:'
+    + (gaps.length ? gaps.map((s) => '\n            · ' + s).join('') : ' none')
+    + (symmetric.length ? '\n          ' + symmetric.length + ' pair(s) asked of NEITHER:'
+        + symmetric.map((s) => '\n            · ' + s).join('') : '')
+    + '\n          ⛔ A FIELD THE PRODUCT WILL NOT OPEN THE DOOR WITHOUT FOR ONE PERSON, AND SHRUGS'
+    + ' AT FOR THE OTHER, IS THE ENGINE\'S CO-ARCHITECT BLIND SPOT REPRODUCED IN THE UI.'
+    + '\n          ⛔ THE FIX IS A DOOR, NEVER A DELETION. Apply the removal test before proposing one.');
+
+  /* ── THE OBSERVED PAYLOADS ARE WRITTEN OUT, SO A SECOND INSTRUMENT CAN JOIN THEM AGAINST THE
+     ENGINE'S OWN FIELD LIST WITHOUT WALKING THE PRODUCT A THIRD TIME.
+     ⛔ THIS GATE ANSWERS "IS ANYTHING HERE UNACCOUNTED?" — a question about the keys that ARE sent.
+        It is structurally incapable of noticing a field the engine accepts and the client NEVER
+        SENDS, because such a field never appears on a payload to be enumerated. That is not a gap
+        in this file; it is the boundary of its question, and the census is the other half.
+     ⚠️ TEMP DIR, NEVER THE REPO. This is observation, not source. */
+  try {
+    fs.writeFileSync(path.join(require('os').tmpdir(), 'datum-payload-observed.json'),
+      JSON.stringify({
+        measured_at: new Date().toISOString(),
+        solo: { payload: payload, asked: [...asked],
+                askedKeys: askedKeys, declaredKeys: declaredKeys, unaccounted: unaccounted },
+        dual: { payload: dualWalk.payload, asked: [...dualWalk.asked],
+                askedKeys: dAsked, declaredKeys: dDeclared, unaccounted: dUnaccounted },
+        laundered: laundered
+      }, null, 2), 'utf8');
+  } catch (e) { /* observation is a courtesy to the census; it never fails this gate */ }
+
+  await dualPage.close();
 
 
   results.forEach((r) => console.log('  ' + r));

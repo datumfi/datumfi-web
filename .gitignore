@@ -33,3 +33,8 @@ claude-*.txt
 
 # Stage-2 ticker importer local cache (regenerable, no-key, large — never commit)
 scripts/_ticker-src/
+
+# ⛔ EXCEPTION — the census reads the RUNNING pydantic model, never a regex over source.
+# A node re-implementation would be a second source of truth and would drift, which is the
+# exact failure the Engine Surface Census exists to end. Ruled 2026-09-13.
+!scripts/_dump_engine_schema.py
