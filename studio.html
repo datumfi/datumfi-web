@@ -19163,6 +19163,25 @@ const _reachesEngine = a =>
     window._sigIgnored = function () { return Object.keys(SIG_IGNORE); };
 
     // ── Render 3×3 SS Matrix grid into #ss-matrix-grid ────────────────────
+    /* THE FLOOR THIS SURFACE PRINTS IS THE FLOOR THE RANGE SCREEN PRINTS. ONE DEFINITION.
+       Until 2026-09-13 every cell here read the case's mc_99_floor, while the Range screen reads
+       tiers.blended.bedrock. THOSE ARE TWO DIFFERENT COMPUTATIONS UNDER ONE WORD: the first is the
+       Monte Carlo bedrock tier, the second is the 5-scenario stress battery. Commit e2a0406
+       (25 Apr) created that field DELIBERATELY AS A DIAGNOSTIC — its own message says it
+       "preserves prior MC 99% blend_tiers value". Nobody moved anything; this surface wired
+       itself to the diagnostic because the name reads like the answer.
+    🔑 TOLERANCE IS THE RIGHT IDEA FOR A QUANTITY AND THE WRONG IDEA FOR A DEFINITION (law 220).
+       The two measured 3.3% apart on one fixture, and that closeness is why nobody caught it —
+       but "survives the worst history we have" and "survives 99% of simulated futures" are
+       different questions, and being near each other does not make them one answer.
+    ⚠️ PROVED BY RENDERING, NOT BY READING (law 221). A fixture carrying bedrock $111k and the
+       diagnostic $999k was pushed through window._ssMatrixUseCached() and the text read back out
+       of .ss-cell-floor-val: $999K before this change, $111K after.
+    ⚠️ THE DIAGNOSTIC MAY STAY ON THE PAYLOAD. What it may never again have is the word "floor"
+       on a screen.
+    ⚠️ RETURNS undefined RATHER THAN 0 FOR A CASE WITH NO TIERS. A zero would render as "$0k/yr" —
+       a confident Floor for a household we could not price. */
+    function _caseFloor(c) { return (c && c.tiers) ? c.tiers.bedrock : undefined; }
     function renderMatrixGrid(result) {
       _lastMatrixResult = result;
       var grid   = document.getElementById('ss-matrix-grid');
@@ -19196,7 +19215,7 @@ const _reachesEngine = a =>
 
       // Spread + cluster detection
       var allSpend = cases.map(function(c) { return c.tiers.keystone; });
-      var allFloor = cases.map(function(c) { return c.mc_99_floor; });
+      var allFloor = cases.map(function(c) { return _caseFloor(c); });
       var maxSpend = Math.max.apply(null, allSpend);
       var minSpend = Math.min.apply(null, allSpend);
       var maxFloor = Math.max.apply(null, allFloor);
@@ -19208,7 +19227,7 @@ const _reachesEngine = a =>
 
       // Top-2 spend / floor keys for subtle cell outline (no label)
       var sortedBySpend = cases.slice().sort(function(a, b) { return b.tiers.keystone - a.tiers.keystone; });
-      var sortedByFloor = cases.slice().sort(function(a, b) { return b.mc_99_floor    - a.mc_99_floor;    });
+      var sortedByFloor = cases.slice().sort(function(a, b) { return _caseFloor(b)    - _caseFloor(a);    });
       var sortedBySS    = cases.slice().sort(function(a, b) { return b.combined_ss    - a.combined_ss;    });
       var topSpendKeys  = {};
       var topFloorKeys  = {};
@@ -19297,13 +19316,13 @@ const _reachesEngine = a =>
 
           // Lower spending estimate with delta — number first
           if (!currentCase || isCurrent) {
-            html += '<div class="ss-cell-floor-val">' + fmtK(c.mc_99_floor) + '/yr'
+            html += '<div class="ss-cell-floor-val">' + fmtK(_caseFloor(c)) + '/yr'
               + (isCurrent ? ' <span style="font-size:8px;color:var(--muted);">baseline</span>' : '')
               + '</div>';
           } else {
-            var flDelta = c.mc_99_floor - currentCase.mc_99_floor;
+            var flDelta = _caseFloor(c) - _caseFloor(currentCase);
             var flAbs   = Math.round(Math.abs(flDelta) / 1000);
-            html += '<div class="ss-cell-floor-val">' + fmtK(c.mc_99_floor) + '/yr'
+            html += '<div class="ss-cell-floor-val">' + fmtK(_caseFloor(c)) + '/yr'
               + (flAbs > 0
                 ? ' <span class="ss-cell-delta" style="color:' + _dColor(flDelta) + ';">'
                   + (flDelta >= 0 ? '▲' : '▼') + ' ' + (flDelta >= 0 ? '+' : '−')
@@ -19402,7 +19421,7 @@ const _reachesEngine = a =>
             if (_ltKsAbs >= 25) {
               _expLines.push('<span style="font-family:var(--font-mono);font-size:9px;color:var(--teal-mid);letter-spacing:0.04em;">Long-horizon impact: ' + _ltKsDir + '$' + _ltKsAbs + 'K total over ' + _ltYrs + ' modeled years vs. your current timing path.</span>');
             }
-            _expLines.push('Compared with your current timing path, total spending ' + _dVerb(c.tiers.keystone - currentCase.tiers.keystone) + ' and the lower spending estimate ' + _dVerb(c.mc_99_floor - currentCase.mc_99_floor) + '.');
+            _expLines.push('Compared with your current timing path, total spending ' + _dVerb(c.tiers.keystone - currentCase.tiers.keystone) + ' and the lower spending estimate ' + _dVerb(_caseFloor(c) - _caseFloor(currentCase)) + '.');
             _expLines.push(_tradeoff);
           } else {
             _expLines.push(_tradeoff);
@@ -20095,7 +20114,7 @@ const _reachesEngine = a =>
               + '</div>'
               + '<div class="ss-inspect-metric">'
               + '<div class="ss-inspect-metric-label">Conservative Floor</div>'
-              + '<div class="ss-inspect-metric-val">' + _fmtK(caseData.mc_99_floor) + '/yr</div>'
+              + '<div class="ss-inspect-metric-val">' + _fmtK(_caseFloor(caseData)) + '/yr</div>'
               + '</div>';
           } else {
             metricsEl.innerHTML = '';
@@ -20126,7 +20145,7 @@ const _reachesEngine = a =>
             var _total = _ppAll.length;
             var _srtSS    = _ppAll.slice().sort(function(a, b) { return b.combined_ss       - a.combined_ss; });
             var _srtSpend = _ppAll.slice().sort(function(a, b) { return b.tiers.keystone    - a.tiers.keystone; });
-            var _srtFloor = _ppAll.slice().sort(function(a, b) { return b.mc_99_floor       - a.mc_99_floor; });
+            var _srtFloor = _ppAll.slice().sort(function(a, b) { return _caseFloor(b)       - _caseFloor(a); });
             var _rkSS    = _srtSS.findIndex(function(c)    { return c.case_key === caseKey; }) + 1;
             var _rkSpend = _srtSpend.findIndex(function(c) { return c.case_key === caseKey; }) + 1;
             var _rkFloor = _srtFloor.findIndex(function(c) { return c.case_key === caseKey; }) + 1;
@@ -20147,7 +20166,7 @@ const _reachesEngine = a =>
             else { l2 += '.'; }
             var l3 = 'Conservative floor sits ' + _ord(_rkFloor) + ' of ' + _total;
             if (_isCur) { l3 += ' (current plan).'; }
-            else if (_curData) { l3 += ', ' + _dYr(_ppData.mc_99_floor - _curData.mc_99_floor) + '.'; }
+            else if (_curData) { l3 += ', ' + _dYr(_caseFloor(_ppData) - _caseFloor(_curData)) + '.'; }
             else { l3 += '.'; }
             perpathEl.innerHTML = '<div style="margin-top:10px;padding:8px 10px;'
               + 'background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;">'
