@@ -5767,52 +5767,23 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       });
     });
 
-    const climateOpts = document.querySelectorAll('.climate-option:not(#custom-climate-btn)');
-    const customBtn = document.getElementById('custom-climate-btn');
-    const customBox = document.getElementById('custom-climate-box');
-
-    climateOpts.forEach(opt => {
+    /* ⛔⛔ THE CUSTOM MATRIX WIRING WENT WITH ITS TILE, ONE COMMIT LATE, AND THE GAP WAS A LIVE
+       DEFECT. `customBox` resolved to the element the previous commit deleted, so
+       `customBox.style.display` threw `Cannot read properties of null` on EVERY climate-tile
+       click — and it threw AFTER `opt.classList.add('active')`, so the tile selected correctly
+       and the control looked fine while an exception went up on every single use.
+    🔑 THE LOAD CHECK PASSED AND PROVED NOTHING. I verified the page loads without errors and
+       never clicked a tile. Proving a page boots is not proving a control works — the same
+       shape as proving a handler exists and calling it a feature.
+    🔑 A REMOVAL IS NOT DONE WHEN THE MARKUP IS GONE. IT IS DONE WHEN NOTHING STILL REACHES FOR
+       IT. The grep that found this was looking for something else.
+    ⚠️ openCustomMatrix / closeCustomMatrix and the four-weight sum listener are gone with it:
+       their only callers were the removed tile's inline handlers, so they were unreachable and
+       would have thrown on the null tile if anything had reached them. */
+    document.querySelectorAll('.climate-option').forEach(opt => {
       opt.addEventListener('click', () => {
         document.querySelectorAll('.climate-option').forEach(o => o.classList.remove('active'));
         opt.classList.add('active');
-        customBox.style.display = 'none'; 
-      });
-    });
-
-    window.openCustomMatrix = function(e) {
-        document.querySelectorAll('.climate-option').forEach(o => o.classList.remove('active'));
-        customBtn.classList.add('active');
-        customBox.style.display = 'block';
-    }
-
-    window.closeCustomMatrix = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const cSave = document.getElementById('c-save');
-        cSave.classList.add('saved');
-        cSave.innerText = "Saved ✓";
-        setTimeout(() => {
-          customBox.style.display = 'none';
-          cSave.classList.remove('saved');
-          cSave.innerText = "Confirm Matrix";
-        }, 800);
-    }
-
-    const cWeights = document.querySelectorAll('.c-weight');
-    const cSum = document.getElementById('c-sum');
-    const cSave = document.getElementById('c-save');
-    cWeights.forEach(w => {
-      w.addEventListener('input', () => {
-        let sum = 0;
-        cWeights.forEach(inp => sum += Number(inp.value) || 0);
-        cSum.innerText = `${sum} / 100`;
-        if(sum === 100) {
-          cSum.classList.add('valid');
-          cSave.classList.add('valid');
-        } else {
-          cSum.classList.remove('valid');
-          cSave.classList.remove('valid');
-        }
       });
     });
 
