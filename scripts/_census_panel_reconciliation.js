@@ -29,7 +29,7 @@ const { execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..');
 const MOCK = path.join(ROOT, 'Studio Mock.html');
 const MANIFEST = path.join(os.tmpdir(), 'datum-panel-manifest.json');
-const MAP = path.join(__dirname, 'panel_engine_map.json');
+const MAP = path.join(__dirname, '_panel_engine_map.json');
 const MAX_AGE_MS = 30 * 60 * 1000;
 
 let fails = 0;

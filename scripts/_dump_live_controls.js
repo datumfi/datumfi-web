@@ -11,7 +11,7 @@ const http = require('http'), fs = require('fs'), path = require('path'), os = r
 const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8267;
-const MAP = path.join(__dirname, 'panel_engine_map.json');
+const MAP = path.join(__dirname, '_panel_engine_map.json');
 const OUT = path.join(os.tmpdir(), 'datum-live-controls.json');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
 const server = http.createServer((req, res) => {

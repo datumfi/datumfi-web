@@ -42,7 +42,7 @@ const { chromium } = require('playwright');
 const { studioSource } = require('./_studio_source.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8235;
-const DECL = path.join(__dirname, 'payload_sources.json');
+const DECL = path.join(__dirname, '_payload_sources.json');
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
 const server = http.createServer((req, res) => {

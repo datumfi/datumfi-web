@@ -44,7 +44,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const OBSERVED = path.join(os.tmpdir(), 'datum-payload-observed.json');
-const DECL = path.join(__dirname, 'payload_sources.json');
+const DECL = path.join(__dirname, '_payload_sources.json');
 const ROOT_DIR = path.resolve(__dirname, '..');
 
 function die(msg) {
