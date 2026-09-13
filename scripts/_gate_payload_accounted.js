@@ -733,6 +733,97 @@ async function walkRefusals(page) {
     + '\n          ⛔ THE FIX IS A DOOR, NEVER A DELETION. Apply the removal test before proposing one.');
 
 
+
+  /* ══════════════════════════════════════════════════════════════════════════════════════════
+     THE SS-MATRIX PAYLOAD — A SECOND REQUEST SURFACE, ENUMERATED FOR THE FIRST TIME.
+     ⛔⛔ IT WAS NOT UNMEASURED BECAUSE NOBODY CARED. IT WAS UNMEASURABLE: buildMatrixRequest was
+        nested inside another function, so typeof window.buildMatrixRequest was "undefined" and a
+        scoped eval could not reach it either. NO HARNESS COULD CALL IT. dc7117f exposed it and
+        this is the first thing to walk through that door.
+     🔑 SEVEN OF THE ELEVEN DECLARATIONS IN _payload_sources.json DESCRIBE THIS PAYLOAD and have
+        never been checked against anything. A declaration whose payload no instrument walks is a
+        claim, not a record.
+     ⚠️ IT IS CAPTURED BEFORE THE JOINT->SOLO BLOCK because that block mutates dualPage. Order is
+        load-bearing here, not incidental. */
+  async function captureMatrix(pg, label) {
+    return pg.evaluate(() => {
+      if (typeof window.buildMatrixRequest !== "function") return { reachable: false };
+      /* ⛔ CLEARED FIRST, SO A REFUSAL READ AFTERWARDS BELONGS TO THIS CALL. These globals are
+         left behind by whatever refused last; reading them without clearing would attribute an
+         earlier walk's refusal to the matrix builder. */
+      window._buildRequestError = null;
+      window._buildRequestErrorField = null;
+      window._buildRequestErrorTarget = null;
+      let body = null, threw = null;
+      try { body = window.buildMatrixRequest(); } catch (e) { threw = String(e && e.message).slice(0, 120); }
+      return {
+        reachable: true, threw: threw, body: body,
+        refusal: window._buildRequestError || null,
+        refusalField: window._buildRequestErrorField || null,
+        refusalTarget: window._buildRequestErrorTarget || null
+      };
+    });
+  }
+  /* ⛔⛔ THE MATRIX HAS ITS OWN REQUIRED SET, AND NOBODY HAD EVER ASKED WHAT IT WAS. Walking it the
+     same way the calculate door was walked — answer only what it refuses on, record the demand
+     BEFORE satisfying it — turns "the matrix does not build in dual" into a NAMED LIST of what this
+     surface demands that the other one does not.
+     🔑 THE TWO REQUIRED SETS ARE THE MEASUREMENT. A field on one list and not the other is the
+        product holding two opinions about the same household. */
+  async function walkMatrix(pg) {
+    const demanded = [];
+    for (let i = 0; i < 8; i++) {
+      const r = await captureMatrix(pg);
+      if (!r.reachable || r.threw || (r.body && Object.keys(r.body).length)) return { ...r, demanded };
+      if (!r.refusalTarget) return { ...r, demanded, stuck: 'refused with no target named' };
+      demanded.push(r.refusalTarget);
+      if (!ANSWERS[r.refusalTarget]) return { ...r, demanded, stuck: 'no answer known for ' + r.refusalTarget };
+      await pg.evaluate((a) => {
+        const el = document.getElementById(a[0]); if (!el) return;
+        el.focus(); el.value = a[1];
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.blur();
+      }, [r.refusalTarget, ANSWERS[r.refusalTarget]]);
+      await pg.waitForTimeout(120);
+    }
+    return { reachable: true, body: null, demanded, stuck: 'still refusing after 8 rounds' };
+  }
+  const matrixSolo = await walkMatrix(page);
+  const matrixDual = await walkMatrix(dualPage);
+
+  const mSoloKeys = (matrixSolo.body && Object.keys(matrixSolo.body)) || [];
+  const mDualKeys = (matrixDual.body && Object.keys(matrixDual.body)) || [];
+
+  check('L23 INSTRUMENT: the SS-matrix builder is reachable and answers in BOTH configurations',
+    matrixSolo.reachable && matrixDual.reachable && !matrixSolo.threw && !matrixDual.threw
+      && mSoloKeys.length > 0 && mDualKeys.length > 0,
+    'solo: reachable=' + matrixSolo.reachable + (matrixSolo.threw ? ' THREW ' + matrixSolo.threw : '')
+      + ' · keys=' + mSoloKeys.length
+    + '\n          dual: reachable=' + matrixDual.reachable + (matrixDual.threw ? ' THREW ' + matrixDual.threw : '')
+      + ' · keys=' + mDualKeys.length
+    + '\n          THE MATRIX\'S OWN REQUIRED SET — what it refused on that the calculate door did not:'
+    + '\n            solo demanded (' + matrixSolo.demanded.length + '): ' + (matrixSolo.demanded.join(', ') || 'nothing')
+      + (matrixSolo.stuck ? '  ⛔ STUCK: ' + matrixSolo.stuck : '')
+    + '\n            dual demanded (' + matrixDual.demanded.length + '): ' + (matrixDual.demanded.join(', ') || 'nothing')
+      + (matrixDual.stuck ? '  ⛔ STUCK: ' + matrixDual.stuck : '')
+    + '\n          ⛔ EVERY TARGET ON THOSE LINES IS A FIELD ONE SURFACE DEMANDS AND THE OTHER SHRUGS AT.'
+    + '\n          ⛔ IF THIS IS RED THE SURFACE IS STILL UNMEASURABLE AND EVERY COUNT BELOW IS ZERO'
+    + ' BECAUSE NOBODY LOOKED, NOT BECAUSE NOTHING IS THERE.');
+
+  /* ⛔ THE MATRIX PAYLOAD AGAINST THE CALCULATE PAYLOAD. The matrix is not a different household —
+     it is the SAME household asked a different question, so every key it adds or drops is a
+     deliberate difference somebody must own. */
+  const addsDual = mDualKeys.filter((k) => !dualKeys.includes(k));
+  const dropsDual = dualKeys.filter((k) => !mDualKeys.includes(k));
+  check('L24 THE TWO REQUEST SURFACES DIFFER ONLY WHERE SOMEBODY MEANT THEM TO — CONFIGURATION DUAL',
+    mDualKeys.length > 0,
+    'calculate sends ' + dualKeys.length + ' keys · matrix sends ' + mDualKeys.length
+    + '\n          ONLY ON THE MATRIX (' + addsDual.length + '): ' + (addsDual.join(', ') || 'none')
+    + '\n          ONLY ON CALCULATE (' + dropsDual.length + '): ' + (dropsDual.join(', ') || 'none')
+    + '\n          ⚠️ THIS LEG REPORTS, IT DOES NOT JUDGE. A difference is a decision; an'
+    + ' UNEXPLAINED difference is a defect, and telling them apart is a ruling, not a measurement.');
+
   /* ══════════════════════════════════════════════════════════════════════════════════════════
      CONFIGURATION JOINT -> SOLO. BEREAVEMENT. DIVORCE. THE THIRD CONFIGURATION, AND UNTIL
      2026-09-13 NOTHING IN THIS REPOSITORY HAD EVER ENTERED IT.
@@ -861,6 +952,7 @@ async function walkRefusals(page) {
         measured_at: new Date().toISOString(),
         solo: { payload: payload, asked: [...asked],
                 askedKeys: askedKeys, declaredKeys: declaredKeys, unaccounted: unaccounted },
+        matrix: { solo: matrixSolo, dual: matrixDual },
         dual: { payload: dualWalk.payload, asked: [...dualWalk.asked],
                 askedKeys: dAsked, declaredKeys: dDeclared, unaccounted: dUnaccounted },
         laundered: laundered
