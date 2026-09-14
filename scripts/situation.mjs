@@ -102,33 +102,91 @@ if (engErr) {
       and a census of one population says nothing about the other.
    ⚠️ IT REPORTS CANDIDATES, NOT VIOLATIONS, AND THE DIFFERENCE IS LOAD-BEARING. A resting slider
       guarded by an `_xAnswered()` predicate is correct; one that is read straight is a default.
-      This cannot tell them apart, so it says so rather than accusing. */
-const studio = path.join(WEB, 'studio.html');
+      This cannot tell them apart, so it says so rather than accusing.
+
+   ⛔⛔ IT SCANNED ONE FILE UNTIL 2026-09-13 AND CALLED ITSELF A CENSUS. studio.html was the whole
+      declared population, which made it A SEARCH WITH ONE HAYSTACK — the exact shape §82.2321
+      forbids. MEASURED on the day it was widened: the true population is 39 tracked .html files,
+      226 <input> elements and 66 numeric resting positions, against the 58 and 14 it had been
+      reporting. sketch.html alone — a SACRED host with live Framing-D math, not an archive —
+      carries 13, INCLUDING `sl-plan-through=93`, the Captain's own plan-through age, on a page
+      no previous Clause-2 sweep had ever looked at. Dossier.html carries `datumDefault=$100,000`.
+   🔑 A CENSUS OF ONE FILE SAYS NOTHING ABOUT THE OTHER THIRTY-EIGHT. The population is now
+      `git ls-files *.html` — derived, never a hand-written list, so a NEW page joins the census
+      the commit it is tracked rather than the day somebody remembers to add it.
+
+   ⛔ COMMENTS ARE STRIPPED BEFORE COUNTING — §82.2332, and it is a guard over a hazard that has
+      NOT YET FIRED, which is stated plainly rather than dressed as a repair. MEASURED: stripping
+      removes 685,142 bytes from studio.html (40% of the file) and the <input> count does not move,
+      58 to 58, same ids. No whole `<input>` tag is quoted inside a comment TODAY. But the house
+      style buries a removed default in prose beside where it stood, and good prose quotes what it
+      removed: `grep -cF 'value="$1,150"'` on the LIVE page returns 1 and the hit is the comment
+      recording the removal. The day one of those comments quotes a full tag, this census would
+      have counted a ghost. A FIX CAN TRIP A DETECTOR JUST AS A DEFECT CAN DISABLE ONE. */
+const htmlFiles = (() => {
+  try {
+    return execFileSync('git', ['ls-files', '-z', '*.html'], { cwd: WEB, maxBuffer: 1e8 })
+      .toString().split('\0').filter(Boolean);
+  } catch { return null; }
+})();
+/* ⛔ COMMENT STRIPPER. Newlines are PRESERVED as they are removed so any future line-anchored
+   check keeps its line numbers. `//` is stripped ONLY at line start — a bare `//` rule would
+   eat every `https://` in the file and silently shrink the haystack. */
+const stripComments = (s) => s
+  .replace(/<!--[\s\S]*?-->/g, m => '\n'.repeat((m.match(/\n/g) || []).length))
+  .replace(/\/\*[\s\S]*?\*\//g, m => '\n'.repeat((m.match(/\n/g) || []).length))
+  .replace(/^[ \t]*\/\/.*$/gm, '');
+
 console.log('');
-if (!fs.existsSync(studio)) {
-  console.log(RED('  ⛔ MARKUP CENSUS COULD NOT BE TAKEN — studio.html not found'));
+if (!htmlFiles || !htmlFiles.length) {
+  console.log(RED('  ⛔ MARKUP CENSUS COULD NOT BE TAKEN — `git ls-files *.html` returned nothing.'));
+  console.log(RED('     A ZERO PRINTED FOR A CENSUS THAT NEVER RAN IS INDISTINGUISHABLE FROM GOOD NEWS.'));
+} else if (!htmlFiles.includes('studio.html')) {
+  console.log(RED('  ⛔ MARKUP CENSUS REFUSED — studio.html is not in the tracked population.'));
+  console.log(RED('     It is the Studio. Its absence is a broken census, never a clean one.'));
 } else {
-  const s = fs.readFileSync(studio, 'utf8');
-  const inputs = s.match(/<input\b[^>]*>/gi) || [];
-  const withVal = inputs.filter(t => /\bvalue\s*=\s*"[^"]*[^"\s][^"]*"/.test(t));
-  const rows = [];
-  for (const t of withVal) {
-    const v = (t.match(/\bvalue\s*=\s*"([^"]*)"/) || [])[1] || '';
-    if (!v.trim() || v.includes('${')) continue;            // template render site, not a default
-    const type = (t.match(/\btype\s*=\s*"([^"]+)"/) || [])[1] || '?';
-    if (['checkbox', 'radio', 'hidden'].includes(type)) continue;
-    if (!/[0-9$]/.test(v)) continue;
-    const id = (t.match(/\bid\s*=\s*"([^"]+)"/) || [])[1] || '(no id)';
-    rows.push({ id, type, v });
+  let bytesRaw = 0, bytesStripped = 0, inputTotal = 0;
+  const perFile = [];
+  for (const f of htmlFiles) {
+    let raw;
+    try { raw = fs.readFileSync(path.join(WEB, f), 'utf8'); } catch { continue; }
+    const src = stripComments(raw);
+    bytesRaw += raw.length; bytesStripped += src.length;
+    const inputs = src.match(/<input\b[^>]*>/gi) || [];
+    inputTotal += inputs.length;
+    const rows = [];
+    for (const t of inputs) {
+      const v = (t.match(/\bvalue\s*=\s*"([^"]*)"/) || [])[1] || '';
+      if (!v.trim() || v.includes('${')) continue;          // template render site, not a default
+      const type = (t.match(/\btype\s*=\s*"([^"]+)"/) || [])[1] || '?';
+      if (['checkbox', 'radio', 'hidden'].includes(type)) continue;
+      if (!/[0-9$]/.test(v)) continue;
+      const id = (t.match(/\bid\s*=\s*"([^"]+)"/) || [])[1] || '(no id)';
+      /* ⚠️ AN <input> WITH NO id CANNOT BE LOOKED UP BY A GUARD PREDICATE, so it can never be
+         proven guarded. It counts as a CANDIDATE rather than being skipped — an element the
+         census cannot clear is not the same as one it has cleared. */
+      const idRe = [...id].map(c => (/[A-Za-z0-9_]/.test(c) ? c : '\\' + c)).join('');
+      const guarded = id !== '(no id)'
+        && new RegExp('Answered[^;]{0,400}' + idRe, 's').test(src);
+      rows.push({ id, type, v, guarded });
+    }
+    if (rows.length) perFile.push({ f, rows });
   }
-  const guarded = rows.filter(r => new RegExp(`Answered[^;]{0,400}${r.id.replace(/[-]/g, '\\-')}`, 's').test(s));
-  console.log(`  population: ${B(inputs.length)} <input> elements in studio.html`);
-  console.log(`    ${String(rows.length).padStart(2)}  carry a hardcoded NUMBER or $ a user did not type ${DIM('(template sites excluded)')}`);
-  console.log(YEL(`    ${String(rows.length - guarded.length).padStart(2)}  ⚠️ CANDIDATES — unproven either way. A guarded resting position is correct;`));
+  const all      = perFile.flatMap(p => p.rows);
+  const unproven = all.filter(r => !r.guarded);
+  perFile.sort((a, b) => (a.f === 'studio.html' ? -1 : b.f === 'studio.html' ? 1 : b.rows.length - a.rows.length));
+
+  console.log(`  population: ${B(htmlFiles.length)} tracked .html files · ${B(bytesRaw.toLocaleString())} bytes`
+            + ` · ${B(inputTotal)} <input> elements`);
+  console.log(DIM(`              comments stripped before counting — ${(bytesRaw - bytesStripped).toLocaleString()} bytes removed (§82.2332)`));
+  console.log(`    ${String(all.length).padStart(2)}  carry a hardcoded NUMBER or $ a user did not type ${DIM('(template sites excluded)')}`);
+  console.log(GRN(`    ${String(all.length - unproven.length).padStart(2)}  guarded by an Answered-predicate — a resting position, correctly`));
+  console.log(YEL(`    ${String(unproven.length).padStart(2)}  ⚠️ CANDIDATES — unproven either way. A guarded resting position is correct;`));
   console.log(YEL('        one read straight is a default. This census cannot tell them apart.'));
-  for (const r of rows) {
-    const ok = guarded.includes(r);
-    console.log(`         ${ok ? GRN('guarded') : YEL('  ?    ')}  ${r.id.padEnd(26)} ${DIM(r.type.padEnd(7))} ${r.v}`);
+  for (const p of perFile) {
+    console.log(DIM(`         ── ${p.f}  (${p.rows.length})`));
+    for (const r of p.rows)
+      console.log(`         ${r.guarded ? GRN('guarded') : YEL('  ?    ')}  ${r.id.padEnd(26)} ${DIM(r.type.padEnd(7))} ${r.v}`);
   }
 }
 
