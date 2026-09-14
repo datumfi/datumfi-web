@@ -190,6 +190,32 @@ if (!htmlFiles || !htmlFiles.length) {
   }
 }
 
+/* ── THE THIRD POPULATION · WHERE ELSE THE DEFAULT IS RE-CREATED ──────────────
+   ⛔⛔ THE SCHEMA COUNT IS THE ONE EVERYBODY QUOTES AND IT IS THE SMALLER HALF. Deleting
+      `plan_end_age = 93` from CalculateRequest does NOT delete 93 from the engine: it is rebuilt
+      in function signatures and in `params.get(name, literal)` calls that four separate doors
+      reach WITHOUT passing through the schema at all.
+   🔑 A VALUE DELETED IN ONE LAYER IS DELETED **THERE**. Until a field's site count reads 0, its
+      schema change is cosmetic and the engine still answers for a stranger — from a different
+      line, with every schema gate green. */
+console.log('');
+const subs = eng?.blocks?.clause2_substitution_sites;
+if (engErr || !subs || subs.REFUSED) {
+  console.log(RED(`  ⛔ SUBSTITUTION CENSUS COULD NOT BE TAKEN — ${engErr || subs?.REFUSED || 'block absent'}`));
+} else {
+  const fields = Object.entries(subs.by_field);
+  console.log(`  population: ${B(subs.population_fields)} life-bearing fields × ${B(subs.population_files)} engine .py files`
+            + DIM('   (AST walk, never a grep — a comment cannot be counted)'));
+  console.log(subs.total_sites
+    ? RED(`    ${String(subs.total_sites).padStart(2)}  ⛔ SITES THAT RE-CREATE A DEFAULT OUTSIDE THE SCHEMA`)
+    : GRN('     0  ✅ no default is rebuilt downstream — the schema is the only door'));
+  for (const [name, sites] of fields) {
+    if (!sites.length) { console.log(GRN(`         ${name.padEnd(22)} 0`)); continue; }
+    console.log(RED(`         ${name.padEnd(22)} ${sites.length}`));
+    for (const s of sites) console.log(DIM(`             ${s.file}:${s.line}  ${s.shape}`));
+  }
+}
+
 /* ═══ CLAUSE 1 ═══════════════════════════════════════════════════════════════ */
 rule('  CLAUSE 1 · IS THE SECOND PERSON MODELLED');
 console.log(DIM('  "SOLO and JOINT fully modelled — every field pertinent to the primary is'));
