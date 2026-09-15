@@ -18829,6 +18829,29 @@ const _reachesEngine = a =>
     var _scratchBoot = false;
     try { _scratchBoot = sessionStorage.getItem('datumfi_skip_entry_overlay') === '1'; } catch (e) {}
 
+    /* ⛔⛔ A SECOND LATCH, ON ITS OWN KEY, BECAUSE `datumfi_skip_entry_overlay` MEANS "DO NOT SHOW
+     * THE ENTRY OVERLAY" AND NOTHING MORE. `_startScratchFlow` happens to set it, so it CORRELATES
+     * with a scratch boot without MEANING one — and anything else that wants a quiet boot sets it
+     * too. Suppressing the dossier seed on that flag was measured WRONG the same hour it was
+     * written: `_gate_signed_out_privacy` seeds it purely for quiet (SEED_QUIET, :239), and the
+     * guard turned that gate from GREEN to RED by switching off the signed-in prefill its L7b
+     * exists to protect. The gate was right and the guard was wrong.
+     *   🔑 A FLAG IS ITS MEANING, NOT ITS CORRELATION. Two conditions that coincide today are one
+     *      convenience away from parting, and the reader who parts them will not know they were
+     *      load-bearing for somebody else.
+     * ⛔ `_scratchBoot` ABOVE IS DELIBERATELY LEFT ON THE OLD KEY. It gates only whether to HIDE
+     *    the stage — a cosmetic decision where a false positive costs a beat of paint — and
+     *    `_gate_seed_gate_scratch_skip` pins that behaviour to that key in both directions. Moving
+     *    it would silently re-scope a passing gate. ⚠️ ONE-SHOT: the key is cleared the instant it
+     *    is read, so a later same-tab load is an ordinary boot and seeds normally.
+     * DEGRADATION: if the read throws, this stays false and both seeds run exactly as they shipped
+     * — the pre-fix behaviour, never a blank profile. */
+    var _scratchSeedBoot = false;
+    try {
+      _scratchSeedBoot = sessionStorage.getItem('datumfi_scratch_boot') === '1';
+      sessionStorage.removeItem('datumfi_scratch_boot');
+    } catch (e) {}
+
     function _seedGateOn()  { var _l = document.getElementById('studio-layout'); if (_l) _l.classList.add('seed-gated'); }
     function _seedGateOff() { var _l = document.getElementById('studio-layout'); if (_l) _l.classList.remove('seed-gated'); }
 
@@ -18929,6 +18952,41 @@ const _reachesEngine = a =>
            * exactly as it shipped — the old behaviour, never a blank screen. */
           if (_likelySignedIn && !_scratchBoot) _seedGateOn();
           window.addEventListener('load', function () {
+            /* ⛔⛔ THE SCRATCH BOOT DOES NOT SEED, AND THE COMMENT ABOVE USED TO CLAIM IT COULD NOT
+             * NEED TO. Its words were: "`_scratchReset()` has already cleared the prefill sources —
+             * THERE IS NO REAL ESTATE ARRIVING FOR A SEED TO OVERWRITE." That sentence is FALSE,
+             * and it is false about the very next statement in the same block. `_scratchReset()`
+             * clears the LOCAL prefill sources — the session draft, the snapshot, the pending
+             * state, the carried design. The account dossier is NOT one of them: it is fetched from
+             * D1/Clerk on `load`, AFTER the reload, and `applyDossierProfile` then re-fills the
+             * profile the user just asked us to throw away.
+             *   ⛔ MEASURED 2026-09-15, four arms, one browser, the Captain's own reported state:
+             *        signed OUT ................................ 0 of 16 surfaces came back
+             *        signed in, NO cached dossier .............. 0 of 16
+             *        signed in, dossier stamped to ANOTHER user  0 of 9 profile fields (owner check holds)
+             *        signed in + OWN cached dossier ............ 14 of 16 CAME BACK
+             *      The two that cleared were `plan-end-age` and `filing-status` — the only two
+             *      fields `applyDossierProfile` does not write. THE NEGATIVES MATCHED TOO, which is
+             *      what makes this the mechanism and not a correlation.
+             *   ⭐ AND THE SOURCE WAS PROVEN, NOT INFERRED: the fixture's dossier carried a
+             *      DIFFERENT co-architect salary (111000) from the one typed into the page
+             *      (111500), and the field came back reading 111,000. A value can only arrive from
+             *      the store that holds it. 🔑 SEED THE FIXTURE WITH A DISAGREEING VALUE AND THE
+             *      SURVIVOR NAMES ITS OWN SOURCE.
+             * ⚠️ THIS IS NOT A CROSS-USER LEAK AND MUST NOT BE FILED AS ONE. `cachedDossier()`
+             *    checks the owner stamp, and the third arm above is the measurement of that claim:
+             *    a dossier belonging to somebody else re-filled NOTHING. What this was is a control
+             *    whose only job is to clear, not clearing — the user's own data, on the user's own
+             *    screen, after they asked for a blank page.
+             * ⛔ SUPPRESSION IS THE FIX, NOT A LONGER CLEAR LIST. The fields are cleared correctly
+             *    already; a second writer re-fills them a beat later. Adding those fields to
+             *    `_scratchReset()` would clear them before a reload that re-fetches them anyway —
+             *    a fix that runs, looks right in a diff, and changes nothing on screen.
+             * ⚠️ `_scratchBoot` IS THE PARSE-TIME LATCH, not a live read — see its note. The line
+             *    below already relied on it for the seed GATE while letting the seed itself run:
+             *    we were hiding the page to protect data we then went and put back.
+             * Guarded both directions by scripts/_gate_scratch_clears_declared.js. */
+            if (_scratchSeedBoot) { _seedGateOff(); return; }
             // MISS-5 pre-work item 1 — the Clerk read moved behind the SHARED resolver in nav.js
             // (_datumSeedDossier): D1 preferences/dossier first, Clerk unsafeMetadata.dossier as the silent
             // fallback. sketch.html folds onto this same helper, so the two houses can never drift apart.
@@ -19042,6 +19100,19 @@ const _reachesEngine = a =>
           } catch (e) {}
         }
         if (!window.DatumSession || typeof DatumSession.resolved !== 'function') return;  // fail CLOSED
+        /* ⛔⛔ THE SECOND SEEDING DOOR, AND IT IS WHY THE FIRST FIX FOR THIS MEASURED AS NO FIX AT
+         * ALL. Suppressing the `load`-time dossier seed alone left the co-architect salary STILL
+         * coming back as the dossier's 111,000 after START FROM SCRATCH — 13 of 16 surfaces instead
+         * of 14. The block above and this one are TWO INDEPENDENT ROUTES to `applyDossierProfile`
+         * (the async D1/Clerk resolver, and this synchronous owner-checked cache read), and a guard
+         * on one of them is a guard on neither.
+         *   🔑 THE SAME ASYMMETRY THIS BLOCK'S OWN COMMENT DESCRIBES, ONE LAYER UP. That note
+         *      records a leak that survived because "two persistence paths, one auth check, on the
+         *      wrong one." This was two persistence paths and one SCRATCH check — the identical
+         *      shape, found the identical way, by measuring after the fix instead of trusting it.
+         * ⚠️ FIND THE CALL SITES BY ENUMERATION, NOT BY READING THE ONE YOU ARRIVED AT. Three
+         *    references to `applyDossierProfile` exist; the defect needed two of them guarded. */
+        if (_scratchSeedBoot) return;
         DatumSession.resolved(function (signedIn) {
           if (!signedIn) return;
           /* ⚠️ THIS BLOCK MUST NOT RE-RUN seedFromBlueprint(), AND THAT WAS MEASURED, NOT REASONED.
@@ -21225,8 +21296,36 @@ const _reachesEngine = a =>
       // (Item 3.1 — the sketch-design-ref reference box was removed; nothing to hide here.)
       return had;
     }
+    /* ⛔⛔ THE DECLARED POPULATION — WHAT "EVERYTHING" MEANS WHEN A USER ASKS FOR A BLANK PAGE.
+     * Until this list existed there was no answer to "what does START FROM SCRATCH clear?" other
+     * than reading three functions and hoping. A RESET WITH NO DECLARED POPULATION CANNOT CLEAR
+     * WHAT NOBODY RECORDED AS HAVING BEEN WRITTEN — §82.2412 at the interface layer.
+     * ⛔ THIS IS THE ASSERTABLE HALF, NOT THE WORKING HALF. The reload is what actually blanks
+     *    these fields, and the real defect was a SECOND WRITER re-filling them afterwards (see the
+     *    scratch-boot suppression in init()). This list does not fix that and must not be read as
+     *    if it did. What it buys is a NAMED SET a gate can quantify over, so "all of it cleared"
+     *    stops being a claim about whatever the author happened to remember.
+     * ⚠️ IT IS ON `window` SO THE GATE READS THE PRODUCT'S OWN LIST RATHER THAN KEEPING A COPY —
+     *    two lists that must be kept in step by memory is the drift this project has already paid
+     *    for. ⛔ BUT A GATE THAT ONLY QUANTIFIES OVER THIS ARRAY GOES GREEN WHEN THE ARRAY SHRINKS
+     *    (a predicate over an empty set is true), so `_gate_scratch_clears_declared.js` ALSO holds
+     *    its own independent enumeration and asserts this one covers it. Both legs or neither.
+     * ⚠️ ADDING A PROFILE FIELD TO THE MARKUP MEANS ADDING IT HERE AND TO THAT GATE'S list. */
+    window.DATUM_SCRATCH_FIELDS = [
+      'pri-dob', 'co-dob', 'target-ret', 'co-ret', 'plan-end-age', 'co-plan-end',
+      'pri-salary', 'co-salary', 'filing-status', 'pri-location'
+    ];
+    function _scratchClearDeclaredFields() {
+      (window.DATUM_SCRATCH_FIELDS || []).forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.value = '';
+        try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+      });
+    }
     function _scratchReset() {
       var had = _clearCarriedDesign();
+      _scratchClearDeclaredFields();
       try {
         ['datumfi_blueprint_draft_v1','datumfi_blueprint_current_snapshot',
          'datum_blueprint_state_pending'].forEach(function(k) {
@@ -21244,6 +21343,9 @@ const _reachesEngine = a =>
       if (_wrap.style.display === 'none' || _wrap.classList.contains('dismissed')) return;
       if (_scratchReset()) {
         try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch(e) {}
+        /* THE SCRATCH MARKER PROPER — see the `_scratchSeedBoot` latch. The line above is the
+           overlay's business; THIS one is the one that means "the user asked for a blank page". */
+        try { sessionStorage.setItem('datumfi_scratch_boot', '1'); } catch(e) {}
         window._navDrain('/studio.html');
       } else {
         dismissOverlay();

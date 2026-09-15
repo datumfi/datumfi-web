@@ -69,7 +69,21 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
   const page = await ctx.newPage();
   await page.goto('http://127.0.0.1:' + PORT + '/studio.html', { waitUntil: 'load' });
   await page.waitForTimeout(1600);
-  await page.evaluate(() => { const b = document.getElementById('studioStartScratch'); if (b) b.click(); }).catch(() => {});
+  /* ⛔⛔ THE OVERLAY IS DISMISSED WITH THE X, NOT WITH START FROM SCRATCH, AND THE DIFFERENCE IS
+   * THE WHOLE FIXTURE. This line used to click `#studioStartScratch` as a convenient way to get the
+   * entry overlay out of the way — the same conflation `_gate_overlay_x_preserves` exists to
+   * prevent, committed here by an instrument rather than by the product: X MEANS "NEVER MIND",
+   * START FROM SCRATCH MEANS "DISCARD MY WORK."
+   * ⛔ IT ONLY BECAME VISIBLE WHEN SCRATCH STARTED WORKING (2026-09-15). Scratch had been leaving
+   *    the dossier seed in place, so pressing it and then asserting "the dossier seeded" was
+   *    self-consistent BY ACCIDENT. Once the scratch boot stopped re-seeding, this fixture asked
+   *    the page to throw the household away and then checked the household was there — and the
+   *    gate went red naming the product for the fixture's own contradiction.
+   *   🔑 A FIXTURE THAT PRESSES A DESTRUCTIVE CONTROL FOR A COSMETIC REASON IS BORROWING A
+   *      BEHAVIOUR IT DOES NOT WANT. It stays correct exactly as long as the control stays broken.
+   * ⚠️ THE ASSERTIONS BELOW ARE UNCHANGED. Only the dismissal moved; if the seed regresses this
+   *    gate still reds, which was re-proved by amputating applyDossierProfile after this edit. */
+  await page.evaluate(() => { const b = document.getElementById('studioCloseIntro'); if (b) b.click(); }).catch(() => {});
   await page.waitForTimeout(1200);
 
   const r = await page.evaluate(() => ({
