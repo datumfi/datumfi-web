@@ -146,9 +146,15 @@ const fmt = (h) => h.map((x) => x.file + ':' + x.line + '  [shape ' + x.shape + 
    reports "clean" over nothing at all. That is the empty-green species, and it is the single most
    likely way this gate stops measuring while still exiting 0. So a KNOWN-LIVE line from each subject
    must SURVIVE stripping, named literally. */
+/* ⚠️ THE studio.html WITNESS MOVED 2026-09-15 AND THE OLD ONE WAS A DELETED LINE. It used to be
+   `var _ps = document.getElementById('pri-salary');`, one of eleven per-field restore lines that
+   were consolidated into the single declared population `DATUM_PROFILE_RESTORE`. The witness now
+   names the flag-first rule ITSELF at its one remaining home, which is a better witness than the
+   line it replaces: it is the thing this gate exists to protect, not merely a line that happens to
+   sit near it. A WITNESS SHOULD BE THE RULE, NOT ITS NEIGHBOUR. */
 const LIVE_WITNESS = {
   'scripts/studio-blueprint.js': 'bp.profile.primary_salary_stated = _priStated;',
-  'studio.html': "var _ps = document.getElementById('pri-salary');"
+  'studio.html': 'if (!(prof[f.statedKey] || prof[f.key])) return;'
 };
 const stripped = {};
 SUBJECTS.forEach(function (f) { stripped[f] = stripComments(srcs[f]); });
@@ -193,6 +199,29 @@ const quiet = POST_FIX.map((l) => violations(l, 'honest').length === 0);
 check('L4 HONEST HALF: the matcher does NOT flag the post-fix lines — it is not simply flagging everything',
   quiet.every(Boolean),
   POST_FIX.map((l, i) => (quiet[i] ? 'quiet    ' : '⛔ FALSE+ ') + l.trim().slice(0, 110)).join('\n          '));
+
+/* ⛔⛔ L5 — THE COVERAGE L2 LOST WHEN THE RESTORE WAS CONSOLIDATED, RESTORED AT ITS NEW HOME.
+ * L2 scans for `if (<chain>.<literal key>)`. On 2026-09-15 the eleven per-field restore lines in
+ * studio.html were replaced by ONE declared population that reads `prof[f.key]` — BRACKET NOTATION
+ * THE MATCHER CANNOT SEE. L2 therefore went clean across those keys for a reason that has nothing
+ * to do with the code being correct.
+ *   🔑 A REFACTOR CAN BLIND A SYNTACTIC DETECTOR WITHOUT CHANGING ONE THING IT WAS WATCHING FOR.
+ *      "Clean" after a rename is a question, not a result — the same law that says an instrument
+ *      must not detect by syntax, met from the other side: here the SUBJECT moved, not the matcher.
+ * ⛔ SO THIS LEG ASSERTS THE RULE ITSELF, AT THE ONE SITE THAT NOW CARRIES IT: the money branch must
+ *    test the `_stated` FLAG FIRST and use the VALUE ONLY AS A FALLBACK. Reversing that order is
+ *    exactly the defect the whole file exists to prevent — a salary a person corrected to ZERO
+ *    being silently treated as "never answered" and overwritten.
+ * ⚠️ ANCHORED ON THE DEFINITION, NOT ON A COMMENT, and proved red-first by inverting the operands. */
+const FLAG_FIRST = 'if (!(prof[f.statedKey] || prof[f.key])) return;';
+const _studioSrc = srcs['studio.html'];
+const _flagFirstHits = _studioSrc.split(FLAG_FIRST).length - 1;
+const _valueFirstHits = _studioSrc.split('if (!(prof[f.key] || prof[f.statedKey])) return;').length - 1;
+check('L5 DECLARED RESTORE: the one consolidated money branch is FLAG-FIRST, value-as-fallback',
+  _flagFirstHits === 1 && _valueFirstHits === 0,
+  'flag-first occurrences: ' + _flagFirstHits + ' (want 1) · value-first occurrences: '
+  + _valueFirstHits + ' (want 0)'
+  + (_flagFirstHits === 1 ? '' : '\n          ⛔ the declared restore no longer reads the _stated flag before the value'));
 
 console.log('\nPERSISTED-NUMERIC TRUTHINESS');
 console.log('  subject: DatumBlueprint["new"]() zero-defaulted leaves  x  the two persistence files');

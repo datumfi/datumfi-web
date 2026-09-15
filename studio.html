@@ -14840,6 +14840,117 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         return true;
       } catch (_e) { return false; }
     };
+    /* ⛔⛔ ONE DECLARED PROFILE POPULATION, USED BY BOTH RESTORE PATHS (2026-09-15).
+     *
+     * THE DEFECT THIS ENDS. There were TWO profile restores with DIFFERENT COVERAGE, and the rich
+     * one was unreachable on the one path that opens a save. `restoreDraft()` restored the whole
+     * profile; on an explicit `?id=&hydrate=blueprint` open it is DELIBERATELY SKIPPED (:18894) so a
+     * stale session draft cannot paint over a named blueprint — a correct rule — and the explicit
+     * path's own re-assert wrote TWO of fourteen fields. `applyDossierProfile` then filled the rest
+     * under "fill only if empty", so THE ACCOUNT DOSSIER ANSWERED FOR THE SAVED FILE.
+     *   📊 MEASURED by `_gate_roundtrip_persistence` on a REAL 15 Sep save: co_architect_dob,
+     *      co_architect_retirement_date, primary_salary and co_architect_salary all arrived from the
+     *      dossier. With no dossier the same fields render $0 and blank — WHICH IS WHY THIS LOOKED
+     *      LIKE TWO DEFECTS FOR A FORTNIGHT. One mechanism, two backgrounds.
+     *   ⭐ AND THE FIFTH SYMPTOM WAS THE SAME ONE WEARING ARITHMETIC. `co-plan-end` came back
+     *      02/2063 against the file's 03/2070: the dossier's co-dob 02/1961 plus the file's
+     *      plan_end_age 102. `_mirrorCoPlanEnd` already refuses to overwrite a NON-EMPTY field, so
+     *      it only derived because the restore had left the field empty. Restoring it fixes the
+     *      derivation without touching the deriver. A DERIVATION OVER AN ANSWER IS USUALLY AN
+     *      ABSENT RESTORE, NOT A GREEDY FORMULA.
+     *
+     * ⛔ THE SHAPE IS DELIBERATE AND IT IS NOT "ADD THE MISSING TWELVE FIELDS TO THE RE-ASSERT".
+     * That is the undeclared-population defect wearing a fix: it would be correct on the day it was
+     * written and rot the moment a fifteenth field is added, exactly as the clear path did.
+     *   🔑 SEPARATE "WHICH FIELDS" FROM "WHICH STORE MAY ANSWER" AND THE BUG CLASS DIES INSTEAD OF
+     *      THE BUG. The list below is WHICH FIELDS. `_datumMayWrite` is WHICH STORE.
+     *
+     * ⚠️ ORDER IS LOAD-BEARING AND IS THE REASON THIS IS AN ARRAY AND NOT AN OBJECT.
+     *   1. the co-architect toggle first — its change handler reveals #co-arch-fields, and the
+     *      visible order is the honest one (it never clears the inputs; measured).
+     *   2. the DATES OF BIRTH before the PLAN-THROUGH dates. `_mirrorPlanEnd` blanks a plan-through
+     *      field that has no sourced DOB, so a plan-end written first is erased microseconds later
+     *      and rebuilt from the DOB month. A RECEIVER THAT RUNS BEFORE ITS PRECONDITION IS NOT A
+     *      RECEIVER — the note at the old plan-end-age line records this being measured the hard way.
+     * ⚠️ ADDING A PROFILE FIELD MEANS ADDING IT HERE, AND NOWHERE ELSE. Both paths read this list.
+     */
+    var DATUM_PROFILE_RESTORE = [
+      { key: 'co_architect_enabled',         id: 'co-arch-toggle', kind: 'toggle'  },
+      { key: 'primary_name',                 id: 'primary-name',   kind: 'text', quiet: true },
+      { key: 'co_architect_name',            id: 'co-name',        kind: 'text', quiet: true },
+      { key: 'primary_dob',                  id: 'pri-dob',        kind: 'text'    },
+      { key: 'co_architect_dob',             id: 'co-dob',         kind: 'text'    },
+      { key: 'target_retirement_date',       id: 'target-ret',     kind: 'text'    },
+      { key: 'co_architect_retirement_date', id: 'co-ret',         kind: 'text'    },
+      { key: 'primary_salary',               id: 'pri-salary',     kind: 'money', statedKey: 'primary_salary_stated' },
+      { key: 'co_architect_salary',          id: 'co-salary',      kind: 'money', statedKey: 'co_architect_salary_stated' },
+      { key: 'plan_end_date',                id: 'plan-end-age',   kind: 'text'    },
+      { key: 'co_architect_plan_end_date',   id: 'co-plan-end',    kind: 'text', quiet: true }
+    ];
+    window.DATUM_PROFILE_RESTORE = DATUM_PROFILE_RESTORE;
+
+    /* ⛔⛔ "FILL ONLY IF EMPTY" BECOMES "FILL ONLY IF NOBODY WITH MORE AUTHORITY HAS ANSWERED."
+     * A SAVED FILE OUTRANKS A SESSION DRAFT OUTRANKS A DOSSIER SEED. That ranking IS provenance
+     * (§82.2412) doing its actual job — the product finally records WHO wrote a field, not just what
+     * is in it. One boolean (`_ptaAnswered`) was the entire inventory before this.
+     * ⚠️ THE EMPTINESS TEST IS KEPT ALONGSIDE, NOT REPLACED, AND THAT IS ON PURPOSE: a value the
+     *    USER typed carries no recorded authority, and dropping the `!el.value` check would let a
+     *    seed overwrite a human being. The ranking makes the guard STRICTER, never looser.
+     * ⚠️⚠️ THE RANKING IS NOT LOAD-BEARING TODAY AND THAT IS MEASURED, NOT ASSUMED. Disabling
+     *    `_datumMayWrite` entirely (forcing it to return true) leaves `_gate_roundtrip_persistence`
+     *    IDENTICAL at BUILT 11/0 — because the restore now fills those fields, so the older
+     *    `!el.value` test already refuses the seed. THE FIX THAT MADE THE PRODUCT CORRECT IS THE
+     *    FULL RESTORE; THIS IS A STRUCTURAL GUARD BEHIND IT, AND IT IS CURRENTLY REDUNDANT.
+     *    ⛔ SO DO NOT COUNT IT AS TESTED. It earns its place the day a restore legitimately writes
+     *       an EMPTY-BUT-ANSWERED value (a cleared salary, a blanked name), where "empty" and
+     *       "unanswered" finally diverge and the emptiness test alone would let a seed answer for a
+     *       person who had deliberately erased something. A GUARD WITH NO CURRENT BITE IS HONEST
+     *       ONLY WHILE IT SAYS SO — this note is the difference between a safety net and a claim. */
+    var DATUM_WRITE_RANK = { saved_file: 3, session_draft: 2, dossier_seed: 1 };
+    window._datumFieldSource = window._datumFieldSource || {};
+    function _datumMayWrite(id, authority) {
+      var cur = window._datumFieldSource[id];
+      if (!cur) return true;
+      return (DATUM_WRITE_RANK[authority] || 0) >= (DATUM_WRITE_RANK[cur] || 0);
+    }
+    window._datumMayWrite = _datumMayWrite;
+
+    /* Applies the declared population from `prof` at the given authority. Returns true if anything
+       a USER would notice was restored (the `quiet` fields do not count toward the announcement —
+       a session that restored only a name announced nothing before this and still does not). */
+    function _datumApplyProfileFields(prof, authority) {
+      if (!prof) return false;
+      var announced = false;
+      var _fmtMoney = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+      DATUM_PROFILE_RESTORE.forEach(function (f) {
+        var el = document.getElementById(f.id);
+        if (!el) return;
+        if (!_datumMayWrite(f.id, authority)) return;
+        if (f.kind === 'toggle') {
+          if (prof[f.key] && !el.checked) { el.checked = true; el.dispatchEvent(new Event('change')); }
+          if (prof[f.key]) window._datumFieldSource[f.id] = authority;
+          return;
+        }
+        if (f.kind === 'money') {
+          /* ⛔ THE FLAG IS READ FIRST AND THE VALUE IS THE FALLBACK. A salary of ZERO is a genuine
+             restored answer — that is this arc's whole point — and a legacy blueprint with no flag
+             falls through to the old truthiness test, so nothing that worked stops working and
+             nothing is fabricated for a user who never answered. */
+          if (!(prof[f.statedKey] || prof[f.key])) return;
+          el.value = _fmtMoney(prof[f.key] || 0);
+          window._datumFieldSource[f.id] = authority;
+          announced = true;
+          return;
+        }
+        if (!prof[f.key]) return;
+        el.value = prof[f.key];
+        window._datumFieldSource[f.id] = authority;
+        if (!f.quiet) announced = true;
+      });
+      return announced;
+    }
+    window._datumApplyProfileFields = _datumApplyProfileFields;
+
     function restoreDraft() {
       // C (#288) DESIGN FLIP — a FRESH (?fresh=1) or SKETCH (?hydrate=sketch) open must NOT resume the last
       // draft's rooms/profile; it starts from seed / sketch inputs. Skip the whole draft restore (this runs
@@ -14871,10 +14982,11 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       try {
         var prof = bp.profile || {};
         var _restoredAnything = false;
-        if (prof.primary_dob)            { var d = document.getElementById('pri-dob');     if (d) { d.value = prof.primary_dob; _restoredAnything = true; } }
-        if (prof.target_retirement_date) { var r = document.getElementById('target-ret');  if (r) { r.value = prof.target_retirement_date; _restoredAnything = true; } }
-        if (prof.primary_name)           { var pn = document.getElementById('primary-name'); if (pn) pn.value = prof.primary_name; }
-        if (prof.co_architect_name)      { var cn = document.getElementById('co-name');    if (cn) cn.value = prof.co_architect_name; }
+        /* ⛔ THE PROFILE FIELDS MOVED TO THE ONE DECLARED POPULATION — see DATUM_PROFILE_RESTORE.
+           Eleven per-field lines used to live here and in two other shapes elsewhere; this path and
+           the explicit-open path now read the SAME list in the SAME order, so a field added to one
+           can no longer be missing from the other. L48 applied to a restore. */
+        if (_datumApplyProfileFields(prof, 'session_draft')) _restoredAnything = true;
         var _spend = bp.datum && bp.datum.net_datum_v1;
         /* ⛔ A RESTORED VALUE ONLY COUNTS AS A RESTORE IF IT DIFFERS FROM WHAT THE MARKUP SHIPS.
            MEASURED on a cold browser: a session draft ALREADY EXISTS at boot (the autosave writes
@@ -14895,7 +15007,9 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
           var _ssLabel = { early_62: '62', full_67: '67', optimal_70: '70' }[_ssEnum];
           if (_ssLabel) document.querySelectorAll('.ss-btn').forEach(function (btn) { var t = ((btn.querySelector('strong') || {}).textContent || '').trim(); btn.classList.toggle('active', t === _ssLabel); });
         }
-        if (prof.co_architect_enabled) { var tog = document.getElementById('co-arch-toggle'); if (tog && !tog.checked) { tog.checked = true; tog.dispatchEvent(new Event('change')); } }
+        /* the co-architect toggle now fires FIRST, from DATUM_PROFILE_RESTORE. It used to run
+           here -- after the names and before co-dob/co-ret -- and the population preserves that
+           relative order while making it explicit rather than positional. */
         /* ⛔⛔ F64 — THE OTHER HALF OF THE SIX. These read back what captureDOM now stores. They run
            AFTER the co-arch toggle above: the toggle's change handler reveals #co-arch-fields, and
            while the values would survive either order (MEASURED — the handler hides the container and
@@ -14903,8 +15017,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            ⚠ co-dob IS NOT COSMETIC. buildMatrixRequest (:17294) derives the co-architect's age from
            it for the SS Matrix engine payload, so a joint household that reloaded was planned as a
            single one — silently, no error, a plausible number on screen. */
-        if (prof.co_architect_dob)             { var _cd = document.getElementById('co-dob'); if (_cd) _cd.value = prof.co_architect_dob; }
-        if (prof.co_architect_retirement_date) { var _cr = document.getElementById('co-ret'); if (_cr) _cr.value = prof.co_architect_retirement_date; }
+        /* co-dob and co-ret now land via DATUM_PROFILE_RESTORE above, in declared order. */
 
         /* ⛔⛔ plan-end-age — THE TYPED MONTH, RESTORED **HERE**, AND MY FIRST READ OF THIS WAS WRONG.
            seedFromBlueprint DOES already seed this field from prof.plan_end_date, with a comment
@@ -14918,7 +15031,8 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            🔑 A RECEIVER THAT RUNS BEFORE ITS PRECONDITION IS NOT A RECEIVER. Written here — after the
            DOB, with sl-plan-through already holding the matching PTA age — month-survival keeps this
            VERBATIM instead of rebuilding it. ⚠ THE ORDER IS THE FIX; DO NOT MOVE THIS WRITE EARLIER. */
-        if (prof.plan_end_date) { var _pe = document.getElementById('plan-end-age'); if (_pe) _pe.value = prof.plan_end_date; }
+        /* plan_end_date now lands via DATUM_PROFILE_RESTORE above -- AFTER both dates of birth,
+           which is the ordering this line was moved down here to get in the first place. */
 
         /* ⛔⛔ THE TAX SELECTS FAIL TOWARD BLANK, AND THAT IS THE WHOLE DESIGN OF THIS BLOCK.
            captureDOM writes these keys ONLY when the user actually answered, so an UNGUARDED restore
@@ -15047,9 +15161,8 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
            must NOT be re-gated on the value being truthy. The flag follows the RESTORE, not the
            magnitude — re-testing the number here would smuggle the truthy-zero defect back in
            through the announcement path after it was removed from the persistence path. */
-        if (prof.primary_salary_stated || prof.primary_salary)           { var _ps = document.getElementById('pri-salary'); if (_ps) { _ps.value = _money(prof.primary_salary); _restoredAnything = true; } }
-        if (prof.co_architect_salary_stated || prof.co_architect_salary) { var _cs = document.getElementById('co-salary');  if (_cs) { _cs.value = _money(prof.co_architect_salary); _restoredAnything = true; } }
-        if (prof.co_architect_plan_end_date) { var _cp = document.getElementById('co-plan-end'); if (_cp) _cp.value = prof.co_architect_plan_end_date; }
+        /* both salaries (flag-gated) and co_architect_plan_end_date now land via
+           DATUM_PROFILE_RESTORE above. The flag-first rule moved WITH them, unchanged. */
         /* ⛔ FOUR RESTORE LINES REMOVED IN BATCH 1a — method, co_method, co_filing, co_location.
            Their target elements no longer exist. They were null-safe (`_optHas` guards on !!el) so
            they would not have thrown — WHICH IS EXACTLY WHY THEY HAD TO GO RATHER THAN BE LEFT.
@@ -17696,8 +17809,17 @@ const _reachesEngine = a =>
       var _lsrc = String(bp._loadSource || '');
       if (!(_lsrc.indexOf('blueprint-slot') === 0 || _lsrc.indexOf('sketch-contract') === 0)) return;
       var prof = bp.profile || {};
-      if (prof.primary_dob)            { var d = $('pri-dob');    if (d) d.value = prof.primary_dob; }
-      if (prof.target_retirement_date) { var r = $('target-ret'); if (r) r.value = prof.target_retirement_date; }
+      /* ⛔⛔ THIS WROTE TWO OF FOURTEEN PROFILE FIELDS AND THAT WAS THE WHOLE LOAD DEFECT.
+       * It now reaches the SAME declared population `restoreDraft` uses, at SAVED_FILE authority —
+       * the highest rank there is, so nothing seeded afterwards can answer over it.
+       *   🔑 THE SKIP AT :18894 PROTECTS AGAINST A SOURCE, NOT AGAINST A FIELD LIST. A stale session
+       *      draft must not paint over a named blueprint — correct, and unchanged. That rule never
+       *      required the explicit path to restore FEWER FIELDS; it only required it to restore them
+       *      FROM THE FILE. Conflating the two is what left twelve fields to the dossier.
+       * ⚠️ AUTHORITY IS RECORDED, NOT JUST APPLIED. `applyDossierProfile` now asks `_datumMayWrite`
+       *    before filling, so the ordering race between this re-assert and the async dossier seed
+       *    stops deciding whose numbers a person sees. */
+      _datumApplyProfileFields(prof, 'saved_file');
       var clEnum = bp.climate && bp.climate.outlook;
       if (clEnum) {
         var clLabel = { history_repeats: 'History Repeats', valuations_matter: 'Valuations Matter', cautious: 'Cautious', optimistic: 'Optimistic', custom: 'Custom Matrix' }[clEnum];
@@ -18310,14 +18432,38 @@ const _reachesEngine = a =>
        Date conversion reuses DatumBlueprint.mmYYYY / retDateFromAge. */
     function applyDossierProfile(p) {
       if (!p) return;
+      /* ⛔⛔ THE SEED IS THE LOWEST AUTHORITY THERE IS, AND UNTIL NOW IT DID NOT KNOW THAT.
+       * Its rule was "fill only if empty", which is a statement about the FIELD and says nothing
+       * about WHO LEFT IT EMPTY. When the explicit saved-file open restored only two of fourteen
+       * profile fields, every other field was empty for a reason this function could not see — and
+       * it filled twelve of them with the account dossier's numbers, over a file the user had
+       * explicitly opened. MEASURED: `_gate_roundtrip_persistence` printed
+       * "<- ANSWERED BY the account dossier (primary.grossIncome)" on four fields.
+       *   🔑 "EMPTY" IS NOT A PERMISSION. `_mayS` asks whether anyone with more authority has
+       *      already answered, which is the question this guard was always trying to ask.
+       * ⚠️ BOTH TESTS ARE KEPT. A value the USER typed carries no recorded authority, so the
+       *    `!el.value` half still protects a human being; the rank half protects a saved file. */
+      /* ⛔ WINDOW-QUALIFIED ON PURPOSE — THIS FUNCTION LIVES IN A DIFFERENT <script> BLOCK FROM
+       * `_datumMayWrite`, and a bare reference here is a ReferenceError, not a fallback. MEASURED
+       * the moment it was written: `_gate_scratch_clears_declared` L3 read "seeded 0 of 7" because
+       * the throw was swallowed by this function's own try/catch and the ENTIRE dossier seed died
+       * silently — a prefill regression for every returning user, with nothing on screen and
+       * nothing in the console. A CROSS-SCRIPT CALL IS NOT A LOCAL CALL THAT HAPPENS TO WORK.
+       * DEGRADATION: if the helper is absent this returns true, which is exactly the pre-ranking
+       * behaviour — the `!el.value` test still guards every one of these writes. Fail toward the
+       * old rule, never toward a dead seed. */
+      var _mayS = function (id) {
+        var f = window._datumMayWrite;
+        return (typeof f === 'function') ? f(id, 'dossier_seed') : true;
+      };
       var pri = p.primary || {}, def = p.defaults || {}, ho = p.household || {};
       var BP = window.DatumBlueprint || {};
       var dobEl = $('pri-dob');
       var dobStr = (typeof BP.mmYYYY === 'function') ? BP.mmYYYY(pri.dateOfBirth) : '';
-      if (dobEl && dobStr && !dobEl.value) dobEl.value = dobStr;
+      if (dobEl && dobStr && !dobEl.value && _mayS('pri-dob')) dobEl.value = dobStr;
       var retEl = $('target-ret');
       var rAge = pri.targetRetirementAge || def.targetRetirementAge;
-      if (retEl && !retEl.value) {
+      if (retEl && !retEl.value && _mayS('target-ret')) {
         // Month-survival: prefer the EXACT typed date string the Dossier persists
         // (primary.targetRetirementDate / defaults.targetRetirementDate) — same pattern the
         // co-architect seed below uses. Fall back to the age derivation only for legacy payloads.
@@ -18329,7 +18475,7 @@ const _reachesEngine = a =>
       }
       var salEl = $('pri-salary');
       var gross = parseFloat(pri.grossIncome);
-      if (salEl && !salEl.value && gross > 0) salEl.value = '$' + Math.round(gross).toLocaleString('en-US');
+      if (salEl && !salEl.value && gross > 0 && _mayS('pri-salary')) salEl.value = '$' + Math.round(gross).toLocaleString('en-US');
       /* ⛔ THE DOSSIER TAX SEED IS RETIRED — BOTH HALVES (2026-09-07). The first wrote
          def.effectiveTaxRate into #eff-tax-rate, which is gone. The second wrote it into slider-tax
          "so the Profile tax and the Shape HUD agree without a manual touch".
@@ -18359,12 +18505,12 @@ const _reachesEngine = a =>
         if (tog && !tog.checked) { tog.checked = true; tog.dispatchEvent(new Event('change')); }
         var coDobEl = $('co-dob');
         var coDobStr = (typeof BP.mmYYYY === 'function') ? BP.mmYYYY(co.dateOfBirth) : '';
-        if (coDobEl && coDobStr && !coDobEl.value) coDobEl.value = coDobStr;
+        if (coDobEl && coDobStr && !coDobEl.value && _mayS('co-dob')) coDobEl.value = coDobStr;
         var coSalEl = $('co-salary');
         var coGross = parseFloat(co.grossIncome);
-        if (coSalEl && !coSalEl.value && coGross > 0) coSalEl.value = '$' + Math.round(coGross).toLocaleString('en-US');
+        if (coSalEl && !coSalEl.value && coGross > 0 && _mayS('co-salary')) coSalEl.value = '$' + Math.round(coGross).toLocaleString('en-US');
         var coRetEl = $('co-ret');
-        if (coRetEl && !coRetEl.value) {
+        if (coRetEl && !coRetEl.value && _mayS('co-ret')) {
           var rawRet = co.targetRetirementDate != null ? String(co.targetRetirementDate).trim() : '';
           var coRetStr = (typeof BP.mmYYYY === 'function') ? BP.mmYYYY(rawRet) : '';
           if (!coRetStr) {

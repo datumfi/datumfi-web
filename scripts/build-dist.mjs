@@ -4,7 +4,7 @@
 //
 // Usage:  node scripts/build-dist.mjs   ->   ./dist  (deploy that, never ".")
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, copyFileSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, copyFileSync, rmSync, existsSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { dirname, join, extname } from 'node:path';
 import { createHash } from 'node:crypto';
 
@@ -41,7 +41,7 @@ const SACRED = {
      — five §20 gates anchor on the literal, two match 12-space-indented literals in their red-first
      mutations. A dedent would disarm those controls while leaving them green. */
   'scripts/studio-account-modal.js': 'c70e369a69c4cd2bee123bf33d217c08',   // MOVE 1b — 53 sole-consumed helpers ABSORBED (132,541 bytes): their only caller is the builder, which already lives here. Not a new part: §11.2 names a part for its CALLERS, and a group that reads coherent is not a module. Surface 1 -> 50 published names (2026-08-22)   // extracted verbatim from studio.html:7981-9555 (2026-08-22)
-  'studio.html': 'd0b6bac16eaf5ba122b151c13a938144',   // ⛔⛔⛔ THE CUTOVER — THE STUDIO DRAWS ITS OWN RANGE (2026-09-14). Reveal no longer walks the user to range.html; it forces Split (§82.2354), hands the fetch promise to the Convergence swarm and opens #mcOverlay in place. THE PANEL AND THE SWARM WERE BUILT AND UNREACHABLE THE WHOLE TIME — grep DatumMeasurement studio.html returned ZERO LINES while :prod-8 was returning tiers, a 43-point capacity_curve and the tax series on every reveal, all discarded. ⛔ FOUR OTHER REPAIRS RIDE IN THE SAME COMMIT AND EACH ONE WAS CAPTAIN-FOUND IN A BROWSER: (1) the plan-through door now tests window._ptaAnswered instead of a box the product filled in — typing DOB 08/1982 in the Profile was writing 08/2072 into #plan-end-age and closing the door with the slider's shipped value="90" (§82.2350, §9.3); the Sketch path was already correct and did not move. (2) Every surviving "|| 93" and "{value: 93}" deleted, including one inside a live expression (defaultPlanEnd) whose only consumer was _planEndAgeDefault, a variable NOTHING EVER READ — the Captain's 93 sitting on the plan-through window, invisible to any "what moves the answer" sweep because it moved nothing, and one wiring commit away from shipping as a recommendation. A DEAD READER IS NOT A SAFE DEFAULT; IT IS A DEFAULT WAITING FOR A CONSUMER. (3) The SS matrix key translation: datum-fi cbc231f canonicalised the claiming strategies to age_NN and kept the old names as INPUT aliases only, so the engine emitted age_67_x_age_67 while this file asked for full_67_x_full_67 — MEASURED in production, 0 OF 9 KEYS MATCHED and the grid drew nine em-dashes over nine correct answers (§82.2349). (4) The tenth reveal door deleted: it demanded an account with a BALANCE, the rule the Captain overturned, and it was STRICTER than the estate door it duplicated — a new 401(k) with a zero balance and a monthly contribution cleared door 5 and was stopped by door 10 (§82.2351). ⚠️ #cinematic-overlay is now dead surface, deliberately uncalled rather than deleted — resetOverlayState() is still the one home of the button re-enable. ⚠️ window._datumWasRefusal is READ for the first time: a refused household (New Jersey today) used to have its refusal painted and then be navigated away from it.
+  'studio.html': 'aa90d7b21fa30a0025855904c6d7d64f',   // ⛔⛔⛔ THE CUTOVER — THE STUDIO DRAWS ITS OWN RANGE (2026-09-14). Reveal no longer walks the user to range.html; it forces Split (§82.2354), hands the fetch promise to the Convergence swarm and opens #mcOverlay in place. THE PANEL AND THE SWARM WERE BUILT AND UNREACHABLE THE WHOLE TIME — grep DatumMeasurement studio.html returned ZERO LINES while :prod-8 was returning tiers, a 43-point capacity_curve and the tax series on every reveal, all discarded. ⛔ FOUR OTHER REPAIRS RIDE IN THE SAME COMMIT AND EACH ONE WAS CAPTAIN-FOUND IN A BROWSER: (1) the plan-through door now tests window._ptaAnswered instead of a box the product filled in — typing DOB 08/1982 in the Profile was writing 08/2072 into #plan-end-age and closing the door with the slider's shipped value="90" (§82.2350, §9.3); the Sketch path was already correct and did not move. (2) Every surviving "|| 93" and "{value: 93}" deleted, including one inside a live expression (defaultPlanEnd) whose only consumer was _planEndAgeDefault, a variable NOTHING EVER READ — the Captain's 93 sitting on the plan-through window, invisible to any "what moves the answer" sweep because it moved nothing, and one wiring commit away from shipping as a recommendation. A DEAD READER IS NOT A SAFE DEFAULT; IT IS A DEFAULT WAITING FOR A CONSUMER. (3) The SS matrix key translation: datum-fi cbc231f canonicalised the claiming strategies to age_NN and kept the old names as INPUT aliases only, so the engine emitted age_67_x_age_67 while this file asked for full_67_x_full_67 — MEASURED in production, 0 OF 9 KEYS MATCHED and the grid drew nine em-dashes over nine correct answers (§82.2349). (4) The tenth reveal door deleted: it demanded an account with a BALANCE, the rule the Captain overturned, and it was STRICTER than the estate door it duplicated — a new 401(k) with a zero balance and a monthly contribution cleared door 5 and was stopped by door 10 (§82.2351). ⚠️ #cinematic-overlay is now dead surface, deliberately uncalled rather than deleted — resetOverlayState() is still the one home of the button re-enable. ⚠️ window._datumWasRefusal is READ for the first time: a refused household (New Jersey today) used to have its refusal painted and then be navigated away from it.
   'sketch.html': 'e7de7433caad8ffa06b19e2750ac77d3',   // (0b) the last --font-serif shadow deleted; Georgia is promoted into styles/typography.css instead (2026-08-16)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
@@ -189,6 +189,37 @@ for (const f of tracked) {
   mkdirSync(dirname(dest), { recursive: true });
   copyFileSync(f, dest);
   web++;
+}
+
+/* ⛔⛔ NO TEST FIXTURE MAY EVER REACH THE EDGE. Measured 2026-09-15, minutes after it happened:
+ * a REAL household export — 13 accounts, real balances — was copied into dist/ and would have been
+ * served publicly. The gate exclusion is /^scripts\/_/ and the fixture sat in scripts/fixtures/
+ * without the underscore, so a rule that had reliably kept 100+ gate files off the web silently did
+ * not cover a sibling directory.
+ *   ⛔ AND THE CHECK THAT SAID IT WAS SAFE WAS RUN BEFORE THE FILE WAS COMMITTED. The copy loop
+ *      publishes `git ls-files` only, so an UNTRACKED fixture is invisible to it and the build at
+ *      that moment reports a clean, smaller asset count. The number went 107 -> 108 the instant it
+ *      was tracked. 🔑 A PUBLISH CHECK RUN BEFORE THE COMMIT MEASURES THE WRONG TREE.
+ * ⚠️ The fixture now lives under scripts/_fixtures/, covered by the EXISTING underscore rule rather
+ *    than a second rule of its own (L48). THIS assertion is the half that cannot be forgotten: it
+ *    fails the BUILD rather than trusting the next person to pick the right filename.
+ *    A NAMING CONVENTION IS NOT AN ENFORCEMENT MECHANISM. */
+{
+  const leaked = [];
+  const walkDist = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, e.name);
+      if (e.isDirectory()) { walkDist(full); continue; }
+      if (/(^|[\\/])_?fixtures?([\\/]|$)/i.test(dirname(full))) leaked.push(full);
+    }
+  };
+  walkDist(OUT);
+  if (leaked.length) {
+    console.error('FIXTURE LEAK — test fixtures were copied into dist/ and would be served publicly:');
+    leaked.forEach((f) => console.error('  ' + f));
+    console.error('  -> Move them under scripts/_ (the existing exclusion) rather than loosening this check.');
+    process.exit(1);
+  }
 }
 
 let cfg = 0;

@@ -65,7 +65,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8491;          /* claimed 2026-09-15. ⛔ NEVER 8001 — the suite's shared server. */
-const FIXTURE = path.join(__dirname, 'fixtures', 'roundtrip_joint_2026-09-15.json');
+const FIXTURE = path.join(__dirname, '_fixtures', 'roundtrip_joint_2026-09-15.json');
 
 const BP = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));
 const P  = BP.profile || {};
