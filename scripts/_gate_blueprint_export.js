@@ -63,8 +63,22 @@ async function boot(browser, opts) {
     const u = r.request().url();
     if (/\/api\/documents/.test(u)) {
       if (opts.serverDown) return r.abort();
-      if (/\/api\/documents\?/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ documents: [{ doc_key: 'bp-1', updated_at: '2026-09-04T00:00:00Z' }] }) });
-      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ payload: '{"profile":{"primary_dob":"08 / 1982"}}' }) });
+      /* ⛔⛔ THE STUB HONOURS THE DOCUMENTED ADDRESS AND 404s ANYTHING ELSE. The first version
+         fulfilled whatever the export asked for — so it was GREEN OVER AN INVENTED URL, and on the
+         first human press the Captain got `d1: list HTTP 404` and ZERO SERVER FILES: the only ones
+         that mattered. Fourteen legs passed because every one of them tested the response I had
+         imagined, and none tested whether the address existed.
+         🔑 A FIXTURE BUILT FROM A GUESS TESTS THE GUESS. The contract lives in
+            functions/api/documents.js: `?type=blueprint&list=1` lists; `?type=blueprint&key=<id>`
+            reads one. Anything else is a 404 here, exactly as it is in production. */
+      const q = new URL(u).searchParams;
+      if (q.get('list') === '1' && q.get('type') === 'blueprint') {
+        return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ documents: [{ doc_key: 'bp-1', revision: 3, updated_at: '2026-09-04T00:00:00Z' }] }) });
+      }
+      if (q.get('type') === 'blueprint' && q.get('key')) {
+        return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ payload: '{"profile":{"primary_dob":"08 / 1982"}}', revision: 3, updated_at: '2026-09-04T00:00:00Z' }) });
+      }
+      return r.fulfill({ status: 404, contentType: 'application/json', body: '{"error":"undocumented address"}' });
     }
     if (!/127\.0\.0\.1/.test(u) && /clerk|cloudflareinsights|posthog|sentry|beacon/i.test(u)) return r.abort();
     return r.continue();

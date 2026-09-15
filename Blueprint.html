@@ -2313,23 +2313,49 @@ async function _bpExportAll(btn) {
   } catch (e) { out.errors.push('localStorage: ' + (e && e.message || e)); }
 
   /* ── Store 2 · D1. This is what the Archive CARDS render from, and it is NOT the same set as
-        the browser copy — measured 14 Sep, the two held different saves on different dates. ── */
+        the browser copy — measured 14 Sep, the two held different saves on different dates.
+     ⛔⛔ IT GOES THROUGH THE PRODUCT'S OWN CLIENT (window.DatumD1), NOT A HAND-ROLLED FETCH, AND
+        THAT IS A CORRECTION OF THIS VERY FUNCTION. The first version invented its own URLs —
+        "?type=blueprint" for the list and "/api/documents/&lt;id&gt;" for a document. BOTH WERE WRONG:
+        the list needs "&amp;list=1" (without it the endpoint reads it as a key lookup for key=active
+        and 404s) and a document is "?type=blueprint&amp;key=&lt;id&gt;", not a path segment.
+        ⛔ THE CAPTAIN PRESSED THE BUTTON AND GOT "d1: list HTTP 404" AND ZERO SERVER FILES — the
+           only files that mattered. Fourteen green legs, because THE GATE STUBBED MY OWN WRONG URL:
+           it asserted the export handled the response I imagined, never that the address existed.
+        🔑 A FIXTURE BUILT FROM A GUESS TESTS THE GUESS. L48 — the client that already talks to this
+           API is thirty lines away and is the only thing that knows its shape.
+     ⚠️ THE RAW-URL PATH SURVIVES AS A FALLBACK, in the DOCUMENTED shape, for the case where
+        datum-d1.js has not loaded. It is a fallback, not a second implementation: if it is ever
+        reached the file records that it was. */
   try {
     if (!window.Clerk || !Clerk.session) throw new Error('not signed in — server copies need a session');
-    const tok = await Clerk.session.getToken();
-    const auth = { Authorization: 'Bearer ' + tok };
-    const lr = await fetch('/api/documents?type=blueprint', { headers: auth });
-    if (!lr.ok) throw new Error('list HTTP ' + lr.status);
-    const list = await lr.json();
-    out.d1.list = list;
-    const rows = list.documents || list.docs || (Array.isArray(list) ? list : []);
-    for (const row of rows) {
-      const key = row.doc_key || row.key || row.id || row.blueprint_id;
+    let rows = null;
+    if (window.DatumD1 && typeof DatumD1.listDocs === 'function') {
+      rows = await DatumD1.listDocs('blueprint');
+      out.d1.via = 'DatumD1';
+    } else {
+      out.d1.via = 'raw-url fallback (datum-d1.js absent)';
+      out.errors.push('d1: used the raw-URL fallback — DatumD1 was not on the page');
+      const tok = await Clerk.session.getToken();
+      const lr = await fetch('/api/documents?type=blueprint&list=1', { headers: { Authorization: 'Bearer ' + tok } });
+      if (!lr.ok) throw new Error('list HTTP ' + lr.status);
+      rows = (await lr.json()).documents || [];
+    }
+    out.d1.list = rows;
+    for (const row of (rows || [])) {
+      const key = row.doc_key || row.key || row.id;
       if (!key) { out.errors.push('d1: a row carried no key — ' + JSON.stringify(row).slice(0, 120)); continue; }
       try {
-        const dr = await fetch('/api/documents/' + encodeURIComponent(key), { headers: auth });
-        out.d1.docs[key] = dr.ok ? await dr.json() : ('HTTP ' + dr.status);
-        if (!dr.ok) out.errors.push('d1 doc ' + key + ': HTTP ' + dr.status);
+        let doc = null;
+        if (window.DatumD1 && typeof DatumD1.getDoc === 'function') doc = await DatumD1.getDoc('blueprint', key);
+        else {
+          const tok2 = await Clerk.session.getToken();
+          const dr = await fetch('/api/documents?type=blueprint&key=' + encodeURIComponent(key), { headers: { Authorization: 'Bearer ' + tok2 } });
+          doc = dr.ok ? await dr.json() : null;
+          if (!dr.ok) out.errors.push('d1 doc ' + key + ': HTTP ' + dr.status);
+        }
+        if (doc) out.d1.docs[key] = doc;
+        else out.errors.push('d1 doc ' + key + ': came back empty');
       } catch (e) { out.errors.push('d1 doc ' + key + ': ' + (e && e.message || e)); }
     }
   } catch (e) { out.errors.push('d1: ' + (e && e.message || e)); }
