@@ -16663,6 +16663,23 @@ const _reachesEngine = a =>
              ever stops being true — plain text beats silence, which was the whole defect. */
           : '<div style="margin-top:14px;color:var(--gold);font-family:var(--font-serif);font-size:11px;">' + body + '</div>';
         host.style.display = 'block';
+        /* ⛔⛔ BROUGHT INTO VIEW, BECAUSE THE CUTOVER MOVED THE USER'S EYE AND THIS SURFACE DID NOT.
+           CAPTAIN-MEASURED ON THE LIVE SITE, 2026-09-14: the Convergence swarm played on the CANVAS
+           for ~18 seconds, closed, and he was "back on my estate looking at my rooms" with no panel
+           and — as far as he could tell — no explanation. #reveal-status lives at :4452, inside
+           .drafting-panel, which is the OTHER HALF OF THE SCREEN and may be scrolled anywhere.
+           🔑 A MESSAGE THAT PAINTS WHERE THE USER IS NOT LOOKING HAS NOT BEEN DELIVERED. Before the
+              cutover this was fine: the refusal happened before any animation, with the user's
+              attention already on the form they had just submitted. Afterwards the product spends
+              eighteen seconds pulling the eye to the canvas and then answers in the margin.
+           ⚠️ THE COPY IS UNTOUCHED AND NO NEW STRING IS INTRODUCED — this is delivery, not wording.
+              scrollIntoView is already in-house (setStatus uses it), so this is the existing
+              mechanism applied to the surface the cutover stranded.
+           ⚠️ GUARDED AND SILENT ON FAILURE: an old browser without smooth behaviour still scrolls,
+              and a throw here must never swallow the refusal it is trying to show. */
+        try { host.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_e) {
+          try { host.scrollIntoView(); } catch (_e2) {}
+        }
       }
       function _revealClearStatus() {
         var host = document.getElementById('reveal-status');
@@ -16950,10 +16967,32 @@ const _reachesEngine = a =>
              panel's own renderFromSession() reads BOTH of these keys, and so does the SS Matrix
              (`datumfi_range.params.n_years`). Dropping them because "we no longer navigate" would
              have silently emptied two other surfaces. */
-          sessionStorage.setItem('datumfi_studio_request', JSON.stringify(req));
-          sessionStorage.setItem('datumfi_range', JSON.stringify(apiResult));
-          sessionStorage.removeItem('datum_api_fallback');
-          sessionStorage.setItem('datum_range_revealed', 'true');
+          /* ⛔⛔ THE PANEL MUST NOT DEPEND ON A STORAGE WRITE SUCCEEDING, AND IT DID.
+             These four lines were UNGUARDED and they sit BETWEEN the answer and the panel. A full
+             sessionStorage throws QuotaExceededError on setItem — and this is an async click
+             handler, so the throw is swallowed as an unhandled rejection: THE SWARM PLAYS FOR
+             EIGHTEEN SECONDS, CLOSES, AND NOTHING OPENS. No error on screen, no refusal, no panel.
+             ⛔ CAPTAIN-REPORTED ON THE LIVE SITE, 2026-09-14, WITH A THREE-WEEK-OLD BLUEPRINT
+                LOADED: "the range measurement panel did not show at all, i was back on my estate
+                look at my rooms." A loaded blueprint is exactly the session that fills this store —
+                studio-blueprint.js already reports QuotaExceededError against the same origin.
+             🔑 A SIDE EFFECT PLACED BEFORE THE DELIVERABLE CAN CANCEL IT. The writes are a
+                CONVENIENCE for other surfaces; the panel is the thing the user pressed the button
+                for. Ordering them this way let the least important step veto the most important.
+             ⚠️ THE WRITES ARE KEPT, NOT DROPPED — renderFromSession() and the SS Matrix both read
+                them, so silently removing them would empty two other surfaces. They are now
+                best-effort, and their failure is REPORTED rather than swallowed.
+             ⚠️ AND THE PANEL IS HANDED THE ANSWER DIRECTLY below rather than reading it back out of
+                a store that may have just refused to hold it. A round-trip through storage was
+                never necessary to draw a result we already have in hand. */
+          try {
+            sessionStorage.setItem('datumfi_studio_request', JSON.stringify(req));
+            sessionStorage.setItem('datumfi_range', JSON.stringify(apiResult));
+            sessionStorage.removeItem('datum_api_fallback');
+            sessionStorage.setItem('datum_range_revealed', 'true');
+          } catch (_e) {
+            _reportComputeFailure('session_store', (_e && _e.name) || String(_e));
+          }
           if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: true });
 
           /* F74 — THE DRAFT SURVIVES THE RANGE. This used to be followed by _studioClearDraft(),
@@ -16964,7 +17003,9 @@ const _reachesEngine = a =>
                again. A product that wipes the draft turns a dial into a form.
              ⭐ AND THE CUTOVER MAKES THAT LITERAL — the estate is still on screen behind the panel
                rather than one page-load away. */
-          DatumMeasurement.open();
+          /* ⛔ THE ANSWER IS HANDED OVER DIRECTLY, not read back out of a store that may have just
+             refused to hold it. See the try/catch above. */
+          DatumMeasurement.open(apiResult, req);
         });
       }
     })();
@@ -17949,6 +17990,20 @@ const _reachesEngine = a =>
     function _mirrorCoPlanEnd() {
       var cEl = $('co-plan-end');
       if (!cEl || String(cEl.value || '').trim()) return;      // never overwrite — see above
+      /* ⛔⛔ §9.3 ON THE SECOND PERSON, AND IT WAS MISSING FROM THE COMMIT THAT CLAIMED TO FIX IT.
+         CAPTAIN-MEASURED ON THE LIVE SITE, 2026-09-14: "I went ahead and put in the Co-Arch DOB and
+         it automatically put in a Plan Through Date even though I thought this had been fixed?"
+         HE IS RIGHT. I gated `_mirrorPlanEnd` on window._ptaAnswered and left THIS function — the
+         co-architect's half — deriving from the shared plan-through age the moment a second date of
+         birth landed. A DATE OF BIRTH ANSWERS EXACTLY ONE QUESTION, AND THAT IS TRUE OF BOTH PEOPLE.
+         🔑 I FIXED THE DEFECT FOR THE PRIMARY AND LEFT IT STANDING FOR THE CO-ARCHITECT — which is
+            Clause 1 and Clause 2 failing in the same line: the second person got the treatment the
+            first person was just rescued from, inside the commit that did the rescuing.
+         ⚠️ THE FLAG IS SHARED ON PURPOSE. There is ONE plan-through age in this product and the
+            co-architect's date is that age anchored to THEIR birthday — so the question is answered
+            once, for the household, and this derivation is licensed by that single answer. A second
+            flag would imply a second question the product never asks. */
+      if (!window._ptaAnswered) { if (cEl.value) cEl.value = ''; return; }
       var dEl = $('co-dob');
       var dm = String((dEl && dEl.value) || '').replace(/\s/g, '').match(/^(\d{1,2})\/(\d{4})$/);
       if (!dm) return;                                          // L47 sourced-or-blank: nothing to derive from

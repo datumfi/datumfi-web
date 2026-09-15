@@ -1460,8 +1460,37 @@
     return emptyN || oldestN;
   }
 
+  /* ⛔⛔⛔ §82.2392 — SAVE IS NON-DESTRUCTIVE UNTIL LOAD IS PROVEN. Set 2026-09-14, in force.
+     THE MEASUREMENT THAT CAUSED IT, the Captain, live site, his own blueprint saved 26 August and
+     untouched for three weeks: it loaded almost empty — only primary DOB and primary retirement
+     date survived. He re-entered everything for both people, saved, reloaded, and was back to SOLO.
+     He then re-opened the archive file HE HAD JUST SAVED and it was empty too.
+     ⛔ THE SAVE WROTE THE DAMAGE TO DISK. A degraded LOAD is recoverable because the original still
+        exists; a degraded SAVE captures whatever the broken load left in memory and destroys the
+        original in the same stroke. THE SECOND IS NOT RECOVERABLE AND IT IS WHAT HAPPENED.
+     🔑 A PRODUCT THAT CANNOT PROVE IT READ A FILE CORRECTLY HAS NOT EARNED THE RIGHT TO WRITE OVER IT.
+     ⚠️ WHAT THIS DOES: every save mints a NEW blueprint_id and lands in a NEW slot. The overwrite
+        branches still RUN — the picker, the confirm dialog, the legacy exact-slot callers all work —
+        they simply cannot land on an existing record. Nothing is deleted and nothing is blocked.
+     ⚠️ WHAT IT COSTS, SAID OUT LOUD: "Overwrite <sheet>" no longer overwrites, so a user saving
+        repeatedly accumulates sheets. That is the intended trade. AN EXTRA FILE IS A TIDINESS
+        PROBLEM; A REPLACED FILE IS A DATA-LOSS PROBLEM.
+     ⛔ LIFTING IT IS ONE LINE AND IT IS NOT A JUDGEMENT CALL: set NONDESTRUCTIVE to false only when
+        a gate SAVES a household, RELOADS it, and asserts every field came back — including the
+        co-architect. No such gate exists today; no gate in this suite opens a file it did not write.
+     ⛔ AND THE COPY THAT DESCRIBES THIS (Copy Bank §11.3, "We have kept your original exactly as it
+        was. Nothing you do next can overwrite it.") MAY NOT SHIP UNTIL THIS FLAG IS TRUE IN THE
+        DEPLOYED BYTES. A sentence that promises safety ahead of the mechanism is worse than silence. */
+  var NONDESTRUCTIVE = true;
+
   function save(bp, opts) {
     opts = opts || {};
+    if (NONDESTRUCTIVE) {
+      /* Rebuilt rather than mutated: the caller's object is theirs, and a save must not silently
+         change the options a later reader inspects. `newBlueprint` forces a fresh id below; dropping
+         `slot` sends the write through _placeInNet to a new position. */
+      opts = { newBlueprint: true, done: opts.done };
+    }
     bp.saved_at = new Date().toISOString();
     // P5a Layer-2 — the two-branch save-picker contract (#276, Captain-ratified Option 1), PLUS the
     // legacy exact-slot path kept intact. Each saved sheet becomes its OWN D1 row (doc_key = blueprint_id):

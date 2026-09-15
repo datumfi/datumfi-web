@@ -915,9 +915,27 @@
     });
   }
 
-  function open() {
+  /* ⛔⛔ IT TAKES THE ANSWER IN HAND WHEN IT IS OFFERED ONE (2026-09-14). `open()` used to read the
+     response back out of sessionStorage unconditionally — which is correct for a reopen, and WRONG
+     immediately after a compute, because the caller already holds the response and the store may
+     have just refused to keep it (QuotaExceededError on a session with a large blueprint loaded).
+     🔑 A RENDERER THAT CAN ONLY READ FROM A STORE INHERITS THAT STORE'S FAILURES. The Range the
+        user pressed a button for should not be hostage to whether a convenience write succeeded.
+     ⚠️ THE SESSION PATH IS UNCHANGED AND STILL THE DEFAULT: called with no arguments — a reopen, a
+        gate, any later visit — it behaves exactly as before. This ADDS a door; it closes none.
+     ⚠️ AND THE OVERLAY IS UNHIDDEN EVEN WHEN THE SCENARIO REFUSES. An empty panel is a normal
+        display state here and it is the honest one; refusing to open leaves the user with the
+        silence this whole repair exists to remove. */
+  function open(res, req) {
     var o = el('mcOverlay'); if (!o) return;
-    renderFromSession();
+    try {
+      if (res) render(fromEngine(res, req));
+      else renderFromSession();
+    } catch (_e) {
+      /* ⛔ A RENDER FAULT MAY NOT SWALLOW THE PANEL. Whatever went wrong drawing the numbers, the
+         user still gets the surface and its empty state rather than a button that did nothing. */
+      try { renderEmpty(); } catch (_e2) {}
+    }
     o.hidden = false; o.classList.add('open');
   }
   function close() {

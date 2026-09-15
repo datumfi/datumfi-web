@@ -1323,6 +1323,29 @@ button {
         <strong>The Archive</strong> is for Studio blueprints you have modeled,
         named, saved, and may want to reopen, compare, or promote into your working retirement plan.
       </p>
+      <!-- ⛔⛔ EXPORT LIVES IN THE HERO, NOT IN THE BOOK, AND THAT PLACEMENT IS THE WHOLE POINT.
+           It was first put inside .archive-actions beside Compare and Open Studio — and the gate
+           could not click it, because that block sits inside .archive-sheet and is not visible
+           until the archive renders.
+           🔑 A BACKUP CONTROL THAT ONLY APPEARS WHEN THE THING IT BACKS UP IS WORKING IS USELESS IN
+              EXACTLY THE CASE IT EXISTS FOR. The Captain opened a blueprint that loaded almost
+              empty; an export reachable only from a healthy archive would have been unreachable
+              on the night it was needed.
+           ⛔ THE PRODUCT HAD NO EXIT AT ALL UNTIL TONIGHT. Every blueprint lived in D1 and a
+              four-slot browser cache with no way for the person who made them to take a copy out.
+              That is why a load dropping fields, and a save writing the result back over the
+              original, made three weeks of his own work look irreplaceable — IT WAS. And it is why
+              the only recovery route anyone could invent that night was hand-written console
+              commands, which put a live session token into a chat log.
+           🔑 DATA A PERSON CANNOT TAKE OUT IS DATA THEY CANNOT PROTECT.
+           ⚠️ IT READS BOTH STORES, because they are not the same files: the Archive CARDS render
+              from D1 while a separate newest-4 window sits in localStorage, and on 14 Sep the two
+              held different saves on different dates. An export of one would look complete and be
+              partial. ⚠️ IT NEVER WRITES — reading is the only operation safe to offer while the
+              load path is still under investigation. -->
+      <p class="hero-export">
+        <button class="secondary-action" id="action-export-blueprints" type="button">Export All</button>
+      </p>
     </section>
 
     <section class="archive-wrapper" aria-label="The Archive — saved Studio blueprints">
@@ -2261,6 +2284,87 @@ document.getElementById('bp-turn-next').addEventListener('click', function () { 
 document.getElementById('bp-turn-prev').addEventListener('click', function () { turnPage(ARCH.page - 1); });
 
 document.getElementById('action-compare-blueprints').addEventListener('click', openCompareModal);
+
+
+/* ⛔⛔ EXPORT ALL — READ-ONLY, BOTH STORES, NO CONSOLE. See the note beside the button.
+   ⚠️ IT REPORTS WHAT IT COULD NOT GET RATHER THAN RETURNING A SHORTER FILE. A backup that silently
+      omits the store it failed to read is worse than no backup: it looks complete. Every failure
+      lands in `errors[]` inside the file itself, so the artefact carries its own completeness claim.
+   ⚠️ THE TOKEN IS FETCHED FRESH PER CALL AND NEVER LOGGED, STORED OR PLACED IN THE FILE. Clerk's
+      session tokens live ~60 seconds; one was exposed on 14 Sep because the only export route was a
+      hand-written console command. This exists so that never has to happen again. */
+async function _bpExportAll(btn) {
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Exporting…'; }
+  const out = {
+    exported_at: new Date().toISOString(),
+    note: 'Datumae blueprint export. Read-only snapshot of BOTH stores. Keep this file.',
+    errors: [],
+    localStorage: {},
+    d1: { list: null, docs: {} }
+  };
+
+  /* ── Store 1 · the browser. The newest-4 rolling window plus the sketchbook and dossier. ── */
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (/^datumfi/i.test(k)) out.localStorage[k] = localStorage.getItem(k);
+    }
+  } catch (e) { out.errors.push('localStorage: ' + (e && e.message || e)); }
+
+  /* ── Store 2 · D1. This is what the Archive CARDS render from, and it is NOT the same set as
+        the browser copy — measured 14 Sep, the two held different saves on different dates. ── */
+  try {
+    if (!window.Clerk || !Clerk.session) throw new Error('not signed in — server copies need a session');
+    const tok = await Clerk.session.getToken();
+    const auth = { Authorization: 'Bearer ' + tok };
+    const lr = await fetch('/api/documents?type=blueprint', { headers: auth });
+    if (!lr.ok) throw new Error('list HTTP ' + lr.status);
+    const list = await lr.json();
+    out.d1.list = list;
+    const rows = list.documents || list.docs || (Array.isArray(list) ? list : []);
+    for (const row of rows) {
+      const key = row.doc_key || row.key || row.id || row.blueprint_id;
+      if (!key) { out.errors.push('d1: a row carried no key — ' + JSON.stringify(row).slice(0, 120)); continue; }
+      try {
+        const dr = await fetch('/api/documents/' + encodeURIComponent(key), { headers: auth });
+        out.d1.docs[key] = dr.ok ? await dr.json() : ('HTTP ' + dr.status);
+        if (!dr.ok) out.errors.push('d1 doc ' + key + ': HTTP ' + dr.status);
+      } catch (e) { out.errors.push('d1 doc ' + key + ': ' + (e && e.message || e)); }
+    }
+  } catch (e) { out.errors.push('d1: ' + (e && e.message || e)); }
+
+  /* ⛔ THE COUNTS ARE IN THE FILE, so a reader can tell a complete export from a partial one
+     without trusting the button that produced it. */
+  out.counts = {
+    localStorage_keys: Object.keys(out.localStorage).length,
+    d1_docs: Object.keys(out.d1.docs).length,
+    errors: out.errors.length
+  };
+
+  try {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }));
+    a.download = 'datumae-export-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+    alert('Export could not save a file: ' + (e && e.message || e));
+    return out;
+  }
+
+  if (btn) {
+    btn.textContent = out.errors.length ? 'Exported (' + out.errors.length + ' issue' + (out.errors.length === 1 ? '' : 's') + ')' : 'Exported ✓';
+    setTimeout(() => { btn.disabled = false; btn.textContent = label; }, 4000);
+  }
+  return out;
+}
+window._bpExportAll = _bpExportAll;   // gate seam — read-only
+
+(function () {
+  const b = document.getElementById('action-export-blueprints');
+  if (b) b.addEventListener('click', () => { _bpExportAll(b); });
+}());
 
 document.getElementById('action-open-studio').addEventListener('click', () => {
   const id = AppSessionState.activeBlueprintId;
