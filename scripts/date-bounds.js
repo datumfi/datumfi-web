@@ -5,7 +5,7 @@
  *
  *   Current age (DOB) window : 18-85
  *   Retirement age window    : [max(45, CA+1), 90]
- *   Plan-through age window   : [max(75, RA+20), 105]
+ *   Plan-through age window   : [RA, 105]
  *
  * Pure, dependency-free. Exposes window.DatumDateBounds.
  */
@@ -14,28 +14,53 @@
 
   var AGE_MIN = 18, AGE_MAX = 85;   // current age (DOB)
   var RA_MIN_FLOOR = 45, RA_MAX = 90;
-  var PTA_MIN_FLOOR = 75, PTA_MAX = 105;
-  /* NAMED because it appears in a user-facing sentence. It was an inline `+ 20`, which meant the
-     rule existed in the arithmetic and nowhere a reader could find it. */
-  var PTA_GAP = 20;
+  var PTA_MAX = 105;
+  /* ⛔⛔ PTA_MIN_FLOOR (75) AND PTA_GAP (20) ARE DELETED — §9.2, 2026-09-14. THE RULE IS REMOVED,
+     NOT REWORDED, AND THAT DISTINCTION IS THE WHOLE RULING.
+     ⛔ A 20-YEAR GAP WAS NEVER THE CAPTAIN'S RULE. It asserts that a retirement shorter than twenty
+        years is invalid — a judgement about a person's life expectancy this product has no standing
+        to make. `max(75, RA+20)` is an actuarial guess with the guess taken out; the floor below is
+        derived from what the model MEANS: a plan that ends before it begins has no years to run.
+     ⛔⛔ AND THIS FILE IS WHY §82.2348 EXISTS. studio.html was moved to the derived floor on
+        2026-09-13 and THIS FILE WAS NOT, so the product carried TWO plan-through floors for a day:
+        the SLIDER's minimum came from studio.html's `minPlanEnd` (new) while TYPING A DATE was
+        validated here (old). The Captain met the old one, was told "at least 20 years after you
+        retire", and reported — correctly — that nothing had changed.
+     🔑 A RULE APPLIED IN ONE FILE IS NOT A RULE, IT IS A BRANCH. Before declaring this rule changed
+        again, enumerate every file that implements it: THIS file, studio.html (`minPlanEnd` /
+        `_planEndAgeMin`), schemas.py (`validate_ages`), and the two gates that assert it. */
 
   /* THE PLAN-THROUGH WINDOW FOR A GIVEN RETIREMENT AGE — one function, so the UI, the validator and
      any gate all ask the SAME question and cannot disagree about the answer.
      `floor` is CLAMPED to the ceiling so no caller can be handed an inverted range; `rawFloor`
      keeps the uncapped value because the crossed-state message has to report what the rule actually
-     demanded ("would need a plan-through age of 110"), not the clamped fiction.
+     demanded, not the clamped fiction.
        🔑 CLAMPING THE VALUE WITHOUT KEEPING THE TRUTH WOULD HIDE THE DEFECT INSTEAD OF EXPLAINING IT.
-     `raMaxValid` is COMPUTED (PTA_MAX - PTA_GAP), never typed.
-     ⚠️ FLAGGED FOR THE ARCHITECT: at exactly raMaxValid the window is COLLAPSED, not open — so the
-     crossed message points at a retirement age that yields a single plan-through value rather than
-     a range. The formula is the one that was ruled (105 - 20); the nuance is named here rather than
-     silently changed to raMaxValid - 1. */
+     ⚠️⚠️ FLAGGED FOR THE ARCHITECT — THE 'crossed' AND 'collapsed' BRANCHES ARE NOW UNREACHABLE AND
+        THEIR AUTHORED COPY IS LEFT STANDING DELIBERATELY. With the floor at RA and RA_MAX = 90
+        against PTA_MAX = 105, rawFloor can never reach the ceiling: the window is ALWAYS open.
+        Both sentences are the Architect's and deleting authored copy is not the Wirer's call, so
+        they are reported rather than removed. ⛔ THIS IS A LANDMINE BY THE FILE'S OWN DOCTRINE — a
+        refusal that cannot fire is not a safeguard — and it wants a ruling, not a quiet deletion.
+     `raMaxValid` is now simply PTA_MAX: every retirement age the retire field permits leaves a
+        usable window, which is the condition _gate_plan_window_never_empty was written to check. */
   function planWindow(ra) {
-    var rawFloor = Math.max(PTA_MIN_FLOOR, (ra | 0) + PTA_GAP);
+    var rawFloor = (ra | 0);
     var floor = Math.min(rawFloor, PTA_MAX);
     var state = rawFloor > PTA_MAX ? 'crossed' : (rawFloor === PTA_MAX ? 'collapsed' : 'open');
     return { floor: floor, ceiling: PTA_MAX, rawFloor: rawFloor, state: state,
-             raMaxValid: PTA_MAX - PTA_GAP };
+             raMaxValid: PTA_MAX };
+  }
+
+  /* §6.2 — THE ONE SENTENCE FOR "your plan ends before it starts", Architect-authored, wired
+     verbatim. It lives HERE rather than in studio.html because this module is the shared one:
+     the Profile's typed-date validator and the slider's blur clamp are two doors onto ONE rule,
+     and §82.2348 was written the day they disagreed.
+     ⛔ `{retirement_age}` IS ECHOED AND MUST BE. A fixed number here would be a new hardcode —
+        wrong for every household but one — which is the defect class this whole arc removes. */
+  function planFloorMsg(ra) {
+    return 'That is before you retire at ' + (ra | 0)
+         + '. A plan has to run past the day it starts — choose an age after that.';
   }
 
   // "MM / YYYY" or "MM/YYYY" (also accepts ISO "YYYY-MM") -> { mo, yr } or null. Month must be 1-12.
@@ -119,8 +144,13 @@
       if (w.state === 'collapsed' && (a < w.floor || a > w.ceiling)) {
         return { ok: false, age: a, state: w.state, err: 'Retiring at ' + (ra | 0) + ' leaves only one plan-through age: ' + PTA_MAX + '. To plan through anything earlier, move your retirement age back.' };
       }
+      /* ⛔⛔ THE §6.2 STRING, REUSED VERBATIM — NOT A SECOND COPY OF IT (L48, §9.2). studio.html's
+         `_planEndBelowFloorMsg` says exactly this sentence to the same person about the same fact.
+         Forking the wording here would rebuild the two-floors defect ONE LAYER UP: the arithmetic
+         would agree while the two sentences drifted, and nobody diffs a message across two files.
+         🔑 THE RULE AND ITS SENTENCE TRAVEL TOGETHER OR NEITHER IS SINGLE-SOURCED. */
       if (a < w.floor || a > w.ceiling) {
-        return { ok: false, age: a, state: w.state, err: 'Plan-through has to be at least ' + PTA_GAP + ' years after you retire — so between ' + w.floor + ' and ' + PTA_MAX + '.' };
+        return { ok: false, age: a, state: w.state, err: planFloorMsg(ra) };
       }
     }
     return { ok: true, age: a };
@@ -153,10 +183,14 @@
     return d.length <= 2 ? d : d.slice(0, 2) + '/' + d.slice(2);
   }
 
+  /* ⛔ PTA_GAP AND PTA_MIN_FLOOR ARE NOT EXPORTED BECAUSE THEY NO LONGER EXIST (§9.2). A constant
+     left on this object "for compatibility" would be a rule still readable by anything that asks,
+     and the two gates that read them are updated in THIS commit rather than kept alive by a stub.
+     🔑 DELETING A RULE MEANS DELETING EVERY CHECK THAT STILL IMPLEMENTS IT (§82.2351). */
   global.DatumDateBounds = {
-    planWindow: planWindow, PTA_GAP: PTA_GAP,
+    planWindow: planWindow, planFloorMsg: planFloorMsg,
     AGE_MIN: AGE_MIN, AGE_MAX: AGE_MAX, RA_MIN_FLOOR: RA_MIN_FLOOR, RA_MAX: RA_MAX,
-    PTA_MIN_FLOOR: PTA_MIN_FLOOR, PTA_MAX: PTA_MAX,
+    PTA_MAX: PTA_MAX,
     parseMoYr: parseMoYr, ageFromDob: ageFromDob, ageAtDate: ageAtDate,
     validateDob: validateDob, validateTarget: validateTarget,
     pad2: pad2, dateFromAge: dateFromAge, fmtDateStr: fmtDateStr

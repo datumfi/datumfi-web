@@ -125,13 +125,30 @@ const server = http.createServer((req, res) => {
      ⛔ WITHOUT THIS THE WHOLE GATE IS VACUOUS. If a valid DOB produced no mirrored date, then
      "no derived date remains after a refusal" would be trivially true and would stay true over a
      product that had stopped deriving entirely. */
+  /* ⛔⛔ RE-ARMED 2026-09-14 (§9.3). THIS LEG USED TO READ "a valid DOB produces a mirrored
+     plan-through date" AND THAT BEHAVIOUR IS NOW DELETED ON PURPOSE: a date of birth answers
+     exactly one question — how old somebody is — and it may not seed, suggest or prefill any other
+     field. Typing a DOB used to fill #plan-end-age from the slider's resting position, which closed
+     the door that exists to ask the question and sent 90 to the engine as though the person had
+     chosen it (Captain-measured in a browser: DOB 08/1982 -> plan-through 08/2072).
+     🔑 SO THE PRECONDITION IS NOW A HUMAN ACT, NOT A SIDE EFFECT. The mirror is armed by ANSWERING
+        the plan-through question through the real control, which is what window._ptaAnswered
+        records. THE LEG GOT STRONGER RATHER THAN WEAKER: L1a now guards the new rule (a DOB alone
+        invents nothing) and L1b still establishes that there is something a refusal could leave
+        behind. A single patched assertion would have proven only the second. */
   { const { ctx, page } = await fresh();
     const cold = await read(page);
     await type(page, '#pri-dob', '03/1985');
+    const dobOnly = await read(page);
+    ok(cold.plan === '' && dobOnly.plan === '',
+      'L1a · §9.3 — A DATE OF BIRTH ALONE INVENTS NO PLAN-THROUGH DATE [observed cold "'
+      + cold.plan + '" -> after DOB "' + dobOnly.plan + '"]');
+
+    await type(page, '#plan-end-age', '03/2075');   // the human answers, through the real control
     const good = await read(page);
-    ok(cold.plan === '' && /^\d{2}\s*\/\s*\d{4}$/.test(good.plan),
-      'L1 · A VALID DOB PRODUCES A MIRRORED PLAN-THROUGH DATE, so there is something a refusal '
-      + 'could wrongly leave behind [observed cold "' + cold.plan + '" -> "' + good.plan + '"]');
+    ok(/^\d{2}\s*\/\s*\d{4}$/.test(good.plan),
+      'L1b · ONCE ANSWERED, THE DATE IS THERE — so there is something a refusal could wrongly '
+      + 'leave behind [observed "' + good.plan + '"]');
     await ctx.close(); }
 
   /* ── L2a / L2b · TWO DIFFERENT REFUSALS, SAME PROPERTY ───────────────────────────────────────
@@ -142,7 +159,21 @@ const server = http.createServer((req, res) => {
      under test from CLEAR to REVERT and would have reported a defect that does not exist.
      🔑 THE RETRACTION TARGET IS CREATED BY THE BAD INPUT ITSELF: `oninput` derives from the
         half-typed future year before `onblur` ever refuses it, so the stale date exists precisely
-        in the case where there is no good value to fall back to. That is the Captain's case. */
+        in the case where there is no good value to fall back to. That is the Captain's case.
+
+     ⛔⛔ FLAGGED FOR THE ARCHITECT — THESE FOUR LEGS ARE NOW WEAKENED AND I AM SAYING SO RATHER
+        THAN LEAVING A GREEN THAT MEANS LESS THAN IT DID. Since §9.3, an unanswered plan-through
+        NEVER produces a derived date, so `after.plan === ''` is satisfied whether the retraction
+        works or not. THE ASSERTION IS TRUE OVER AN EMPTY SET.
+        ⚠️ AND IT CANNOT SIMPLY BE ARMED THE WAY L1b IS. Answering plan-through through the real
+           control needs a readable DOB first, and this fixture's whole design is that NO PRIOR GOOD
+           DOB EXISTS — seeding one changes the behaviour under test from CLEAR to REVERT and would
+           report a defect that does not exist (the paragraph above records that being measured).
+           The two requirements are in direct tension and resolving it is a design question, not a
+           patch: it wants either a non-DOB route to arming (the sl-plan-through slider, if it is
+           reachable on a cold Studio) or a ruling that this property is now covered by L1a instead.
+        🔑 A LEG THAT STILL PASSES FOR A NEW REASON IS NOT A LEG THAT STILL PASSES. Recorded here
+           so the next reader does not bank it. */
   for (const [shape, bad] of [['FUTURE birth date', '03/2057'],
                               ['an age far over the limit', '03/1900']]) {
     for (const [where, withRet, tag] of [['NO retirement date', false, 'a'],
@@ -164,12 +195,13 @@ const server = http.createServer((req, res) => {
      A fix of the form "never write anything" passes every leg above and destroys the feature. */
   { const { ctx, page } = await fresh();
     await type(page, '#pri-dob', '03/1985');
+    await type(page, '#plan-end-age', '03/2075');   // §9.3 — the mirror is armed by an ANSWER
     const a = await read(page);
     await type(page, '#pri-dob', '07/1990');
     const b = await read(page);
     ok(/^\d{2}\s*\/\s*\d{4}$/.test(a.plan) && /^\d{2}\s*\/\s*\d{4}$/.test(b.plan) && a.plan !== b.plan,
-      'L3 · A VALID DOB STILL MIRRORS, AND RE-MIRRORS WHEN IT CHANGES [observed "' + a.plan
-      + '" -> "' + b.plan + '"] — retracting on refusal must not become never writing at all');
+      'L3 · AN ANSWERED PLAN-THROUGH STILL MIRRORS, AND RE-MIRRORS WHEN THE DOB CHANGES [observed "'
+      + a.plan + '" -> "' + b.plan + '"] — retracting on refusal must not become never writing at all');
     await ctx.close(); }
 
   for (const l of lines) console.log(l);

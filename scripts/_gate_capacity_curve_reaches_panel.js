@@ -42,7 +42,7 @@ const { chromium } = require('playwright');
    would assert about a file that no longer contains what they name. They would not crash; they
    would go red in bulk for a reason unrelated to the room they guard.
    🔑 90 GATES AT RISK BECAME ONE HELPER. Reading around it puts this file back in the 90. */
-const { studioSource } = require('./_studio_source.cjs');
+const { studioSource, stripComments } = require('./_studio_source.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8219;
 
@@ -739,7 +739,18 @@ const REQUEST = { retirement_age: 52.6, plan_end_age: 93, datum_spend: TARGET };
     .concat(fs.readdirSync(path.join(ROOT, 'scripts'))
       .filter((f) => /\.js$/.test(f) && !/^_/.test(f))
       .map((f) => path.join(ROOT, 'scripts', f)));
-  const readers = files.filter((f) => fs.existsSync(f) && /capacity_curve/.test(fs.readFileSync(f, 'utf8')));
+  /* ⛔⛔ COUNTED ON STRIPPED SOURCE — 2026-09-14. This tested the RAW text and therefore counted
+     PROSE AS A READER: the cutover added one sentence to studio.html describing the 43-point
+     capacity_curve the panel receives, and this leg reported studio.html as a second mapper.
+     MEASURED: studio.html carries `capacity_curve` 1 time raw and 0 times in code.
+     🔑 AN INSTRUMENT MUST NOT DETECT BY SYNTAX. The claim is "one file MAPS this field", and a file
+        that merely NAMES it in a comment maps nothing. Left as it was, the only way to keep this
+        green would have been to stop writing down what the field does — an instrument that punishes
+        documentation is an instrument that will be worked around.
+     ⚠️ stripComments() is the shared one, regression-locked by _gate_studio_source's fixture
+        battery, so this does not introduce a fourth private stripper. */
+  const readers = files.filter((f) => fs.existsSync(f)
+    && /capacity_curve/.test(stripComments(fs.readFileSync(f, 'utf8'))));
   check('L6 NO FORK: exactly one shipped file reads capacity_curve',
     readers.length === 1 && /studio-measurement\.js$/.test(readers[0]),
     'readers = ' + JSON.stringify(readers.map((f) => path.relative(ROOT, f)))

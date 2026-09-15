@@ -83,6 +83,58 @@ const MAX_ROUNDS = 10;   // the loop must terminate even if a refusal cannot be 
       value it does not carry is SILENT (it takes ''), so a re-worded label would turn this into a
       no-op with nothing saying so. The assignment is READ BACK and verified for that exact reason. */
 function answerOne(id) {
+  /* ⛔⛔ THE ESTATE IS NOT A FIELD, AND UNTIL 2026-09-14 THIS HELPER TREATED IT AS ONE.
+     Two of the refusal queue's reasons — the estate ("Either an account with a balance, or what you
+     earn") and the target spend that depends on it — carry `target: 'sec-drafting'`, which is a
+     SECTION, not an input. The generic branch below found the element, wrote
+     "Seeded by _seed_household" into it, read it back, and reported ok — so the loop marked the
+     reason ANSWERED while the product went on refusing it. MEASURED: `STILL REFUSING:
+     sec-drafting,sec-drafting` after seven rounds, on every one of the seven gates that share this
+     file.
+     🔑 A DOOR THAT CANNOT NAME A FIELD CANNOT BE ANSWERED BY SETTING ONE. The estate is answered by
+        CREATING SOMETHING, and the product's own entry point for that is window.addInstance().
+     ⚠️ THE BALANCE IS SET ON THE STATE OBJECT AND THAT PART IS A FIXTURE ACT, NOT A UI ACT — said
+        out loud rather than glossed. addInstance() is the real door and is used as such; the value
+        that makes the account REACH THE ENGINE (_reachesEngine wants value > 0 or inflow > 0) is
+        written directly because the amount field lives behind a modal this helper deliberately does
+        not drive (fighting each gate's navigation is how a shared helper becomes a second product).
+     ⚠️ taxable IS CHOSEN BECAUSE IT IS THE PLAINEST INVESTABLE TYPE: not filtered by FILTERED_TYPES,
+        no Rule-of-55 or conduit semantics, no owner suffix. A seeded household should be the most
+        boring one the product accepts. */
+  if (id === 'sec-drafting') {
+    if (typeof window.addInstance !== 'function') return { ok: false, why: 'addInstance missing' };
+    const before = (window.state && window.state.accounts || []).length;
+    window.addInstance('taxable');
+    const accts = (window.state && window.state.accounts) || [];
+    if (accts.length !== before + 1) return { ok: false, why: 'addInstance did not add' };
+    accts[accts.length - 1].value = 750000;
+    try { if (typeof window.renderInputs === 'function') window.renderInputs(); } catch (_e) {}
+    try { if (typeof window.fireUpdate === 'function') window.fireUpdate(); } catch (_e) {}
+    return { ok: true, value: 'taxable account, $750,000 (via addInstance)' };
+  }
+  /* ⛔ THE TARGET SPEND IS NOT A FIELD EITHER, AND IT ONLY APPEARS ONCE THE ESTATE EXISTS. The
+     refusal's target moves from 'sec-drafting' to 'sec-sketch' the moment an account is added —
+     "a door that opens onto a locked room is worse than no door", so the product sends an
+     estate-less household to the estate step first. Answering the estate REVEALS this one.
+     ⛔ `_datumAnswered()` TESTS `dataset.exactVal`, NOT `.value`. That distinction is the product's
+        own §3 ruling: a slider POSITION is not an answer, a typed FIGURE is, and the dataset is
+        where a typed figure lives. Writing `.value` here would move the thumb and answer nothing —
+        the same class of mistake as writing text into a section.
+     ⚠️ THE POSITION IS SET FROM THE FIGURE THROUGH THE PRODUCT'S OWN SCALE (datumValToPos), so the
+        thumb and the stored fact agree. A seeded household whose slider disagrees with its own
+        answer is a fixture that could not occur in the product. */
+  if (id === 'sec-sketch') {
+    const sd = document.getElementById('slider-datum');
+    if (!sd) return { ok: false, why: 'no slider-datum' };
+    const DOLLARS = 95000;
+    sd.dataset.exactVal = String(DOLLARS);
+    try {
+      const SC = window.DatumShape && window.DatumShape.scales;
+      if (SC && typeof SC.datumValToPos === 'function') sd.value = SC.datumValToPos(DOLLARS / 1000);
+    } catch (_e) { /* the stored fact is the answer; the thumb is cosmetic */ }
+    ['input', 'change'].forEach((ev) => sd.dispatchEvent(new Event(ev, { bubbles: true })));
+    return { ok: true, value: '$' + DOLLARS.toLocaleString() + ' (dataset.exactVal)' };
+  }
   const el = document.getElementById(id);
   if (!el) return { ok: false, why: 'no element' };
   if (el.tagName === 'SELECT') {

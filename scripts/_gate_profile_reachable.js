@@ -170,24 +170,39 @@ const enter = async (P) => {
     JSON.stringify(jointOrder) === JSON.stringify(visualJoint),
     'visual=' + visualJoint.join(' > ') + '   keyboard=' + jointOrder.join(' > '));
 
-  /* ── L4/L5 · the disclosure must open on KEYBOARD focus, and be shut before it ─────────────── */
-  const tipOpacity = () => P.evaluate(() => {
-    const t = document.querySelector('.architect-lastsurvivor-tip');
-    return t ? { o: parseFloat(getComputedStyle(t).opacity), d: getComputedStyle(t).display } : null;
+  /* ── L4/L5 · RE-AIMED 2026-09-14, ARCHITECT-RULED (§82.2361 / §82.2363) ────────────────────
+     ⛔ THESE LEGS WATCHED , WHICH §6.11 RETIRED. Its text was false —
+     the engine prices all three clauses of the survivor year as of 9fefa49 — and it was shown only
+     to the population it was false about. The element is gone, so the tip-opacity probe returned
+     null and both legs failed over a surface that no longer exists.
+     ⭐ THE RULING: RE-AIM, DO NOT DELETE. The thing these legs were REALLY guarding — THAT THE
+        PROFILE SURFACE IS REACHABLE BY KEYBOARD AT ALL — is not retired and has no other guard.
+        They now assert the surface, not the sentence.
+     ⚠️ AND THEY LOAD THE ROUTE, NOT THE FILE: this gate already serves studio.html over HTTP, which
+        is what makes the claim about a path a user can walk rather than about bytes on a disk.
+     ⚠️ FLAGGED, NOT FIXED: styles/profile.css STILL CARRIES 4 RULES FOR .architect-lastsurvivor-tip,
+        orphaned CSS for an element that no longer ships. Harmless today; it is also what lets the
+        --hoveronly mutation still find its anchor, so deleting it without re-pointing that mutation
+        would turn a negative control into a silent abort. One ruling, both halves. */
+  const completeBtn = () => P.evaluate(() => {
+    const b = document.querySelector('.architect-complete-wrap button');
+    if (!b) return null;
+    const r = b.getBoundingClientRect();
+    return { present: true, rendered: r.width > 0 && r.height > 0, disabled: !!b.disabled };
   });
-  await P.evaluate(() => { const b = document.querySelector('#primary-name'); b && b.focus(); });
-  await P.waitForTimeout(300);
-  const before = await tipOpacity();
-  check('L5 HONEST HALF: the disclosure is CLOSED before anything focuses it (else L4 passes over '
-    + 'a tip that is simply always on)',
-    before && before.o === 0 && before.d !== 'none', JSON.stringify(before));
+  const shown = await completeBtn();
+  check('L5 HONEST HALF: the Complete Profile control RENDERS on the route a person walks — a reach '
+    + 'assertion over a missing control would pass by vacuum',
+    !!(shown && shown.present && shown.rendered), JSON.stringify(shown));
 
-  await P.evaluate(() => { const b = document.querySelector('.architect-complete-wrap button'); b && b.focus(); });
-  await P.waitForTimeout(400);
-  const after = await tipOpacity();
-  check('L4 REACH: focusing Complete Profile OPENS the disclosure — it is not pointer-only '
-    + '[BITE hoveronly]',
-    after && after.o > 0.9, JSON.stringify(after));
+  const focused = await P.evaluate(() => {
+    const b = document.querySelector('.architect-complete-wrap button');
+    if (!b) return null;
+    b.focus();
+    return { isActive: document.activeElement === b, tag: document.activeElement && document.activeElement.tagName };
+  });
+  check('L4 REACH: the Profile surface takes KEYBOARD focus — it is not pointer-only [BITE hoveronly]',
+    !!(focused && focused.isActive), JSON.stringify(focused));
 
   await b.close(); srv.close();
 

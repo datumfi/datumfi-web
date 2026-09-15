@@ -88,12 +88,39 @@
     'mcGuardrail', 'mcTerminal', 'mcFailure', 'mcModeCode', 'mcRangeWidth',
     'mcHeroRange', 'mcHeroDatum'];
 
+  /* ⛔⛔ §6.9b — THE SURVIVOR DISCLOSURE. THE STRING IS THE ARCHITECT'S, SHIPPED VERBATIM, AND IT IS
+     BYTE-FOR-BYTE THE ONE range.html HAS CARRIED SINCE 12 Sep — including the curly apostrophe in
+     "person’s". Same sentence, same trigger, new surface (§82.2363, L48). A re-wording here would
+     be the 75% getting re-argued through copy instead of through a ruling.
+     ⛔ IT IS NOT IN DATA_SLOTS, AND THAT IS THE SAME REASON renderTax IS NOT: `put()` only writes
+        textContent, and this element's resting state is HIDDEN. A slot list that only knows about
+        text would clear the sentence and leave the empty strip painted under the headline range —
+        which reads as something that failed to load, not as a household with no survivor window.
+     ⚠️ A NULL YEAR IS A NORMAL DISPLAY CONDITION, NOT A FAILURE: every solo household has one, and
+        so does any response from an engine too old to carry the field. Both render nothing at all.
+     ⚠️ THE YEAR IS INTERPOLATED, NEVER FORMATTED. money()/pct() would be wrong here — it is a
+        calendar year, not a quantity, and a thousands separator on 2064 would read as money. */
+  function renderSurvivor(year) {
+    var e = el('mcSurvivorDisclosure');
+    if (!e) return;
+    if (year == null) { e.hidden = true; e.textContent = ''; return; }
+    e.textContent = 'After ' + year + ', this plans for one person: the larger Social Security '
+                  + 'benefit, single-filer tax, one person’s healthcare, and 75% of your '
+                  + 'spending.';
+    e.hidden = false;
+  }
+
   function clearData() {
     for (var i = 0; i < DATA_SLOTS.length; i++) put(DATA_SLOTS[i], '');
     var line = el('mcCurveLine'), area = el('mcCurveArea'), marks = el('mcCurveMarkers');
     if (line) line.removeAttribute('d');
     if (area) area.removeAttribute('d');
     if (marks) marks.innerHTML = '';
+    /* ⛔ CLEARED HERE RATHER THAN ONLY IN renderEmpty, BECAUSE clearData IS THE FUNCTION EVERY
+       RE-RENDER GOES THROUGH. A disclosure left standing from the PREVIOUS household while the
+       next one's numbers paint over it would name a survivor year belonging to somebody else —
+       and it would look deliberate, because it was, once. */
+    renderSurvivor(null);
   }
 
   /* ⛔ THE EMPTY STATE IS A DISPLAY STATE, NOT AN ERROR. capacity_curve is Optional on the engine
@@ -296,6 +323,24 @@
     s.taxSeries = res.eff_rate_by_year || null;
     s.taxP25 = res.eff_rate_p25_by_year || null;
     s.taxP75 = res.eff_rate_p75_by_year || null;
+
+    /* ⛔⛔ §6.9b — THE SURVIVOR YEAR, READ FROM THE ENGINE AND NEVER RE-DERIVED.
+       LAW 183 — BIND THE COPY TO THE MECHANISM, NEVER TO A RESTATEMENT OF IT. The engine computes
+       the window and hands back the year; this reads that year. A client that re-derived "is there
+       a window?" from the two plan-through ages would be a SECOND IMPLEMENTATION of the rule, free
+       to drift from the one that actually moved the money.
+       ⛔ AND THAT RESTATEMENT WAS TRIED AND WAS WRONG. The original trigger read "joint household
+          AND the two plan-through ages differ." MEASURED: a couple who both plan to the SAME age
+          but differ in age by 2.2 years DOES open a 2.2-year window — the older one's horizon
+          arrives first. The described population was a STRICT SUBSET of the real one, so the
+          restatement silently skipped most affected households.
+       ⚠️ `== null` IS DELIBERATE AND `=== null` IS NOT USED: it catches null AND undefined, and
+          undefined is what a response from an engine predating the field looks like. Both mean the
+          same thing here — "no window was reported" — and both must render nothing.
+       ⚠️ IT RIDES ALONG RATHER THAN GATING THE SCENARIO, like the tax series above: `usable()`
+          does not test it. A solo household has no survivor year and must still get its Range. */
+    var _sy = res.params ? res.params.survivor_calendar_year : null;
+    s.survivorYear = (_sy == null) ? null : _sy;
     return s;
   }
 
@@ -343,6 +388,11 @@
     put('mcGuardrail', money(s.guardrail));
     put('mcTerminal', s.terminal == null ? '' : s.terminal);
     put('mcFailure', Number.isFinite(conf) ? pct(1 - conf) : '');
+
+    /* §6.9b — painted by the SAME call that paints the tiers it describes. There is no path
+       that renders a stepped-down number without it, which is the only structural way "it must
+       ship before any user sees a stepped-down tier" can hold, rather than holding by discipline. */
+    renderSurvivor(s.survivorYear);
     put('mcModeCode', s.code || '');
     put('mcRangeWidth', money(s.ceiling - s.floor));
 
@@ -940,6 +990,7 @@
       successAtSpend: successAtSpend,
       interpAt: interpAt,
       renderTax: renderTax,
+      renderSurvivor: renderSurvivor,
       taxY: taxY,
       taxCeiling: taxCeiling,
       curvePoints: function () { return CURVE_POINTS; },

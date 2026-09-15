@@ -3796,7 +3796,18 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                 <label class="control-label" for="sl-plan-through">Plan Through Age</label>
                 <span class="control-value" id="val-plan-through">Not set</span>
               </div>
-              <input type="range" id="sl-plan-through" min="75" max="105" value="90" step="1">
+              <!-- ⛔ `value="90"` REMOVED (§9.3, 2026-09-14). It was the number the Captain met:
+                   typing DOB 08/1982 in the Profile produced a plan-through date of 08/2072, and
+                   1982 + 90 = 2072. A range input always HAS a position, so the position is not
+                   the defect and deleting the attribute changes nothing on screen — a value-less
+                   range rests at min + (max-min)/2, which is 90, and _updatePlanEndAge then moves
+                   it to the midpoint of THIS household's own window.
+                   🔑 THE FIX IS window._ptaAnswered, NOT THE ATTRIBUTE: a resting position stops
+                      being a default when nothing READS it as an answer. The literal comes out as
+                      well so that a census grepping this markup for a person's figures finds
+                      nothing here — A NUMBER LEFT IN THE MARKUP IS A NUMBER THE NEXT SWEEP MUST
+                      RE-ADJUDICATE. -->
+              <input type="range" id="sl-plan-through" min="75" max="105" step="1">
               <div class="lev-tooltip">How long you're planning for your money to last — a shorter retirement raises your boundaries, a longer one lowers them, so set it to the age you genuinely want to be covered through.</div>
             </div>
           </div>
@@ -5250,6 +5261,40 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                 </div>
               </div>
             </section>
+
+            <!-- ⛔⛔ §6.9b — THE SURVIVOR DISCLOSURE, RE-HOMED ONTO THE PANEL. Ruled §82.2363,
+                 2026-09-14. THE STRING DOES NOT CHANGE — same sentence, same trigger, new surface
+                 (L48). If the wording changed here, the 75% would be getting re-argued through copy
+                 instead of through a ruling.
+                 ⛔ IT MOVED BECAUSE THE CUTOVER MOVED THE USER. §6.9 shipped into range.html on
+                    12 Sep and was correct there; the reveal now opens this panel and never visits
+                    that page, so the one sentence that explains a stepped-down tier had no home on
+                    the route a person actually walks. A DISCLOSURE ON A PAGE NOBODY REACHES IS NOT
+                    A DISCLOSURE — and `_gate_survivor_disclosure` could not tell the difference,
+                    because it loaded range.html directly over file:// and proved the FILE, not the
+                    PATH (§82.2361).
+                 ⛔ IT SITS HERE, DIRECTLY UNDER THE HEADLINE RANGE AND ABOVE THE THREE CARDS,
+                    BECAUSE THE RULING IS EXPLICIT: it lives WHERE THE STEPPED-DOWN NUMBER IS SHOWN.
+                    Not a footer, not behind a toggle, not in the tax face. The number above it is
+                    the one the survivor window moved.
+                 ⛔ MEASURED 12 Sep, and this is why it gates the ship: the survivor build moved a
+                    two-horizon household from 71,000 / 85,000 / 93,000 to 66,000 / 81,000 / 91,000
+                    — DOWN ON ALL THREE TIERS, the Floor included. The failure mode is not a bug. It
+                    is a household watching their number drop with no sentence on screen saying why.
+                 ⛔ THE 75% IS A HOUSE ASSUMPTION, NOT A FACT ABOUT THIS HOUSEHOLD, AND IT MOVES
+                    MONEY — so it is named on screen at the place it acts. That is Clause 2 in its
+                    plainest form: an unnamed house assumption moving a stranger's tiers IS "the
+                    Range we are showing you is not yours".
+                 ⚠️ EMPTY AND HIDDEN IS THE RESTING STATE. Only a response carrying a survivor year
+                    clears it, so a solo household — and a response from an engine too old to carry
+                    the field — shows nothing at all rather than an empty box or a sentence about a
+                    year nobody has.
+                 ⚠️ THE STRING NOW EXISTS IN TWO FILES UNTIL range.html IS DELETED, AND THAT IS A
+                    NAMED, TRIGGERED DUPLICATION RATHER THAN A FORK: range.html is sunset and ruled
+                    zero-effort, so it is not re-plumbed to read this one. THE COMMIT THAT DELETES
+                    range.html IS THE COMMIT THAT RESOLVES THIS. A duplication with no trigger is a
+                    fork; this one has a date and a deletion attached to it. -->
+            <div id="mcSurvivorDisclosure" class="mc-survivor-disclosure" hidden></div>
 
             <div class="mc-grid">
               <article class="mc-range-card floor">
@@ -15335,6 +15380,19 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       var CO_ARCH_DOB_UNREADABLE = "Your co-architect's date of birth could not be read, so this plan cannot be built for both of you.";
       var CO_ARCH_DOB_MISSING    = "Your co-architect's date of birth is missing, so this plan cannot be built for both of you.";
 
+      /* ⛔⛔ THE PROVENANCE BIT, AND ITS PLACEMENT IS THE WHOLE POINT — IT LIVES OUTSIDE
+         buildStudioRequest(). I FIRST PUT THE INITIALISER *INSIDE* THAT FUNCTION, WHICH MEANT EVERY
+         PAYLOAD BUILD ZEROED THE USER'S ANSWER. MEASURED IN A BROWSER, 2026-09-14: flag true before
+         the call, FALSE after it. The reveal path calls buildStudioRequest TWICE — once to collect
+         reasons, once to build — so the first call destroyed the answer and the second refused the
+         household for not having given one. IT WOULD HAVE REFUSED EVERY USER WHO ANSWERED IT.
+         🔑 A FLAG THAT RECORDS AN ANSWER MAY NOT BE INITIALISED WHERE THE ANSWER IS READ. Declared on
+            window because the writers live in four scopes and this file is not an IIFE; declared HERE
+            because parse time happens once and a payload build happens on every click.
+         ⚠️ GUARDED RATHER THAN ASSIGNED, so a later edit that re-runs this block cannot silently
+            retract an answer a person already gave. */
+      if (typeof window._ptaAnswered !== 'boolean') window._ptaAnswered = false;
+
       // STU-010: enum mapping and Group 4 filter. (STU-022 custom_weights retired 2026-09-13.)
       function buildStudioRequest() {
         window._buildRequestError = null;
@@ -15394,9 +15452,27 @@ const _datumAnswered = () => {
   const ex = el && el.dataset.exactVal;
   return !!(ex !== undefined && ex !== null && String(ex).trim() !== '');
 };
+/* ⛔⛔ §82.2350 — A DOOR THAT TESTS A BOX THE PRODUCT FILLED IN IS NOT A DOOR.
+   THIS READ `!!(el && el.value.trim())` AND THAT WAS THE WHOLE DEFECT. #plan-end-age is a MIRROR
+   of the sl-plan-through slider, and _mirrorPlanEnd wrote into it the moment a readable DOB landed
+   — so TYPING A DATE OF BIRTH IN THE PROFILE ANSWERED THE PLAN-THROUGH QUESTION ON THE USER'S
+   BEHALF, closed the door that exists to ask it, and sent the slider's resting position to the
+   engine as though the person had chosen it.
+   ⛔ CAPTAIN-MEASURED IN THE BROWSER, 2026-09-14: DOB 08/1982 typed into the Profile and nothing
+      else touched; the plan-through box read 08/2072 unprompted. 1982 + 90 = 2072, and 90 was the
+      slider's shipped `value="90"`. He never opened the area the slider lives in.
+   ⭐ THE SKETCH PATH WAS ALREADY CORRECT AND IS THE MODEL FOR THIS FIX — slider-age never calls
+      _updatePlanEndAge, so entering the same date there invented nothing. THE PROFILE MATCHES THE
+      SKETCH; THE SKETCH DOES NOT MOVE.
+   🔑 A NON-EMPTY VALUE IS NOT AN ANSWER. Provenance cannot be recovered from a string, so it is
+      recorded at the moment of the answer instead: window._ptaAnswered is set ONLY by a human act
+      (the slider committed, a date typed and validated) or by a SAVED answer being restored. It is
+      never set by a derivation, which is why _mirrorPlanEnd cannot reach it.
+   ⚠️ THE VALUE TEST SURVIVES ALONGSIDE THE FLAG, NOT INSTEAD OF IT: a flag with an empty box would
+      send a plan-through age with nothing on screen backing it. Both, or neither. */
 const _planThroughAnswered = () => {
   const el = document.getElementById('plan-end-age');
-  return !!(el && String(el.value || '').trim());
+  return !!(window._ptaAnswered && el && String(el.value || '').trim());
 };
 const _reachesEngine = a =>
              !FILTERED_TYPES.has(a.baseId)
@@ -15848,7 +15924,6 @@ const _reachesEngine = a =>
       }
       window._validateDateField = _validateDateField;
 
-      var _planEndAgeDefault = 93;
       var _planEndAgeMin = 75;
       function _updatePlanEndAge() {
         var dobVal = (document.getElementById('pri-dob') || {}).value || '';
@@ -15906,11 +15981,17 @@ const _reachesEngine = a =>
               the two: the schema now accepts 72 and a client floor of 87 would hide it. The two
               floors are one rule in two repositories and they move together or not at all. */
         var minPlanEnd    = Math.min(105, Math.max(Math.ceil(currentAge), Math.ceil(retireAge)));
-        /* ⚠️ THE UNANSWERED RESTING POSITION IS NOW THE MIDPOINT OF THIS HOUSEHOLD'S OWN RANGE,
-           not of a fixed 75-105 bar. §3.2 asks for "a position that carries no recommendation",
-           and the middle of what is actually allowed is the only position that keeps meaning that
-           once the floor stops being the same number for everyone. */
-        var defaultPlanEnd = Math.min(105, Math.max(93, minPlanEnd));
+        /* ⚠️ THE UNANSWERED RESTING POSITION IS THE MIDPOINT OF THIS HOUSEHOLD'S OWN RANGE (set
+           below), not of a fixed 75-105 bar. §3.2 asks for "a position that carries no
+           recommendation", and the middle of what is actually allowed is the only position that
+           keeps meaning that once the floor stops being the same number for everyone.
+           ⛔ `defaultPlanEnd = Math.min(105, Math.max(93, minPlanEnd))` IS DELETED HERE (§9.3,
+              2026-09-14). Its only consumer was `_planEndAgeDefault`, which NOTHING EVER READ — so
+              the Captain's 93 sat in a live expression, on the plan-through window, kept alive by
+              an assignment to a dead variable. It could not be found by asking "what moves the
+              answer" because it moved nothing; it would have been found the day somebody wired the
+              variable up, and then it would have shipped as a recommendation.
+           🔑 A DEAD READER IS NOT A SAFE DEFAULT. IT IS A DEFAULT WAITING FOR A CONSUMER. */
         _planEndAgeMin = minPlanEnd;
         // 2A — operate on the sl-plan-through slider (the single PTA-age source) and refresh the
         // plan-end-age date mirror; the field is no longer the source. Capped at the slider max (105).
@@ -15934,16 +16015,31 @@ const _reachesEngine = a =>
              🔑 A RANGE THE PRODUCT WILL NOT ACCEPT SHOULD NOT BE OFFERED. Rejecting an answer the
                 control invited is a worse experience than never offering it. */
           if (sPlan.min !== String(minPlanEnd)) sPlan.min = String(minPlanEnd);
-          var _peBox = document.getElementById('plan-end-age');
-          var _answered = !!(_peBox && String(_peBox.value || '').trim());
+          /* ⛔⛔ THE MIDPOINT BRANCH IS DELETED — §9.3, 2026-09-14. IT READ:
+                 if (!_answered) cur = Math.round((minPlanEnd + 105) / 2);
+             It moved an UNANSWERED slider to the middle of this household's own range, which was
+             argued as "a position that carries no recommendation". It carried one: it is a number
+             the product chose, derived from this household's figures, sitting on the control that
+             asks the question.
+             ⛔ CAUGHT BY _gate_start_fresh_cold_parity, WHICH IS THE GATE FOR EXACTLY THIS AND WAS
+                BLIND TO IT UNTIL NOW. MEASURED: a real cold boot leaves the slider at 90; Start
+                Fresh left it at 80 — "INVENTED: sl-plan-through=80", a value from neither the user
+                nor the markup. The parity held before only because the old mirror filled the date
+                box from a DOB, so `_answered` was spuriously true and this branch never ran. THE
+                DELETED SIDE EFFECT WAS HIDING A SECOND INVENTED NUMBER BEHIND IT.
+             🔑 CORRECTING AN ANSWER IS NOT THE SAME ACT AS SUPPLYING ONE — this file's own words,
+                twenty lines up. The clamp below CORRECTS (an answer outside the household's valid
+                range is pulled into it, and _planEndBelowFloorMsg says so); the midpoint SUPPLIED.
+             ⚠️ AND THE POSITION NO LONGER MEANS ANYTHING UNTIL IT IS ANSWERED. window._ptaAnswered
+                gates whether the slider is read at all, so where it happens to rest is now cosmetic
+                — which is precisely why moving it per-household bought nothing and cost a defect. */
           var cur = parseInt(sPlan.value, 10);
-          if (!_answered) cur = Math.round((minPlanEnd + 105) / 2);
+          if (!Number.isFinite(cur)) cur = minPlanEnd;
           else if (cur < minPlanEnd) cur = minPlanEnd;
           else if (cur > 105) cur = 105;
           sPlan.value = cur;
           if (typeof updatePlanThroughLabel === 'function') updatePlanThroughLabel();
         }
-        _planEndAgeDefault = defaultPlanEnd;
         if (window._mirrorPlanEnd) window._mirrorPlanEnd();
       }
       window._updatePlanEndAge = _updatePlanEndAge;
@@ -16644,20 +16740,81 @@ const _reachesEngine = a =>
       window.addEventListener('pageshow', _revealOverlayRecover);
 
       if (revealBtn) {
+        /* ⛔⛔⛔ THE CUTOVER — §82.2354, Captain-ruled 2026-09-14. THE STUDIO DRAWS ITS OWN RANGE.
+           WHAT THIS HANDLER USED TO DO: run the full-screen `#cinematic-overlay` V-scan theater on
+           fixed timers, write the engine's answer into sessionStorage, and then `_navDrain` the
+           user to `/range.html` — a page the Captain has ruled is SUNSET and which is broken today.
+           So the product computed a correct Range and walked the person away from it.
+
+           ⛔⛔ THE PANEL THAT DRAWS IT HAS BEEN BUILT AND UNREACHABLE THIS WHOLE TIME. #mcOverlay
+              (:5211), the Convergence swarm (:5184) and scripts/studio-measurement.js all shipped
+              and loaded on every page view, and `grep DatumMeasurement studio.html` RETURNED ZERO
+              LINES. The panel's own note named this exact commit: "Built, not doored — flipping it
+              is the single cutover at the end of the port."
+           ⭐ MEASURED BEFORE WIRING, against :prod-8 with the body buildStudioRequest assembles —
+              HTTP 200, tiers.blended.bedrock 62,000 / success_rates.datum_spend 72,000 at 97.0% /
+              capstone 111,000, a 43-point capacity_curve, the tax series and median_ending. EVERY
+              MEMBER THE PANEL READS WAS ALREADY ARRIVING AND BEING DISCARDED ON EVERY REVEAL.
+
+           ⛔ REVEAL FORCES SPLIT, AND IT IS NOT A LAYOUT CONVENIENCE. .mc-overlay is positioned
+              against .canvas-wrapper, which is `display:none` in mode-draft — so revealing from
+              Sheet would open the panel inside a hidden container and show the user nothing.
+              §82.2354 rules the fix is to switch the VIEW, not to move the panel out: "the estate
+              standing behind the Range is the entire product thesis. A Range rendered over a blank
+              page is every other retirement product on the internet."
+           ⛔ NO TRANSITION SENTENCE, NO TOAST, NO MODE-CHANGE WARNING. The user asked to see their
+              Range; showing it is not an event that needs narrating.
+
+           ⚠️ THE OLD THEATER IS NOT DELETED, IT IS UNCALLED. #cinematic-overlay, its logs and
+              resetOverlayState() all remain — resetOverlayState is still the ONE place that
+              re-enables the button, and F73 hoisted it precisely so something other than a click
+              could reach it. It early-returns harmlessly when the overlay is never activated.
+              FLAGGED: the overlay markup is now dead surface and wants its own removal commit with
+              its own gate, not a silent deletion riding in here.
+           ⚠️ THE SWARM WAITS ON THE ACTUAL ENGINE PROMISE, WHICH IS WHY runConvergence TAKES ONE.
+              The Mock resolves on fixed timers because it has nothing to wait for. A progress
+              animation that finishes before the work does is a spinner that lies.
+           ⚠️ NO NAVIGATION MEANS NO LEAVE-GUARD, so `window._stuLeaveAnswered = true` (F74b) is
+              GONE WITH THE `_navDrain` IT EXISTED FOR. Nothing departs, so nothing must be waved
+              through — and leaving the latch set would pre-answer a LATER, unrelated departure.
+           ⭐ AND IT KILLS THE NEW JERSEY BUG STRUCTURALLY. `_datumHandleRefusal` painted the
+              engine's refusal into #reveal-status and the page then navigated away from the
+              sentence it had just rendered — `window._datumWasRefusal` was written twice and READ
+              NOWHERE. Remove the navigation and the refusal stays on screen because there is
+              nowhere else to go. The flag is now read, once, below. */
         revealBtn.addEventListener('click', async function() {
-          // Block if total investable assets = $0
-          var totalInvestable = (state.accounts || [])
-            .filter(function(a) { var b = getBaseType(a.baseId); var tc = b ? b.taxCode : ''; return tc !== 'physical' && tc !== 'other' && tc !== 'debt'; })
-            .reduce(function(sum, a) { return sum + (a.value || 0); }, 0);
-          /* F77 — ONE PASS, EVERY REASON. The account check used to `return` here, so a cold
-             Studio never reached the date checks and the user was told one thing at a time.
-             buildStudioRequest() is called for its COLLECTION only; the request itself is rebuilt
-             on whichever path runs below. It is safe over an empty estate — it reads inputs. */
+          /* ⛔⛔ THE TENTH DOOR IS DELETED — §82.2351, Captain-ruled 2026-09-14.
+             IT READ:
+                 var totalInvestable = state.accounts.filter(not physical/other/debt)
+                                         .reduce(sum + (a.value || 0), 0);
+                 if (totalInvestable === 0) _all.push({ field: 'Accounts required',
+                                                        message: REVEAL_NO_ACCOUNT, ... });
+
+             ⛔ IT WAS NOT MERELY A DUPLICATE OF THE ESTATE DOOR. IT ENFORCED THE RULE THAT HAD
+                ALREADY BEEN OVERTURNED. ESTATE_REQUIRED asks for "either an account with a balance,
+                or what you earn — the plan needs one of the two"; this one demanded "Add at least
+                one account with a BALANCE." Two doors guarding one fact, disagreeing about what the
+                fact is.
+             🔑 WHERE TWO DOORS GUARD ONE FACT, THE STRICTER ONE IS THE REAL RULE. The looser door
+                was the ruling; the stricter door was the product. The product wins every time,
+                which is why deleting a rule means deleting every check that still implements it.
+             ⛔ MEASURED, NOT ARGUED — the two tests are not the same test. `_reachesEngine` passes
+                an account on `(a.value > 0 || a.inflow > 0)`, and the payload builder maps
+                `balance: a.value, annual_contribution: a.inflow`. This sum read `a.value` ALONE.
+                So somebody who has just opened a 401(k) — nothing in it yet, contributing every
+                month — CLEARED THE ESTATE DOOR AND WAS STOPPED HERE, and told to add a balance
+                they had already said they did not have.
+             ⚠️ THE CAPTAIN HAD ALREADY RULED ON THIS ONCE: "it was decided that a user was NOT
+                required to enter an account (was told to me that some users dont have accounts and
+                are being left out). SO I agreed yet now we have it twice."
+             ⚠️ REVEAL_NO_ACCOUNT IS LEFT DECLARED AND UNUSED ON PURPOSE. It is authored copy and
+                deleting the Architect's strings is not the Wirer's call; it is now a string with no
+                caller rather than a refusal that cannot fire, which is the harmless half of that
+                pair. FLAGGED FOR THE ARCHITECT to retire or re-home.
+
+             F77 — ONE PASS, EVERY REASON. buildStudioRequest() is called for its COLLECTION only;
+             the request itself is rebuilt below. It is safe over an empty estate — it reads inputs. */
           var _all = [];
-          /* ⚠ DIFFUSE BY NATURE — there is no input to fix, because the fix is to CREATE one. The
-             door opens the room where accounts are added rather than focusing a field that does not
-             exist yet. A reason that cannot name a field can still name a place. */
-          if (totalInvestable === 0) _all.push({ field: 'Accounts required', message: REVEAL_NO_ACCOUNT, target: 'sec-drafting' });
           try { buildStudioRequest(); } catch (_e) {}
           _all = _all.concat(window._buildRequestErrors || []);
           if (_all.length) { _revealRefuse(_all); return; }
@@ -16665,40 +16822,37 @@ const _reachesEngine = a =>
 
           if (window.dfTrack) dfTrack('studio_reveal_clicked');
 
-          const overlay        = document.getElementById('cinematic-overlay');
-          const ariaLive       = document.getElementById('cinematic-aria-live');
-          const mainLayout     = document.getElementById('c-main-layout');
-          const errorState     = document.getElementById('c-error-state');
-          const retryBtn       = document.getElementById('c-retry-btn');
-          const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          const req = buildStudioRequest();
+          if (!req) { resetOverlayState();
+            _revealStatus(window._buildRequestError, window._buildRequestErrorField,
+                          'Input Error', 'Check your inputs and try again.');
+            return; }
 
-          overlay.classList.add('active');
+          /* §82.2354 — the view is switched BEFORE the swarm opens, not after the answer lands.
+             The convergence panel lives in the same canvas wrapper the Measurement panel does, so
+             a reveal from Sheet would otherwise play its whole animation inside a hidden element
+             and then hand over to an equally hidden Range. Reuses the existing public setter (L48)
+             so the view buttons stay in step — a class toggled here would leave the toolbar
+             claiming Sheet while the layout showed Split. */
+          try {
+            var _layout = document.getElementById('studio-layout');
+            if (_layout && !_layout.classList.contains('mode-split') && typeof window.setViewMode === 'function') {
+              window.setViewMode('split');
+            }
+          } catch (_e) { /* a view that will not switch must not block the answer */ }
+
           revealBtn.disabled = true;
 
-          function announce(msg) {
-            if (!ariaLive) return;
-            ariaLive.textContent = '';
-            requestAnimationFrame(function() { ariaLive.textContent = msg; });
-          }
-
-          function showLog(id) {
-            var el = document.getElementById(id);
-            if (el) el.classList.add('show');
-          }
-
-          /* ⛔ THE COMPUTE PATH REPORTS ITS OWN FAILURES, AND UNTIL NOW IT DID NOT — FINDING 40.
-             Every branch below was swallowed into `null`, and the page then showed an HONEST error
-             to the user. So this product told every affected user that it had failed, and told US
-             nothing. That is why Finding 30 ran undetected: the reference estate has been breaching
-             the 30s client budget in production and the failure was VISIBLE TO EVERYONE IT HAPPENED
-             TO AND INVISIBLE TO THE TEAM. Silence was never evidence of health; it was evidence of
-             a missing call.
-             ⛔ THE `r.ok` TERNARY IS THE BRANCH THAT MATTERED, AND IT IS NOT THE `.catch`. A non-2xx
-             response resolves — it never reaches a rejection handler — so an instrument placed on
-             `.catch` alone would have been written, reviewed, merged and believed while reporting
-             nothing. A CORRECT DIAGNOSIS DOES NOT LOCATE ITS OWN REMEDY.
-             ⚠️ Sentry captures UNHANDLED errors. These are handled, so no event is automatic:
-             the call is explicit here or there is no event at all. */
+          /* ⛔ THE COMPUTE PATH REPORTS ITS OWN FAILURES, AND UNTIL F40 IT DID NOT — every branch
+             was swallowed into `null`, so this product told every affected user it had failed and
+             told US nothing. That is why Finding 30 ran undetected: the reference estate breached
+             the client budget in production, VISIBLE TO EVERYONE IT HAPPENED TO AND INVISIBLE TO
+             THE TEAM. Silence was never evidence of health; it was evidence of a missing call.
+             ⛔ THE `r.ok` BRANCH IS THE ONE THAT MATTERED, AND IT IS NOT THE `.catch`. A non-2xx
+                response RESOLVES — it never reaches a rejection handler — so an instrument placed
+                on `.catch` alone would have been written, reviewed, merged and believed while
+                reporting nothing. A CORRECT DIAGNOSIS DOES NOT LOCATE ITS OWN REMEDY.
+             ⚠️ Sentry captures UNHANDLED errors. These are handled, so no event is automatic. */
           function _reportComputeFailure(stage, detail) {
             try {
               var S = window.Sentry;
@@ -16709,237 +16863,108 @@ const _reachesEngine = a =>
             } catch (_) { /* telemetry must never break the reveal it is reporting on */ }
           }
 
-          if (retryBtn) retryBtn.onclick = resetOverlayState;
+          window._datumWasRefusal = false;
 
-          // === REDUCED-MOTION FAST PATH (1C) ===
-          if (prefersReduced) {
-            announce('Analyzing your estate. Running 10,000 simulations.');
-            ['log-1','log-2','log-3','log-4','log-5','log-6','log-7'].forEach(showLog);
-
-            const req = buildStudioRequest();
-            if (!req) { resetOverlayState();
-              _revealStatus(window._buildRequestError, window._buildRequestErrorField,
-                            'Input Error', 'Check your inputs and try again.');
-              return; }
-            let apiResult = null, timedOut = false;
-            try {
-              apiResult = await Promise.race([
-                fetch('/api/calculate', {
-                  method: 'POST', headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify(req)
-                }).then(function(r) {
-                  /* ⛔ REFUSAL FIRST, FAILURE SECOND. A 422 carrying {code, condition, change} is
-                     RENDERED and NOT reported; anything else keeps the original Sentry path. */
-                  if (!r.ok) {
-                    return r.text().then(function (t) {
-                      if (_datumHandleRefusal(r, t)) { window._datumWasRefusal = true; return null; }
-                      _reportComputeFailure('http_' + r.status, 'HTTP ' + r.status + ' from /api/calculate');
-                      return null;
-                    });
-                  }
-                  return r.json();
-                }).catch(function(err) { _reportComputeFailure('network', (err && err.message) || String(err)); return null; }),
-                new Promise(function(_, reject) { setTimeout(function() { reject(new Error('timeout')); }, 30000); })
-              ]);
-            } catch(e) {
-              timedOut = !!(e && e.message === 'timeout');
-              _reportComputeFailure(timedOut ? 'timeout' : 'unexpected', (e && e.message) || String(e));
+          /* ⚠️ THE HORIZON IS THE USER'S OWN ARITHMETIC OR IT IS ABSENT. Both operands are figures
+             this household supplied; the years between them are not a new fact. No default years —
+             studio-measurement.js renders the tile weight blank rather than inventing one. */
+          var _horizon = null;
+          try {
+            var _ra = Number(req.retirement_age), _pe = Number(req.plan_end_age);
+            if (Number.isFinite(_ra) && Number.isFinite(_pe) && Math.round(_pe - _ra) > 0) {
+              _horizon = Math.round(_pe - _ra) + ' yrs';
             }
+          } catch (_e) {}
 
-            if (timedOut) {
-              mainLayout.style.display = 'none';
-              errorState.classList.add('show');
-              announce('We could not compute your Range. Please check your inputs and try again.');
-              return;
-            }
-
-            ['cw-ceil','cw-datum','cw-floor'].forEach(function(id) {
-              var el = document.getElementById(id); if (el) el.classList.add('expand');
-            });
-
-            sessionStorage.setItem('datumfi_studio_request', JSON.stringify(req));
-            if (apiResult) sessionStorage.setItem('datumfi_range', JSON.stringify(apiResult));
-            else sessionStorage.setItem('datum_api_fallback', 'true');
-            sessionStorage.setItem('datum_range_revealed', 'true');
-            announce('Datum locked. Your Range is ready.');
-            if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: !!apiResult, reduced_motion: true });
-            await new Promise(function(r) { setTimeout(r, 500); });
-            /* F74 — THE DRAFT SURVIVES THE RANGE (reduced-motion path). Same removal as the
-               full-animation path below; the full account is in the note there. */
-            /* F74b — REVEALING IS A DEPARTURE THE USER JUST CHOSE; DO NOT ASK THEM TO CONFIRM IT.
-               ⛔ THIS LINE EXISTS BECAUSE F74 REMOVED THE CLEAR ABOVE IT, AND THE CLEAR WAS LOAD-BEARING
-                  IN A WAY NOTHING RECORDED. _navDrain runs _stuLeaveGuard first, and that guard blocks on
-                  DatumBlueprint.workState() reporting unsaved content. Clearing the draft happened to zero
-                  that state, so the reveal sailed through. With the draft surviving, the guard fires and
-                  the product's PRIMARY ACTION pops an 'are you sure you want to leave?' dialog.
-               🔑 NO READERS IS NOT NO PURPOSE — and the reader was three functions away, through a guard
-                  reading state the clear happened to reset. Checking that no GATE depended on it was not
-                  checking that no CODE PATH did. Caught by R4, which asserts the reveal still lands.
-               ⚖ REUSES THE EXISTING LATCH RATHER THAN INVENTING A BYPASS (L48). Its own comment names this
-                  case: 'THE HUMAN HAS ALREADY ANSWERED THIS DEPARTURE, SO LET IT THROUGH.' The latch is
-                  scoped to ONE departure and is cleared by the next real edit, so somebody who comes back
-                  from the Range and keeps working is still asked on their next exit. */
-            window._stuLeaveAnswered = true;   // F74b
-            window._navDrain('/range.html');
-            return;
-          }
-
-          // === FULL ANIMATION PATH ===
-
-          // Phase 1 (0–3.5s, always runs): logs 1-4 + estate draw + V-scan beam
-          announce('Initializing Datum V-Scan engine.');
-          setTimeout(function() { showLog('log-1'); }, 300);
-          setTimeout(function() { showLog('log-2'); announce('Compiling architectural assets.'); }, 700);
-          setTimeout(function() { showLog('log-3'); announce('Isolating liquidity friction.'); }, 1100);
-          setTimeout(function() { showLog('log-4'); announce('Running 10,000 futures simulation.'); }, 1500);
-          setTimeout(function() {
-            var estate = document.getElementById('c-estate');
-            var estText = document.getElementById('c-estate-text');
-            if (estate) estate.classList.add('show');
-            if (estText) estText.style.opacity = '1';
-          }, 800);
-          setTimeout(function() {
-            var scanner = document.getElementById('c-scanner');
-            if (scanner) scanner.classList.add('scan');
-          }, 1800);
-          setTimeout(function() {
-            var scanner = document.getElementById('c-scanner');
-            if (scanner) scanner.style.opacity = '0';
-          }, 3400);
-
-          // Kick off API in parallel with Phase 1 theater
-          const req = buildStudioRequest();
-          if (!req) { resetOverlayState();
-            _revealStatus(window._buildRequestError, window._buildRequestErrorField,
-                          'Input Error', 'Check your inputs and try again.');
-            return; }
-          let apiResult = null, timedOut = false, apiSettled = false;
-
-          fetch('/api/calculate', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
+          /* ⛔ REFUSAL FIRST, FAILURE SECOND. A 422 carrying {code, condition, change} is RENDERED
+             and NOT reported; anything else keeps the Sentry path. ONE call site now, where there
+             were two — the reduced-motion fork carried a byte-for-byte copy of this chain, and a
+             refusal rendered on one path and captured as a crash on the other is the same defect,
+             half-fixed, invisible to whichever path the tester happens to take. */
+          var _work = fetch('/api/calculate', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(req)
-          }).then(function(r) {
-              /* ⛔ REFUSAL FIRST, FAILURE SECOND — the twin of the branch in the reduced-motion
-                 path above. BOTH SITES OR NEITHER: a refusal rendered on one path and captured as
-                 a crash on the other is the same defect, half-fixed, and invisible to whichever
-                 path the tester happens to take. */
-              if (!r.ok) {
-                return r.text().then(function (t) {
-                  if (_datumHandleRefusal(r, t)) { window._datumWasRefusal = true; return null; }
-                  _reportComputeFailure('http_' + r.status, 'HTTP ' + r.status + ' from /api/calculate');
-                  return null;
-                });
-              }
-              return r.json();
-            })
-            .catch(function(err) { _reportComputeFailure('network', (err && err.message) || String(err)); return null; })
-            .then(function(v) { apiResult = v; apiSettled = true; });
+          }).then(function (r) {
+            if (!r.ok) {
+              return r.text().then(function (t) {
+                if (_datumHandleRefusal(r, t)) { window._datumWasRefusal = true; return null; }
+                _reportComputeFailure('http_' + r.status, 'HTTP ' + r.status + ' from /api/calculate');
+                return null;
+              });
+            }
+            return r.json();
+          }).catch(function (err) {
+            _reportComputeFailure('network', (err && err.message) || String(err));
+            return null;
+          });
 
-          setTimeout(function() {
-            if (!apiSettled) { _reportComputeFailure('timeout', 'no response within 30000ms'); }
-            timedOut = true;
-          }, 30000);
+          /* ⚠️ THE 30s BUDGET IS A CLIENT DECISION AND IT IS TIGHT — MEASURED 2026-09-14 against
+             :prod-8: a NEW two-account $1.05M household costs 20-23s warm, and repeat payloads
+             return in 7-10s only because the engine's tier cache answers them. Cost scales with
+             wealth (F30), so a real estate can cross this line. The budget is kept rather than
+             widened here: raising it would hide the problem behind a longer wait. */
+          var _timedOut = false;
+          var _budget = new Promise(function (_res, rej) {
+            setTimeout(function () { _timedOut = true; rej(new Error('timeout')); }, 30000);
+          });
 
-          // Phase 2 (3.5s checkpoint): wait for minimum theater
-          await new Promise(function(r) { setTimeout(r, 3500); });
-
-          // If API still pending, loop log-4 with progress dots until it resolves
-          if (!apiSettled && !timedOut) {
-            var log4El = document.getElementById('log-4');
-            if (log4El) log4El.classList.add('pulse');
-            var dotCount = 0;
-            var baseText = '> RUNNING 10,000 FUTURES';
-            await new Promise(function(resolve) {
-              var dotInterval = setInterval(function() {
-                if (apiSettled || timedOut) { clearInterval(dotInterval); resolve(); return; }
-                dotCount = (dotCount + 1) % 4;
-                if (log4El) log4El.textContent = baseText + '.'.repeat(dotCount);
-                announce('Running 10,000 futures' + '.'.repeat(dotCount));
-              }, 600);
-            });
-            if (log4El) { log4El.classList.remove('pulse'); log4El.textContent = '> RUNNING 10,000 FUTURES...'; }
+          var apiResult = null;
+          try {
+            /* ⭐ THE SWARM PLAYS FOR THE LIFE OF THE REQUEST AND ITS ENDING *IS* THE RESULT.
+               runConvergence resolves with whatever the work resolved to, so the answer flows
+               straight through into the panel below without a second fetch. */
+            apiResult = await DatumMeasurement.runConvergence(
+              Promise.race([_work, _budget]), { request: req, horizon: _horizon });
+          } catch (e) {
+            if (_timedOut) _reportComputeFailure('timeout', 'no response within 30000ms');
+            else          _reportComputeFailure('unexpected', (e && e.message) || String(e));
+            apiResult = null;
           }
 
-          // Error state (1E)
-          if (timedOut) {
-            mainLayout.style.display = 'none';
-            errorState.classList.add('show');
-            announce('We could not compute your Range. Please check your inputs and try again.');
+          resetOverlayState();   // re-enables the button; the old overlay is inert but this is its one home
+
+          if (_timedOut) {
+            /* Authored copy, re-homed verbatim from the retired #c-error-state block — the same
+               sentence the user would have read there, now on the surface that still exists. */
+            _revealPaint('Not yet', 'We could not compute your Range. Please check your inputs and try again.');
+            if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: false, timed_out: true });
             return;
           }
 
-          // Phase 3 (API resolved): thermodynamic shock + boundary mapping (~2s total)
-          announce('Applying thermodynamic shock.');
-          showLog('log-5');
-          var shockwave = document.getElementById('c-shockwave');
-          if (shockwave) shockwave.classList.add('fire');
-          var estate = document.getElementById('c-estate');
-          if (estate) estate.classList.add('shocked');
-          setTimeout(function() {
-            if (estate) { estate.classList.remove('shocked'); estate.classList.add('dim'); }
-            var estText = document.getElementById('c-estate-text');
-            if (estText) estText.style.opacity = '0';
-          }, 400);
+          /* ⛔ A REFUSAL IS ALREADY ON SCREEN AND MUST BE LEFT THERE. _datumHandleRefusal painted it
+             into #reveal-status before this line ran; opening an empty Measurement panel over it
+             would replace a sentence that names what is missing with a panel that says nothing.
+             THIS IS THE FIRST READ `_datumWasRefusal` HAS EVER HAD. */
+          if (window._datumWasRefusal) {
+            if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: false, refused: true });
+            return;
+          }
 
-          setTimeout(function() {
-            showLog('log-6');
-            announce('Mapping structural boundaries.');
-          }, 700);
+          if (!apiResult) {
+            _revealPaint('Not yet', 'We could not compute your Range. Please check your inputs and try again.');
+            if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: false });
+            return;
+          }
 
-          setTimeout(function() {
-            var el = document.getElementById('cw-ceil'); if (el) el.classList.add('expand');
-          }, 800);
-          setTimeout(function() {
-            var el = document.getElementById('cw-datum'); if (el) el.classList.add('expand');
-          }, 1100);
-          setTimeout(function() {
-            var el = document.getElementById('cw-floor'); if (el) el.classList.add('expand');
-          }, 1400);
-
-          // Phase 4: datum locked
-          setTimeout(function() {
-            showLog('log-7');
-            announce('Datum locked. Preparing your dossier. Your Range is ready.');
-          }, 1800);
-
-          // Store results and redirect
+          /* ⚠️ THE SESSION WRITES SURVIVE THE CUTOVER AND THEY ARE NOT VESTIGIAL. The Measurement
+             panel's own renderFromSession() reads BOTH of these keys, and so does the SS Matrix
+             (`datumfi_range.params.n_years`). Dropping them because "we no longer navigate" would
+             have silently emptied two other surfaces. */
           sessionStorage.setItem('datumfi_studio_request', JSON.stringify(req));
-          if (apiResult) sessionStorage.setItem('datumfi_range', JSON.stringify(apiResult));
-          else sessionStorage.setItem('datum_api_fallback', 'true');
+          sessionStorage.setItem('datumfi_range', JSON.stringify(apiResult));
+          sessionStorage.removeItem('datum_api_fallback');
           sessionStorage.setItem('datum_range_revealed', 'true');
-          if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: !!apiResult });
+          if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: true });
 
-          await new Promise(function(r) { setTimeout(r, 2000); });
-          /* F74 — THE DRAFT SURVIVES THE RANGE. This line used to read
-               window._studioClearDraft(); window._studioBp = null;
-             ⛔ WHICH DESTROYED THE USER'S ESTATE ON THE WAY OUT. Rooms live in the draft, so
-                pressing Back from the Range returned a Studio with the PROFILE intact and the
-                ARCHITECTURE empty. The profile survives because those are form inputs and the
-                BROWSER caches them — a mechanism we do not own and cannot rely on.
-             🔑 HALF-RESTORED IS WORSE THAN EITHER EXTREME: it looks like it worked, so the user
-                hits Reveal and is refused for a reason they believe they already satisfied.
+          /* F74 — THE DRAFT SURVIVES THE RANGE. This used to be followed by _studioClearDraft(),
+             WHICH DESTROYED THE USER'S ESTATE ON THE WAY OUT: rooms live in the draft, so pressing
+             Back returned a Studio with the PROFILE intact and the ARCHITECTURE empty.
              ⚖ Captain-ruled: "you shouldn't have to do everything all over again — perhaps you
-                wanted to change only 1 or 2 things." That IS the Range: look, adjust one input,
-                look again. A product that wipes the draft turns a dial into a form.
-             ⚠️ NO "already revealed" STATE WAS INVENTED — the draft simply survives. A mark would
-                be a new state with no surface to live on.
-             ⚠️ THE CLEAR STILL EXISTS AND IS STILL CORRECT ON ITS OTHER CALLERS: Start Fresh
-                (clearDraftAndRefresh) and the leave-prompt's discard. REVEALING IS NOT DISCARDING. */
-          /* F74b — REVEALING IS A DEPARTURE THE USER JUST CHOSE; DO NOT ASK THEM TO CONFIRM IT.
-             ⛔ THIS LINE EXISTS BECAUSE F74 REMOVED THE CLEAR ABOVE IT, AND THE CLEAR WAS LOAD-BEARING
-                IN A WAY NOTHING RECORDED. _navDrain runs _stuLeaveGuard first, and that guard blocks on
-                DatumBlueprint.workState() reporting unsaved content. Clearing the draft happened to zero
-                that state, so the reveal sailed through. With the draft surviving, the guard fires and
-                the product's PRIMARY ACTION pops an 'are you sure you want to leave?' dialog.
-             🔑 NO READERS IS NOT NO PURPOSE — and the reader was three functions away, through a guard
-                reading state the clear happened to reset. Checking that no GATE depended on it was not
-                checking that no CODE PATH did. Caught by R4, which asserts the reveal still lands.
-             ⚖ REUSES THE EXISTING LATCH RATHER THAN INVENTING A BYPASS (L48). Its own comment names this
-                case: 'THE HUMAN HAS ALREADY ANSWERED THIS DEPARTURE, SO LET IT THROUGH.' The latch is
-                scoped to ONE departure and is cleared by the next real edit, so somebody who comes back
-                from the Range and keeps working is still asked on their next exit. */
-          window._stuLeaveAnswered = true;   // F74b
-          window._navDrain('/range.html');
+               wanted to change only 1 or 2 things." That IS the Range: look, adjust one input, look
+               again. A product that wipes the draft turns a dial into a form.
+             ⭐ AND THE CUTOVER MAKES THAT LITERAL — the estate is still on screen behind the panel
+               rather than one page-load away. */
+          DatumMeasurement.open();
         });
       }
     })();
@@ -17652,7 +17677,17 @@ const _reachesEngine = a =>
       if (dobM && sA) { var by = parseInt(dobM[2],10); var ca = now.getFullYear() - by; if (now.getMonth() + 1 < parseInt(dobM[1],10)) ca--; sA.value = clampN(ca, 18, 85); }
       if (retM && sR && dobM) { var ry = parseInt(retM[2],10), by2 = parseInt(dobM[2],10), bm = parseInt(dobM[1],10); var ra = ry - by2; if (parseInt(retM[1],10) < bm) ra--; sR.value = clampN(ra, (parseInt(sA && sA.value, 10) || 40) + 1, 90); }
       /* Same gate as the sibling restore above: the DATE is the record that a person answered. */
-      if (sP && prof.plan_end_age && prof.plan_end_date) { sP.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105); var _peR = $('plan-end-age'); if (_peR && prof.plan_end_date && _ageDateRe.test(String(prof.plan_end_date).trim())) _peR.value = _fmtDateStr(prof.plan_end_date); if (typeof _mirrorPlanEnd === 'function') _mirrorPlanEnd(); }
+      /* ⭐ THE THIRD ANSWERING ACT (§82.2350) — A SAVED ANSWER COMING BACK. The branch is already
+         gated on `prof.plan_end_age` being present, so reaching here means this household answered
+         the question on a previous visit; restoring it is not the product choosing.
+         ⛔ `|| 93` DELETED (§9.3). The guard above proves plan_end_age is truthy, so the fallback
+            was unreachable-by-guard and load-bearing only on the day somebody loosened the guard —
+            which is precisely how the OTHER `|| 93` sites outlived the default they protected.
+         ⛔ THE `75` FLOOR IN THE CLAMP DELETED WITH IT. It was the old PTA_MIN_FLOOR wearing a
+            clamp, and a restore that silently raised a saved 72 to 75 would change a person's own
+            answer on the way back in. The household floor is applied by _updatePlanEndAge, which
+            runs after and names what it did. */
+      if (sP && prof.plan_end_age && prof.plan_end_date) { sP.value = clampN(parseInt(prof.plan_end_age, 10), 0, 105); window._ptaAnswered = true; var _peR = $('plan-end-age'); if (_peR && prof.plan_end_date && _ageDateRe.test(String(prof.plan_end_date).trim())) _peR.value = _fmtDateStr(prof.plan_end_date); if (typeof _mirrorPlanEnd === 'function') _mirrorPlanEnd(); }
       // 05/ Market Conditions paradigm + inflation mode — re-assert from the slot too.
       if (bp.market_paradigm) { var _mr = document.querySelector('input[name="market"][value="' + bp.market_paradigm + '"]'); if (_mr) _mr.checked = true; }
       if (bp.inflation_mode)  { var _ir = document.querySelector('input[name="inflation"][value="' + bp.inflation_mode + '"]'); if (_ir) _ir.checked = true; }
@@ -17702,7 +17737,12 @@ const _reachesEngine = a =>
       // PTA: prefer the live Plan-Through date field (carries the typed month, like 'retire'
       // reads target-ret); else derive DOB-anchored via the shared single rounding source.
       var pe = $('plan-end-age'); if (pe && _ageDateRe.test(String(pe.value || '').trim())) return _fmtDateStr(pe.value);
-      return fromAge(parseInt(($('sl-plan-through') || {}).value, 10) || 93);
+      /* ⛔ `|| 93` DELETED (§9.3). With no slider there is nothing to derive a date FROM, and a
+         date built from a substituted age is a claim about this person's horizon that nobody made.
+         L47 SOURCED-OR-BLANK: the empty string is what every caller here already renders for
+         'no sourced value', so the blank path is the one already shipped next door. */
+      var _ptaSl = parseInt(($('sl-plan-through') || {}).value, 10);
+      return Number.isFinite(_ptaSl) ? fromAge(_ptaSl) : '';
     }
     // kind: 'dob' (Current Age = DOB) | 'retire' | 'pta' (target date, DOB-anchored).
     // 4d — delegates to the shared DatumDateBounds (single source; Dossier uses the same).
@@ -17828,6 +17868,25 @@ const _reachesEngine = a =>
             Profile the field is correctly blank today, and _p8_studio_mechanics already asserts
             "plan-end-age is BLANK with no sourced DOB". This makes that true BY CONSTRUCTION rather
             than by whatever the fixture happened to leave behind. */
+      /* ⛔⛔ FINDING 82 — THIS FUNCTION USED TO ANSWER THE QUESTION IT WAS ONLY MEANT TO RESTATE,
+         AND THAT IS THE DEFECT THE CAPTAIN FOUND BY TYPING ONE DATE (2026-09-14).
+         #pri-dob carries `oninput="_fmtRetDate(this); _updatePlanEndAge()"`, and _updatePlanEndAge
+         ends by calling this. So a date of birth — a fact about how old somebody is — reached down
+         and WROTE A PLAN-THROUGH DATE into a field in another area of the Studio, which the reveal
+         door then read back as the person's own answer. The door never fired again.
+         🔑 §9.3 — A DATE OF BIRTH ANSWERS EXACTLY ONE QUESTION: HOW OLD SOMEONE IS. It may not
+            seed, suggest, prefill or bound any other field. THE FIX IS A DELETION, NOT A DEFAULT.
+         ⚠️ THE MIRROR IS STILL A MIRROR AND MUST STAY ONE — once the question HAS been answered,
+            keeping the date in step with the slider is this function's whole job. What it may no
+            longer do is bring the first value into existence.
+         ⚠️ NOTE THE ORDER: the unanswered case is tested BEFORE the DOB case, because an
+            unanswered field must read blank whether or not a DOB is present. Testing DOB first
+            would leave an unanswered-but-derived value standing for anyone with a birthday typed
+            — which is the exact state this is here to end. */
+      if (!window._ptaAnswered) {
+        if (pEl.value) pEl.value = '';
+        return;
+      }
       var _dobEl = $('pri-dob');
       if (!_dobEl || !/\d{1,2}\s*\/\s*\d{4}/.test(String(_dobEl.value || ''))) {
         if (pEl.value) pEl.value = '';
@@ -17839,7 +17898,12 @@ const _reachesEngine = a =>
       // the slider age has actually moved. We derive directly here (NOT via _dateForField('pta'),
       // which now reads this field). (_commitPlanEndDate, the interactive commit, is untouched.)
       var DB = window.DatumDateBounds;
-      var pta = parseInt(($('sl-plan-through') || {}).value, 10) || 93;
+      /* ⛔ `|| 93` DELETED (§9.3). By this line the question HAS been answered (the guard above
+         returns otherwise), so a missing slider here is a broken page rather than an unanswered
+         household — and the honest response to a broken page is a blank field, not the Captain's
+         own plan-through age rendered as though it were this person's. */
+      var pta = parseInt(($('sl-plan-through') || {}).value, 10);
+      if (!Number.isFinite(pta)) { if (pEl.value) pEl.value = ''; return; }
       var dob = _readDobMoYr();
       var pm = String(pEl.value || '').match(_ageDateRe);
       if (DB && pm && DB.ageAtDate(pEl.value, dob.mo, dob.yr) === pta) return;   // consistent — keep verbatim
@@ -17890,7 +17954,11 @@ const _reachesEngine = a =>
       if (!dm) return;                                          // L47 sourced-or-blank: nothing to derive from
       var dobMo = parseInt(dm[1], 10), dobYr = parseInt(dm[2], 10);
       if (!dobMo || dobMo > 12 || !dobYr) return;
-      var pta = parseInt(($('sl-plan-through') || {}).value, 10) || 93;
+      /* ⛔ `|| 93` DELETED (§9.3). The co-architect's date is derived from the SHARED plan-through
+         age; with no slider to read there is no shared age, and inventing one would hand the second
+         person a horizon nobody set — the Clause-1 mirror of the primary's own defect. */
+      var pta = parseInt(($('sl-plan-through') || {}).value, 10);
+      if (!Number.isFinite(pta)) return;
       /* Same anchoring contract as the primary: the DOB month is BOTH the output month and the year
          anchor, so ageAtDate() reads back the age we meant. */
       cEl.value = _fmtDateStr(_pad2(dobMo) + '/' + (dobYr + pta));
@@ -17909,6 +17977,11 @@ const _reachesEngine = a =>
       if (res.ok) {
         var sP = $('sl-plan-through'); if (sP) { sP.value = res.age; if (typeof updatePlanThroughLabel === 'function') updatePlanThroughLabel(); }
         if (warn) { warn.textContent = ''; warn.style.display = 'none'; }
+        /* ⭐ A HUMAN TYPED A PLAN-THROUGH DATE AND IT VALIDATED. This is one of exactly three acts
+           that may set the bit (§82.2350) — the other two are the slider being committed and a
+           SAVED answer being restored. It is set AFTER res.ok on purpose: a rejected date is not
+           an answer, and the `else` branch below reverts the field rather than keeping it. */
+        window._ptaAnswered = true;
         _mirrorPlanEnd(); fireUpdate();
       } else {
         if (warn) { warn.textContent = res.err; warn.style.display = 'block'; }
@@ -17916,7 +17989,10 @@ const _reachesEngine = a =>
       }
     }
     window._commitPlanEndDate = _commitPlanEndDate;
-    function syncPlanFromSketch() { _mirrorPlanEnd(); }
+    /* ⭐ THE SECOND OF THE THREE ANSWERING ACTS (§82.2350). Reached from wireCurrencyEdit's
+       onCommit for sl-plan-through — i.e. the person moved or typed into the Plan Through control
+       and it committed. A drag that never commits is not an answer and does not arrive here. */
+    function syncPlanFromSketch() { window._ptaAnswered = true; _mirrorPlanEnd(); }
     /* ⛔ syncTaxFromSketch IS RETIRED WITH eff-tax-rate (2026-09-07). It mirrored the Shape slider
        into the profile select whenever the slider landed exactly on one of that select's options.
        ⭐ AND ITS MEASURED HISTORY IS WORTH KEEPING, BECAUSE IT INVERTS THE OBVIOUS READING: with the
@@ -18010,8 +18086,13 @@ const _reachesEngine = a =>
             salary-zero repair reads primary_salary_stated before primary_salary.
          ⚠️ THE SCHEMA DEFAULT ITSELF IS LEFT ALONE ON PURPOSE. Changing it edits a SACRED host and
             every stored blueprint's decode; it is harmless once nothing TREATS it as an answer. */
+      /* ⭐ THE THIRD ANSWERING ACT, SECOND SITE (§82.2350) — the blueprint/sketch carry. Same
+         reasoning and same deletions as the Dossier restore above: the branch is gated on a
+         present plan_end_age, so `|| 93` was unreachable-by-guard, and the `75` was the deleted
+         PTA_MIN_FLOOR silently raising somebody's saved answer on the way in. */
       if (sPlan && prof.plan_end_age && prof.plan_end_date) {
-        sPlan.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105);
+        sPlan.value = clampN(parseInt(prof.plan_end_age, 10), 0, 105);
+        window._ptaAnswered = true;
         // Month-survival: seed the Plan-Through date field from the carried typed string FIRST,
         // so _mirrorPlanEnd keeps it verbatim (it implies the slider's PTA age) instead of
         // rebuilding a DOB-month date.
@@ -18246,6 +18327,15 @@ const _reachesEngine = a =>
     function wireClickToType() {
       if (!window.DatumShape || !DatumShape.wireCurrencyEdit || !SC) return;
       var slAge = $('slider-age'), slAct = $('slider-activation'), slPlan = $('sl-plan-through');
+      /* ⛔ ONE EXPRESSION FOR THE PLAN-THROUGH FLOOR ON THIS PATH, because there were TWO and they
+         were identical, which is how a pair drifts apart in a later edit that touches one of them.
+         It is the same rule date-bounds.js and `minPlanEnd` state: not before you retire, and never
+         before you are. §9.2 / §82.2367. */
+      function _wcePlanFloor() {
+        var _ra = Math.round(parseFloat(slAct && slAct.value));
+        var _ca = Math.round(parseFloat(slAge && slAge.value));
+        return Math.min(105, Math.max(Number.isFinite(_ca) ? _ca : 0, Number.isFinite(_ra) ? _ra : 0));
+      }
       var slPort = $('slider-portfolio'), slCont = $('slider-contrib'), slDat = $('slider-datum');
       var cfg = [
         { valId: 'val-age',         slider: slAge,  w: '120px', isCurrency: false, maxLength: 9,
@@ -18266,8 +18356,18 @@ const _reachesEngine = a =>
           getEditVal: function () { return _dateForField('pta'); },
           clean: function (s) { return s.replace(/[^0-9]/g, ''); },
           inputFilter: _fmtDateSlash, parse: function (s) { return _parseAgeOrDate(s, 'pta'); },
-          validate: function (v) { var lo = Math.max(75, Math.round(parseFloat(slAct.value)) + 20); return v >= lo && v <= 105; },
-          getClampedValid: function (v) { var lo = Math.max(75, Math.round(parseFloat(slAct.value)) + 20); return clampN(v, lo, 105); },
+          /* ⛔⛔ THE FIFTH AND SIXTH COPIES IN THIS FILE, AND THE THIRD TIME IN ONE DAY THAT I
+             UNDER-COUNTED THIS RULE. Both read `Math.max(75, RA + 20)`. I enumerated by NAME and
+             found none; then by VALUE and reported "two inline copies"; a proper by-value census
+             over `git ls-files` found these two as well — on the TYPED path, which is the one a
+             person uses when they type an age into the Plan Through control rather than drag it.
+             🔑 THE ARITHMETIC IS THE RULE. `lo` is not called a floor anywhere; it is a local
+                holding two magic numbers, and that is exactly what a name-based census cannot see.
+             ⚠️ `slAct` IS THE RETIREMENT SLIDER AND slAge THE CURRENT-AGE ONE — the floor is the
+                later of the two, matching `minPlanEnd` and date-bounds.js, so the typed path and
+                the dragged path cannot disagree about what is legal. */
+          validate: function (v) { var lo = _wcePlanFloor(); return v >= lo && v <= 105; },
+          getClampedValid: function (v) { var lo = _wcePlanFloor(); return clampN(v, lo, 105); },
           toSlider: function (v) { return v; } },
         { valId: 'val-portfolio',   slider: slPort, w: '140px', isCurrency: true,
           getEditVal: function () { return '$' + window._sliderSnapDollars('portfolio', parseInt(slPort.value,10)).toLocaleString('en-US'); },
@@ -18354,8 +18454,37 @@ const _reachesEngine = a =>
         // Item 1 — Sketch parity (sketch.html:5019): retirement can never meet/fall below current age.
         var _sA = $('slider-age'), _sP = $('sl-plan-through');
         if (_sA && parseInt(sRet.value, 10) <= parseInt(_sA.value, 10)) sRet.value = parseInt(_sA.value, 10) + 1;
-        // Plan-Through floor follows RA: PTA >= max(75, RA+20) (Sketch compute-path rule, sketch.html:3532).
-        if (_sP) { var _minP = Math.max(75, parseInt(sRet.value, 10) + 20); if (parseInt(_sP.value, 10) < _minP) { _sP.value = _minP; updatePlanThroughLabel(); syncPlanFromSketch(); } }
+        /* ⛔⛔ THE THIRD AND FOURTH COPIES OF THE PLAN-THROUGH FLOOR LIVED HERE, SPELLED AS INLINE
+           ARITHMETIC, AND MY OWN ENUMERATION MISSED THEM (§82.2348, third repetition in one day).
+           This read `Math.max(75, parseInt(sRet.value,10) + 20)` — the 20-year gap and the flat 75,
+           both deleted from date-bounds.js and studio.html's `minPlanEnd` in this same commit.
+           ⛔ I ENUMERATED THE RULE BY ITS NAMES — PTA_GAP, PTA_MIN_FLOOR, minPlanEnd, _planEndAgeMin
+              — AND THESE TWO SITES SPELL IT IN DIGITS, so the census walked straight past them. A
+              RULE CAN BE IMPLEMENTED WITHOUT BEING NAMED, AND A NAME-BASED CENSUS CANNOT SEE THAT.
+           ⛔ MEASURED, not inferred: _gate_start_fresh_cold_parity reported `sl-plan-through:
+              cold="90" after="80"` and "INVENTED: sl-plan-through=80". Retirement 60 -> max(75, 80)
+              = 80. The number came from here, not from the midpoint branch I had just deleted.
+           ⚠️ IT REFERENCES sketch.html AS ITS SOURCE ("Sketch compute-path rule, sketch.html:3532"),
+              SO A FIFTH COPY IS ALMOST CERTAINLY LIVE IN THAT FILE. sketch.html is a SACRED host
+              with its own math and is NOT in this batch — FLAGGED, not touched. */
+        if (_sP) {
+          var _sAv = _sA ? parseInt(_sA.value, 10) : NaN;
+          var _minP = Math.min(105, Math.max(Number.isFinite(_sAv) ? _sAv : 0, parseInt(sRet.value, 10)));
+          if (parseInt(_sP.value, 10) < _minP) {
+            _sP.value = _minP;
+            updatePlanThroughLabel();
+            /* ⛔⛔ `syncPlanFromSketch()` USED TO BE CALLED HERE AND IT MUST NOT BE — IT NOW MARKS THE
+               QUESTION ANSWERED. Since §9.3 that function sets window._ptaAnswered, because moving
+               the Plan Through control IS a person answering. THIS IS NOT THAT: it is the retirement
+               slider dragging the plan-through floor up underneath an answer nobody gave, and routing
+               it through the same call would have let DRAGGING RETIREMENT silently answer plan-through
+               — the exact defect §9.3 deletes, reintroduced one control over, by me, in this commit.
+               🔑 CORRECTING A POSITION IS NOT SUPPLYING AN ANSWER. The mirror is refreshed directly so
+                  an ALREADY-answered household keeps its date in step; an unanswered one stays blank
+                  because _mirrorPlanEnd returns early on !_ptaAnswered. */
+            if (window._mirrorPlanEnd) window._mirrorPlanEnd();
+          }
+        }
         var n = parseInt(sRet.value, 10);
         if (!isNaN(_prev.ret)) {
           if (n > _prev.ret) impulse(0, WAVE_IMP_RET, null, +1, null, WAVE_LEAN_MAG);
@@ -18366,9 +18495,15 @@ const _reachesEngine = a =>
       });
       var sPlan = $('sl-plan-through');
       if (sPlan) sPlan.addEventListener('input', function () {
-        // Item 1 — Sketch parity (sketch.html:5031): plan-through floor = max(75, RA+20).
-        var _sR = $('slider-activation');
-        var _minP = Math.max(75, _sR ? parseInt(_sR.value, 10) + 20 : 75);
+        /* ⛔ THE FOURTH COPY — same deletion, same reason as the one on the retirement slider above.
+           This read `Math.max(75, RA + 20)`. The floor is the household's own: not before you
+           retire, and never before you are. See the note above for why a name-based census missed
+           both of these and why sketch.html is flagged rather than touched. */
+        var _sR = $('slider-activation'), _sAge = $('slider-age');
+        var _raV = _sR ? parseInt(_sR.value, 10) : NaN;
+        var _caV = _sAge ? parseInt(_sAge.value, 10) : NaN;
+        var _minP = Math.min(105, Math.max(Number.isFinite(_caV) ? _caV : 0,
+                                           Number.isFinite(_raV) ? _raV : 0));
         if (parseInt(sPlan.value, 10) < _minP) sPlan.value = _minP;
         var n = parseInt(sPlan.value, 10);
         if (!isNaN(_prev.plan)) {
@@ -18648,7 +18783,11 @@ const _reachesEngine = a =>
       // doesn't fire a no-op-magnitude impulse from NaN baseline).
       _prev.age  = parseInt(($('slider-age')        || {value: 40}).value, 10);
       _prev.ret  = parseInt(($('slider-activation') || {value: 65}).value, 10);
-      _prev.plan = parseInt(($('sl-plan-through')   || {value: 93}).value, 10);
+      /* ⛔ `{value: 93}` DELETED (§9.3). The consumer at the impulse site already tests
+         `!isNaN(_prev.plan)` and SKIPS the first impulse when it cannot read a baseline — which is
+         exactly the outcome this literal was added to produce. The number was never needed; it was
+         a household fact doing a null's job. */
+      _prev.plan = parseInt(($('sl-plan-through')   || {}).value, 10);
       _prev.port = parseInt(($('slider-portfolio')  || {value: 61185}).value, 10);
       _prev.cont = parseInt(($('slider-contrib')    || {value: 82964}).value, 10);
       _prev.dat  = parseInt(($('slider-datum')      || {value: 41141}).value, 10);
@@ -19289,7 +19428,80 @@ const _reachesEngine = a =>
     ⚠️ RETURNS undefined RATHER THAN 0 FOR A CASE WITH NO TIERS. A zero would render as "$0k/yr" —
        a confident Floor for a household we could not price. */
     function _caseFloor(c) { return (c && c.tiers) ? c.tiers.bedrock : undefined; }
+
+    /* ⛔⛔ §82.2349 — A RENAME MUST TRANSLATE IN BOTH DIRECTIONS OR IT IS A DELETION.
+       THIS FUNCTION IS THE MISSING DIRECTION, AND ITS ABSENCE KILLED THE WHOLE SURFACE.
+
+       datum-fi `cbc231f` (13 Sep, live in :prod-8) canonicalised the claiming strategies to
+       `age_62 / age_67 / age_70` — a good change, because "optimal_70" encoded a judgement rather
+       than a fact. The old names were KEPT AS INPUT ALIASES, deliberately, and schemas.py says why:
+       "`early_62`, `full_67`, `optimal_70` ... are on the wire from the live Studio TODAY."
+       ⛔ THE OUTPUT SIDE GOT NO SUCH TREATMENT. The engine emits `age_67_x_age_67`; this file asks
+          for `full_67_x_full_67`. MEASURED IN PRODUCTION 2026-09-14 on a real couple: nine cases
+          returned, fully computed, and **0 OF 9 KEYS MATCHED**. `lookup[key]` missed on every cell
+          and the grid drew nine em-dashes. The Captain: "the actual matrix did not render at all,
+          all 9 fields were empty ... so I cant pick anyhting?"
+       🔑 THE HALF-RENAME IS WORSE THAN NO RENAME, BECAUSE IT THROWS NOTHING. Nine correct answers
+          arrived and were discarded at the last step, with no error, no refusal and no console
+          noise — the request succeeded, so every instrument watching the REQUEST stayed green.
+
+       ⚠️ IT TRANSLATES INTO THIS FILE'S EXISTING SPELLING RATHER THAN MIGRATING THE FILE TO THE
+          CANONICAL ONE, AND THAT IS A DELIBERATE CHOICE OF BLAST RADIUS. The legacy names are load-
+          bearing in ~40 places here — the tradeoff literals, `data-case-key` attributes, and TWO
+          sessionStorage keys (`ss_timing_locked_key`, `ss_matrix_selected_key`) that HOLD VALUES
+          WRITTEN BY EARLIER SESSIONS. Migrating the file would silently orphan a user's locked
+          claiming path mid-session. One boundary function cannot.
+       ⚠️ IDEMPOTENT BY CONSTRUCTION, so it is safe to apply at every entry point and it must be:
+          a legacy name maps to itself, so a cached result written before this commit and a fresh
+          one written after it normalise to the same thing. THAT IS WHY IT IS APPLIED ON READ AS
+          WELL AS ON WRITE — sessionStorage outlives the deploy.
+       ⚠️ UNKNOWN NAMES PASS THROUGH UNCHANGED, NEVER MAPPED TO A GUESS. A key this table does not
+          know is a key we cannot honour; it misses the lookup and draws the empty cell, which is
+          the honest rendering of "the engine named a case we do not understand". Substituting the
+          nearest match would put a number in a cell the engine never computed. */
+    var _SS_KEY_ALIASES = {
+      'age_62': 'early_62',  'early_62':   'early_62',
+      'age_67': 'full_67',   'full_67':    'full_67',
+      'age_70': 'optimal_70','optimal_70': 'optimal_70', 'delay_70': 'optimal_70'
+    };
+    function _ssCanonStrategy(s) {
+      if (typeof s !== 'string') return s;
+      return Object.prototype.hasOwnProperty.call(_SS_KEY_ALIASES, s) ? _SS_KEY_ALIASES[s] : s;
+    }
+    /* A key is either a pair (`pri_x_sec`) or a single axis — the SOLO shape the engine adopted on
+       13 Sep, where `case_key = pri` because "full_67_x_None" would name a pairing that does not
+       exist. Both are translated; the separator is preserved exactly as it arrived. */
+    function _ssCanonKey(k) {
+      if (typeof k !== 'string' || !k) return k;
+      var i = k.indexOf('_x_');
+      if (i === -1) return _ssCanonStrategy(k);
+      return _ssCanonStrategy(k.slice(0, i)) + '_x_' + _ssCanonStrategy(k.slice(i + 3));
+    }
+    /* Normalises a whole engine result IN PLACE and returns it. Every key-shaped member is named
+       here explicitly rather than walked generically: a generic walk would rewrite any string that
+       happened to look like a strategy, including `interpretation` copy. */
+    function _ssNormalizeResult(res) {
+      if (!res || typeof res !== 'object') return res;
+      if (Array.isArray(res.cases)) {
+        res.cases.forEach(function (c) {
+          if (!c || typeof c !== 'object') return;
+          c.case_key           = _ssCanonKey(c.case_key);
+          c.primary_strategy   = _ssCanonStrategy(c.primary_strategy);
+          c.secondary_strategy = _ssCanonStrategy(c.secondary_strategy);
+        });
+      }
+      if (res.current_plan_key) res.current_plan_key = _ssCanonKey(res.current_plan_key);
+      if (res.recommended_key)  res.recommended_key  = _ssCanonKey(res.recommended_key);
+      return res;
+    }
+    window._ssNormalizeResult = _ssNormalizeResult;   // gate seam — read-only translation
+    window._ssCanonKey        = _ssCanonKey;
+
     function renderMatrixGrid(result) {
+      /* ⛔ NORMALISED HERE TOO, NOT ONLY AT THE FETCH SITES. renderMatrixGrid is reached from FOUR
+         callers including two that replay a cached result, and a translation applied at three of
+         four doors is the defect this commit is repairing, one layer down. */
+      result = _ssNormalizeResult(result);
       _lastMatrixResult = result;
       var grid   = document.getElementById('ss-matrix-grid');
       var recEl  = document.getElementById('ss-map-recommendation');
@@ -19303,7 +19515,12 @@ const _reachesEngine = a =>
       var _ltYrs = _modeledYrs || 25;
 
       var cases          = result.cases;
-      var currentPlanKey = sessionStorage.getItem('ss_timing_locked_key') || result.current_plan_key || null;
+      /* ⛔ THE STORED KEY IS TRANSLATED TOO. ss_timing_locked_key can hold a value written by a
+         session that ran BEFORE this commit, and sessionStorage outlives a deploy. An untranslated
+         locked key would match no cell, so the user's own chosen claiming path would quietly lose
+         its badge — a smaller version of the same defect, and the one that would have been blamed
+         on the user. Idempotent, so a key already in this file's spelling is unchanged. */
+      var currentPlanKey = _ssCanonKey(sessionStorage.getItem('ss_timing_locked_key') || result.current_plan_key || null);
 
       var strats   = ['early_62', 'full_67', 'optimal_70'];
       var ageLabel = { early_62: '62', full_67: '67', optimal_70: '70' };
@@ -20053,6 +20270,10 @@ const _reachesEngine = a =>
 
         if (status === 'succeeded') {
           stopLoadAnim();
+          /* ⛔ TRANSLATE BEFORE STORING, SO THE CACHE HOLDS THIS FILE'S SPELLING (§82.2349). Storing
+             the raw engine shape would push the translation onto every future READER of the cache —
+             four of them — and one missed reader is nine empty cells again. */
+          result = _ssNormalizeResult(result);
           var _toStore = Object.assign({}, result, { _payload_sig: _pendingReq ? _computeSig(_pendingReq) : undefined });
           sessionStorage.setItem('ss_matrix_result', JSON.stringify(_toStore));
           _pendingReq = null;
@@ -20099,6 +20320,10 @@ const _reachesEngine = a =>
         var d = await r.json();
         if (d.status === 'succeeded') {
           stopLoadAnim();
+          /* THE SECOND DOOR. checkMatrixStatus is the timeout path's Check Status button and it
+             reaches the same renderer by a different route — §82.1968, a guard on one door is
+             not a guard. */
+          d.result = _ssNormalizeResult(d.result);
           sessionStorage.setItem('ss_matrix_result', JSON.stringify(d.result));
           setBtn('Retest Paths &#x2192;', false);
           setStatus('');

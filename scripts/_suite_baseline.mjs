@@ -68,6 +68,9 @@ const ONLY = arg('--only', 'all');
 const LIMIT = parseInt(arg('--limit', '0'), 10);
 const SELFTEST_ONLY = argv.includes('--selftest');
 const EXPLAIN = argv.includes('--explain');
+/* §82.2368 — an explicit name for a comparison run, when a commit sha is not the distinction
+   you mean (two dirty trees, say). Falls back to the git sha + dirty flag. */
+const LABEL = arg('--label', '');
 /* ⭐ `--explain-names` EXISTS SO OTHER INSTRUMENTS CAN **ASK THE RUNNER** FOR THE POPULATION INSTEAD
    OF GLOBBING FOR IT. `--explain` prints counts for a human; this prints the list, as JSON, for a
    machine. The standing rule is that a second opinion about what the suite runs IS A FORK — and
@@ -779,6 +782,32 @@ function selftestRepeat() {
      stable name is KEPT for the full run so nothing that reads the canonical path breaks. */
   const tier = ONLY === 'node' ? '-node' : (ONLY === 'browser' ? '-browser' : '');
   const outPath = path.join(os.tmpdir(), `datum-baseline-results${tier}.json`);
+
+  /* ⛔⛔ §82.2368 — THE INSTRUMENT THAT COMPARES TWO STATES MAY NOT STORE THEM IN THE SAME PLACE.
+     ADDED 2026-09-14 AFTER A FALSE ALL-CLEAR. The tier scoping above stops a NARROW run destroying
+     a WIDE one — it does nothing about two runs at the SAME width from DIFFERENT TREES, which is
+     precisely the shape attribution needs. A full run on a working tree and a full run on a clean
+     HEAD worktree both wrote here, the second overwrote the first, and the attribution diff was
+     computed HEAD-against-HEAD. It returned "0 caused by the batch": clean, plausible, and false.
+     ⛔ IT WAS CAUGHT BY LUCK, NOT BY AN INSTRUMENT — the number contradicted two failures somebody
+        had personally watched happen. Next time the contradiction will not be there.
+     🔑 SAME FAMILY AS THE UNITS ERROR FOUND THE SAME DAY: it never threw, never refused, and
+        returned a number a person would believe.
+     ⚠️ THE CANONICAL PATH IS STILL WRITTEN, UNCHANGED. Every existing reader keeps working; this
+        ADDS a keyed twin rather than moving the receipt. A fix that breaks the readers it protects
+        would be traded for a second defect.
+     ⚠️ THE KEY IS THE TREE, NOT THE CLOCK. A timestamp would make every run unique and NONE of them
+        comparable — the question is never "when" but "which code". Dirty trees are marked, because
+        two dirty runs are NOT interchangeable and must not silently share a file. */
+  const treeKey = (() => {
+    if (LABEL) return LABEL.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 40);
+    try {
+      const sha = execSync('git rev-parse --short HEAD', { cwd: path.resolve(SCRIPTS, '..'), encoding: 'utf8' }).trim();
+      const dirty = execSync('git status --porcelain -uno', { cwd: path.resolve(SCRIPTS, '..'), encoding: 'utf8' }).trim();
+      return sha + (dirty ? '-dirty' : '');
+    } catch { return 'nogit'; }
+  })();
+  const keyedPath = path.join(os.tmpdir(), `datum-baseline-results${tier}--${treeKey}.json`);
   /* The completed receipt is SELF-DESCRIBING: status, the run id stamped at start, and when it
      finished. A reader can now tell a finished run from a running one without looking at a clock. */
   fs.writeFileSync(outPath, JSON.stringify({
@@ -792,7 +821,14 @@ function selftestRepeat() {
     tail: (r.out || '').split('\n').slice(-25).join('\n'), err: (r.err || '').slice(-2000),
     })),
   }, null, 1));
+  /* ⛔ BOTH RECEIPTS ARE WRITTEN, AND THE KEYED ONE IS THE ONE AN ATTRIBUTION DIFF MUST READ. The
+     canonical path is whatever ran LAST; the keyed path is whatever ran on THIS TREE. Diffing the
+     canonical path against itself is what produced the false all-clear this exists to prevent. */
+  try { fs.copyFileSync(outPath, keyedPath); } catch (_e) {}
   console.log(`\nfull results -> ${outPath}`);
+  console.log(`keyed receipt -> ${keyedPath}`);
+  console.log(`   ⛔ diff AGAINST the keyed path, never the canonical one — the canonical path is`);
+  console.log(`      overwritten by whichever run finished most recently, including a baseline.`);
 
   /* Repeatability. REPORTS what THIS RUN changed; does not clean it, and does not claim to know who
      changed it. See _repeatDelta above for the four-times-ruled defect it replaces.

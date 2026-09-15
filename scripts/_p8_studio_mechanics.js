@@ -140,8 +140,22 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   check('Item1: CA clamps to <= RA-1 on live input', caHigh <= 69, 'CA=' + caHigh);
   await setSlider(page, 'slider-age', 50);
   await setSlider(page, 'slider-activation', 70);
-  const ptaLow = await setSlider(page, 'sl-plan-through', 80);           // < RA+20 -> max(75,RA+20)=90
-  check('Item1: PTA clamps to >= max(75, RA+20)', ptaLow >= 90, 'PTA=' + ptaLow);
+  /* ⛔⛔ RE-AIMED 2026-09-14 (§9.2) — AND THIS LEG IS MY OWN §82.2367 LESSON LANDING ON ME.
+     I re-aimed Item4 in this file earlier today, ran it green, and did not enumerate the rule
+     WITHIN THE FILE — so this second assertion of the same deleted rule sat here and went red in
+     the verification window. ENUMERATING BY NAME IS NOT ENUMERATING, and neither is fixing the
+     occurrence somebody showed you.
+     It read `ptaLow >= 90`, i.e. RA 70 must force plan-through to max(75, 90). The 20-year gap is
+     deleted; the floor is the retirement age. With CA 50 / RA 70 the floor is 70, so dragging the
+     control to 80 is now a legal answer and must STAY 80.
+     ⭐ BOTH DIRECTIONS, because "accept everything" would satisfy a one-sided leg: 80 is accepted
+        (above the floor) and 60 is corrected up to the floor (below it). */
+  const ptaLow = await setSlider(page, 'sl-plan-through', 80);           // CA 50 / RA 70 -> floor 70
+  check('Item1: PTA at 80 is ACCEPTED — above the household floor of 70 (the deleted RA+20 gap)',
+    ptaLow === 80, 'PTA=' + ptaLow);
+  const ptaUnder = await setSlider(page, 'sl-plan-through', 60);         // below the floor
+  check('Item1b: PTA below the retirement age is corrected UP to it',
+    ptaUnder >= 70, 'PTA=' + ptaUnder);
 
   // Enter shape mode for Items 2 + 3.
   const rectOf = () => page.evaluate(() => { const r = document.getElementById('shape-subtoggle').getBoundingClientRect(); return r.width ? Math.round(r.x + r.width / 2) : null; });
@@ -343,15 +357,22 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   let bPlan = (await readAges(page)).plan;
   await editField(page, 'val-plan-through', '01 / 9855'); await page.waitForTimeout(150);
   a = await readAges(page);
-  /* The message CHANGED on 2026-08-15 and this assertion is STRENGTHENED rather than relaxed.
-     "Plan-through age must be between X and Y" became state-aware copy, because the old string
-     could emit "between 105 and 105" — an instruction the user could not follow, on a field they
-     could no longer edit. The normal-state message now states the RULE and the RANGE, so this
-     asserts both: a message that merely restates a bound is a complaint; one that names the rule is
-     an instrument. The rejection itself (a.plan === bPlan) is unchanged and still the load-bearing
-     half — it is what proves the absurd year did not take. */
-  check('Item4: nonsensical PTA year (9855) rejected, and the message states the rule AND the range',
-    a.plan === bPlan && /at least \d+ years after you retire/.test(a.toast) && /between \d+ and \d+/.test(a.toast),
+  /* ⛔⛔ RE-AIMED 2026-09-14 (§9.2). THE RULE THIS ASSERTED WAS DELETED, SO THE ASSERTION HAD TO
+     MOVE WITH IT — a gate outliving the rule it enforces must be re-aimed, never satisfied.
+     It required the toast to say "at least N years after you retire" AND "between X and Y". The
+     20-year gap is gone: it asserted that a retirement shorter than twenty years is invalid, which
+     is a judgement about a person's life expectancy this product has no standing to make. There is
+     no "range" left to state either — the only bound is the floor, and the floor is the retirement
+     age.
+     ⭐ THE ASSERTION IS STILL STRENGTHENED RATHER THAN RELAXED, JUST ALONG A DIFFERENT AXIS. It now
+        requires the message to ECHO THIS HOUSEHOLD'S OWN RETIREMENT AGE. A fixed number in that
+        sentence would be a new hardcode — wrong for every household but one — so this is the leg
+        that would catch the §6.2 copy being re-written into a constant.
+     ⚠️ THE REJECTION ITSELF (a.plan === bPlan) IS UNCHANGED AND IS STILL THE LOAD-BEARING HALF. It
+        is what proves the absurd year did not take; the copy legs describe how that is explained. */
+  check('Item4: nonsensical PTA year (9855) rejected, and the message names the age that can move',
+    a.plan === bPlan && /A plan has to run past the day it starts/.test(a.toast)
+      && /before you retire at \d+/.test(a.toast),
     'PTA=' + a.plan + ' toast=' + JSON.stringify(String(a.toast || '').slice(0, 90)));
   // DOB-absent fallback (birthYear = today - current-age slider).
   await page.evaluate(() => { const d = document.getElementById('pri-dob'); if (d) d.value = ''; });

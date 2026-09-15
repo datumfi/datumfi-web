@@ -238,16 +238,36 @@ const server = http.createServer((req, res) => {
   { const { ctx, page } = await fresh();
     const type = async (sel, v) => { await page.click(sel); await page.keyboard.press('Control+A');
       await page.type(sel, v, { delay: 20 }); await page.keyboard.press('Tab'); await page.waitForTimeout(800); };
+    /* ⛔⛔ RE-AIMED 2026-09-14 (§9.3). THE HONEST HALF USED TO WATCH THE PLAN-THROUGH SLIDER AND
+       THAT IS NOW THE DEFECT, NOT THE PROOF. It asserted `withDob !== cold` — a real date of birth
+       must MOVE the plan-through slider — which is precisely the behaviour §9.3 deletes: a date of
+       birth answers exactly one question, how old somebody is, and may not seed, suggest or bound
+       any other field. The leg was correct when written and was invalidated by a ruling, not by a
+       regression (§82.2361).
+       ⭐ THE LEG'S REAL CLAIM SURVIVES INTACT AND IS ASSERTED ON A FIELD THE DOB IS ENTITLED TO
+          MOVE: the AGE slider. With no DOB nothing is invented; with a real DOB the age derives.
+          That still fails over a product that "stopped deriving for everyone", which is the
+          property the original note says this leg exists to protect.
+       ⭐ AND THE PLAN-THROUGH SLIDER IS STILL WATCHED — in the opposite direction. It must now be
+          UNMOVED by both, which is a STRICTER claim than the one it replaces and is the §9.3 guard
+          this file is otherwise missing. */
     const slider = () => page.evaluate(() => document.getElementById('sl-plan-through').value);
+    const ageSlider = () => page.evaluate(() => document.getElementById('slider-age').value);
     const cold = await slider();
+    const coldAge = await ageSlider();
     await type('#target-ret', '03/2062');
     const noDob = await slider();
     await type('#pri-dob', '03/1985');
     const withDob = await slider();
-    ok(noDob === cold && withDob !== cold,
-      'L5 · WITH NO DOB NO AGE IS INVENTED [observed slider cold ' + cold + ', after a retirement '
-      + 'date with NO dob ' + noDob + ' (must equal cold), then with a REAL dob ' + withDob
-      + ' (must differ)] — the invented 43 used to move this to 99 against a true 97');
+    const withDobAge = await ageSlider();
+    ok(withDobAge !== coldAge,
+      'L5a · A REAL DOB DERIVES THE AGE — the honest half, on the field a birthday is entitled to '
+      + 'move [observed age cold ' + coldAge + ' -> with a real dob ' + withDobAge + ']');
+    ok(noDob === cold && withDob === cold,
+      'L5 · NEITHER A RETIREMENT DATE NOR A DOB MOVES THE PLAN-THROUGH SLIDER (§9.3) [observed '
+      + 'cold ' + cold + ', after a retirement date with NO dob ' + noDob + ', then with a REAL dob '
+      + withDob + ' — all three must match] — the invented 43 used to move this to 99 against a '
+      + 'true 97; since §9.3 the correct answer is that it does not move at all');
     await ctx.close(); }
 
   for (const l of lines) console.log(l);

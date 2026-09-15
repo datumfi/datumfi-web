@@ -16,7 +16,13 @@
        and the cleanup is not this batch. */
 const fs = require('fs');
 const path = require('path');
-const SRC = fs.readFileSync(path.resolve(__dirname, '..', 'studio.html'), 'utf8');
+/* ⛔ READ THROUGH studioSource(), NEVER OFF DISK — this was the LAST unexempted disk reader in the
+   repo, and _gate_studio_source had been red on it alone. A bare readFileSync censuses the SHELL,
+   so the day a measured region moves into an extracted part this file reports on a file that no
+   longer contains what it is measuring. It would not crash; it would quietly measure less.
+   🔑 90 GATES AT RISK BECAME ONE HELPER. Reading around it puts this file back in the 90. */
+const { studioSource } = require('./_studio_source.cjs');
+const SRC = studioSource();
 
 /* ── comment extraction ── */
 const comments = [];

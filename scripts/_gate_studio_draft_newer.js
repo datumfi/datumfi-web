@@ -33,7 +33,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const { studioSource } = require('./_studio_source.cjs');
+const { studioSource, stripComments } = require('./_studio_source.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const UNCOND      = process.argv.includes('--unconditional');
 const SESSIONONLY = process.argv.includes('--sessiononly');
@@ -267,8 +267,27 @@ const HTML = studioSource();
 const literalRemoves = HTML.split(`sessionStorage.removeItem('${DRAFT_KEY}')`).length - 1;
 ok(literalRemoves === 0,
   'studio.html holds ZERO literal sessionStorage.removeItem for the draft (found ' + literalRemoves + ')');
-ok((HTML.split('window._studioClearDraft()').length - 1) >= 3,
-  'studio.html routes every discard through the single _studioClearDraft() helper');
+/* ⛔⛔ COUNTED ON STRIPPED SOURCE, AND THE THRESHOLD IS 2 — BOTH CHANGED 2026-09-14 BECAUSE THIS
+   ASSERTION HAD BEEN GREEN ON A COMMENT. It read `>= 3` against the RAW text. MEASURED at HEAD:
+       raw 3  ·  code-only 2
+   So the third occurrence was never a call site. F74 deleted the reveal path's clear (revealing is
+   not discarding) and left a tombstone comment QUOTING THE DELETED LINE — and that quotation kept
+   the count at three. The gate went red only when the cutover rewrote that comment.
+   🔑 A TOMBSTONE CAN CREATE A FALSE PASS, NOT ONLY A FALSE FINDING. The recorded law is that a
+      literal grep's non-zero is a QUESTION; its mirror is that a literal grep's threshold can be
+      MET BY PROSE, and that direction is worse — nobody investigates a green.
+   ⛔ AN INSTRUMENT MUST NOT DETECT BY SYNTAX. stripComments() is the shared one, already validated
+      by _gate_studio_source's fixture battery, so this asks about CODE rather than about text.
+   ⚠️ TWO IS THE HONEST NUMBER AND IT IS EXACT, NOT `>=`: Start Fresh (clearDraftAndRefresh) and the
+      leave-prompt's discard. A THIRD APPEARING IS AS INTERESTING AS ONE VANISHING — it would mean a
+      new discard route landed without being argued, which is what this leg exists to notice.
+   ⚠️ THE REAL FENCE IS THE LINE ABOVE (zero literal sessionStorage.removeItem) and it passed
+      throughout. This leg is the companion, and it was the weaker of the pair by construction. */
+const CODE = stripComments(HTML);
+const clearRoutes = CODE.split('window._studioClearDraft()').length - 1;
+ok(clearRoutes === 2,
+  'studio.html routes every discard through the single _studioClearDraft() helper '
+  + '(code-only count = ' + clearRoutes + ', want exactly 2: Start Fresh + the leave-prompt discard)');
 ok(/_clearCarriedDesign|_scratchReset/.test(HTML) && /localStorage\.removeItem\(k\)/.test(HTML) && /sessionStorage\.removeItem\(k\)/.test(HTML),
   '_scratchReset still sweeps BOTH stores (it was already correct — confirm, do not duplicate it)');
 

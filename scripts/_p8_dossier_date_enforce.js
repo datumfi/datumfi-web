@@ -161,9 +161,22 @@ const coOn = (page) => page.evaluate(() => { const t = document.getElementById('
     check('(port) letters rejected (reverts to 65)', (await typeBox(page, 'retireAge', 'abcdef')) === '65');
     // RA < CurrentAge rejected (06/2020 -> age ~39 < 46 floor)
     check('(port) RA below current age rejected (reverts to 65)', (await typeBox(page, 'retireAge', '06/2020')) === '65');
-    // PTA < RA+20 rejected: retire 65, type plan that implies age 70 (<85 floor)
+    /* ⛔⛔ RE-AIMED 2026-09-14 (§9.2). THIS ASSERTED THE RULE THAT WAS DELETED: "PTA < RA+20
+       rejected", i.e. retire at 65 and you must plan through 85 or be refused. The 20-year gap and
+       the flat 75 floor are gone — they asserted that a retirement shorter than twenty years is
+       invalid, which is a judgement about a person's life expectancy this product has no standing
+       to make. The floor is now the RETIREMENT AGE, derived from what the model means: a plan that
+       ends before it begins has no years to run.
+       ⭐ THE PROPERTY UNDER TEST IS UNCHANGED — "an out-of-range plan-through is rejected and the
+          box reverts" — only the boundary moved. Retire 65: 70 is now LEGAL (five years of
+          retirement is a bleak plan, not an invalid one) and 60 is not, because it ends before it
+          starts. BOTH DIRECTIONS ARE ASSERTED, because a build that accepted everything would pass
+          a one-sided leg just as well as a correct one. */
     await typeBox(page, 'planThrough', '06/2066'); await page.waitForTimeout(60);   // plan 85 (valid)
-    check('(port) PTA below RA+20 rejected (reverts to 85)', (await typeBox(page, 'planThrough', '06/2051')) === '85');
+    check('(port) PTA BELOW RETIREMENT rejected (reverts to 85)', (await typeBox(page, 'planThrough', '06/2041')) === '85');
+    await typeBox(page, 'planThrough', '06/2066'); await page.waitForTimeout(60);   // back to 85
+    check('(port) PTA between retirement and 20 years after is now ACCEPTED (the deleted gap)',
+      (await typeBox(page, 'planThrough', '06/2051')) === '70');
     await ctx.close();
   }
 
@@ -238,14 +251,14 @@ const coOn = (page) => page.evaluate(() => { const t = document.getElementById('
   // ───────── (par) Studio == Dossier: bounds AND rounding ─────────
   {
     const dossier = await openDossier(browser, null);
-    const dProbe = await dossier.page.evaluate(() => { const B = window.DatumDateBounds; return { b: { AGE_MIN: B.AGE_MIN, AGE_MAX: B.AGE_MAX, RA_MIN_FLOOR: B.RA_MIN_FLOOR, RA_MAX: B.RA_MAX, PTA_MIN_FLOOR: B.PTA_MIN_FLOOR, PTA_MAX: B.PTA_MAX }, age: B.ageAtDate('03/2035', 8, 1982), date: B.dateFromAge(52, 8, 1982) }; });
+    const dProbe = await dossier.page.evaluate(() => { const B = window.DatumDateBounds; return { b: { AGE_MIN: B.AGE_MIN, AGE_MAX: B.AGE_MAX, RA_MIN_FLOOR: B.RA_MIN_FLOOR, RA_MAX: B.RA_MAX, PTA_MAX: B.PTA_MAX, planFloorAt60: (typeof B.planWindow === 'function' ? B.planWindow(60).floor : null) }, age: B.ageAtDate('03/2035', 8, 1982), date: B.dateFromAge(52, 8, 1982) }; });
     const sctx = await browser.newContext();
     await sctx.addInitScript('window.Clerk={load:function(){return Promise.resolve();},user:{id:"user_p8date",unsafeMetadata:{}}};');
     await blockClerk(sctx);
     const spage = await sctx.newPage();
     await spage.goto('http://127.0.0.1:' + PORT + '/studio.html', { waitUntil: 'load' });
     await spage.waitForTimeout(900);
-    const sProbe = await spage.evaluate(() => { const B = window.DatumDateBounds || {}; return B.AGE_MIN === undefined ? null : { b: { AGE_MIN: B.AGE_MIN, AGE_MAX: B.AGE_MAX, RA_MIN_FLOOR: B.RA_MIN_FLOOR, RA_MAX: B.RA_MAX, PTA_MIN_FLOOR: B.PTA_MIN_FLOOR, PTA_MAX: B.PTA_MAX }, age: B.ageAtDate('03/2035', 8, 1982), date: typeof B.dateFromAge === 'function' ? B.dateFromAge(52, 8, 1982) : null }; });
+    const sProbe = await spage.evaluate(() => { const B = window.DatumDateBounds || {}; return B.AGE_MIN === undefined ? null : { b: { AGE_MIN: B.AGE_MIN, AGE_MAX: B.AGE_MAX, RA_MIN_FLOOR: B.RA_MIN_FLOOR, RA_MAX: B.RA_MAX, PTA_MAX: B.PTA_MAX, planFloorAt60: (typeof B.planWindow === 'function' ? B.planWindow(60).floor : null) }, age: B.ageAtDate('03/2035', 8, 1982), date: typeof B.dateFromAge === 'function' ? B.dateFromAge(52, 8, 1982) : null }; });
     check('(par) Studio exposes DatumDateBounds', !!sProbe, JSON.stringify(sProbe));
     check('(par) Studio + Dossier bounds IDENTICAL', sProbe && JSON.stringify(sProbe.b) === JSON.stringify(dProbe.b), 'S=' + JSON.stringify(sProbe && sProbe.b) + ' D=' + JSON.stringify(dProbe.b));
     check('(par) Studio == Dossier ageAtDate (52 == 52)', sProbe && sProbe.age === dProbe.age && dProbe.age === 52, 'S=' + (sProbe && sProbe.age) + ' D=' + dProbe.age);
