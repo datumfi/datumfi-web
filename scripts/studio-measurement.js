@@ -63,10 +63,26 @@
   /* ⛔ EVERY VALUE SLOT GOES THROUGH HERE, AND IT REFUSES NON-FINITE INPUT RATHER THAN FORMATTING
      IT. `'$' + Math.round(NaN/1000) + 'k'` is the string "$NaNk", which is how a broken number
      reaches a screen looking like a considered one. */
+  /* ⛔ "$24408k" IS NOT A NUMBER A PERSON READS — Captain-reported 2026-09-15 on a median terminal
+   * estate of $24.4 MILLION. The old form was `$` + round(n/1000) + `k` with no separator and no
+   * upper bound, so every figure above a million rendered as an unpunctuated five-digit "k" value
+   * and the reader had to divide to find out what they were looking at.
+   * ⚠️ THE THOUSANDS FORM IS KEPT BELOW $1M BECAUSE THE WHOLE PANEL IS BUILT ON IT — the axis, the
+   *    marker pills and the tiles all read in `k`, and switching that wholesale would break the
+   *    Mock parity this screen is held to. What changes is only that thousands now carry a
+   *    separator, and that MILLIONS get their own unit instead of being spelled in thousands.
+   * ⚠️ ONE DECIMAL AT THE MILLION SCALE, NEVER MORE: the Mock's own terminal-estate figure reads
+   *    "$1.96M", so this follows it rather than inventing a precision. */
   function money(v) {
     var n = Number(v);
     if (!Number.isFinite(n)) return '';
-    return '$' + Math.round(n / 1000) + 'k';
+    var k = Math.round(n / 1000);
+    if (Math.abs(k) >= 1000) {
+      var m = n / 1000000;
+      return '$' + (Math.abs(m) >= 100 ? Math.round(m).toLocaleString('en-US')
+                                       : (Math.round(m * 10) / 10).toLocaleString('en-US')) + 'M';
+    }
+    return '$' + k.toLocaleString('en-US') + 'k';
   }
   function pct(v) {
     var n = Number(v);
