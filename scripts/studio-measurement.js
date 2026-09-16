@@ -493,11 +493,23 @@
       return TOP + val * H;
     };
 
+    /* ⛔⛔ JUST OUTSIDE THE SHAPE, NOT ON ITS EDGE — Captain-ruled: "visually we can clamp that
+     * maybe to appear just out of the shape... but not appearing at all looks like it was messed
+     * up." The node sits OVERSHOOT past the plot, inside the viewBox gutter (plot 44-586 within
+     * 0-620), so the geometry itself says out-of-range before any copy is read.
+     * ⚠️ AND THE MOCK DOES NOT ANSWER THIS, WHICH IS WHY IT IS DECLARED RATHER THAN PORTED. The
+     *    Mock computes `x:px(datumSpend)` UNCLAMPED and its dragger constrains the datum to the
+     *    window, so the state never arises there. An unclamped marker at $105k would land outside
+     *    the viewBox and VANISH — the precise failure being fixed. Everything else about these
+     *    nodes is the Mock's; this overshoot and the `.is-pinned` styling are invented, and that is
+     *    a declared debt for the Architect to rule on, not a silent choice. */
+    var OVERSHOOT = 10;
     var rawX = px(spend);
     var pinned = rawX < LEFT || rawX > RIGHT;
+    var nodeX = pinned ? (rawX > RIGHT ? RIGHT + OVERSHOOT : LEFT - OVERSHOOT) : rawX;
     var nodes = [
       { label: 'Floor',   value: s.floor,   x: px(s.floor),   accent: 'var(--mc-floor)',   kind: 'floor',   pinned: false },
-      { label: 'Spend',   value: spend,     x: Math.max(LEFT, Math.min(RIGHT, rawX)), accent: 'var(--mc-datum)', kind: 'datum', pinned: pinned },
+      { label: 'Spend',   value: spend,     x: nodeX,         accent: 'var(--mc-datum)',   kind: 'datum',   pinned: pinned },
       { label: 'Ceiling', value: s.ceiling, x: px(s.ceiling), accent: 'var(--mc-ceiling)', kind: 'ceiling', pinned: false }
     ];
 
@@ -514,7 +526,14 @@
         + (datum ? '<circle class="mc-datum-hit" r="14"></circle>' : '')
         + '<line x1="0" y1="0" x2="0" y2="' + (BOTTOM - y).toFixed(1) + '"></line>'
         + (datum ? '<circle class="mc-datum-core" r="6.5"></circle>' : '<circle r="6"></circle>')
-        + '<g transform="translate(-36 ' + (pillY - y).toFixed(1) + ')">'
+        /* ⛔ THE PILL IS HELD INSIDE THE viewBox, AND THIS IS THE HALF THAT MAKES THE OVERSHOOT
+           SAFE. The pill is 72 wide, drawn from the node minus 36; a node pushed past the plot
+           would carry its label off the 0-620 canvas and the VALUE — the one thing that must never
+           disappear — would be clipped. Clamped in ABSOLUTE space, then converted back to the
+           node-relative offset, so an in-range marker keeps the Mock's exact -36 and only a pinned
+           one shifts. A LABEL THAT LEAVES THE CANVAS IS THE BLANK WE ARE HERE TO REMOVE. */
+        + '<g transform="translate(' + (Math.max(4, Math.min(620 - 72 - 4, n.x - 36)) - n.x).toFixed(1)
+        + ' ' + (pillY - y).toFixed(1) + ')">'
         + '<rect class="mc-curve-pill" x="0" y="0" width="72" height="24" rx="8"></rect>'
         + '<text class="mc-curve-label" x="36" y="10" text-anchor="middle">' + n.label + '</text>'
         + '<text class="mc-curve-value" x="36" y="19" text-anchor="middle">' + money(n.value) + '</text>'
