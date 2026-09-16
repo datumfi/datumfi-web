@@ -15598,6 +15598,69 @@ const _planThroughAnswered = () => {
   const el = document.getElementById('plan-end-age');
   return !!(window._ptaAnswered && el && String(el.value || '').trim());
 };
+/* ⛔⛔ THE HOUSEHOLD'S OWN ASSET MIX, VALUE-WEIGHTED ACROSS THE WHOLE ESTATE (2026-09-16).
+   ⛔ THE DEFECT THIS CLOSES WAS NEVER "WE DO NOT KNOW THE MIX". The Studio has classified every
+      holding since long before the engine could receive one — `_diSignals` above reads a Stock
+      instrument as equity and a Bond/CD as fixed income, by VALUE — and it PRINTS THE ANSWER BACK
+      TO THE USER in six places ("The invested sleeve is NN% stocks / NN% bonds"), and DRIVES ROTH
+      ASSET-LOCATION ADVICE off `bondPct >= 30`. It then threw the number away at this boundary and
+      the engine modelled 80 / 17 / 3 for everybody.
+   🔑 A PRODUCT THAT TELLS YOU IT HAS READ YOUR MIX, ADVISES YOU ON IT, AND THEN MODELS
+      SOMEBODY ELSE'S IS WORSE THAN ONE THAT NEVER LOOKED. MEASURED on the Captain's own 15-Sep save
+      through that same classifier: 94.6% stocks / 4.7% bonds, 100% of invested value classified.
+      Worth up to $14,000/yr of Ceiling against the 80/17/3 he was actually being modelled at.
+
+   ⛔⛔ `_diSignals` IS PER-ACCOUNT AND THIS IS PER-HOUSEHOLD, AND THE DIFFERENCE IS THE WHOLE
+      FUNCTION. Averaging the six printed per-account percentages would weight a $7,000 IRA equally
+      with an $89,000 one. DOLLARS ARE SUMMED, NEVER PERCENTAGES AVERAGED.
+
+   ⚠️ THE DENOMINATOR IS THE ENGINE'S PORTFOLIO, NOT THE SUM OF THE HOLDINGS, AND THAT IS THE
+      TRAP THIS FUNCTION EXISTS TO AVOID. `_diSignals` only sees rows in the holdings table, so a
+      household with $900,000 typed straight into a 401(k) and $10,000 of classified stock in a
+      brokerage would otherwise report 100% EQUITY WITH TOTAL CONFIDENCE — a 1.1% sample answering
+      for the whole estate. Coverage is measured against what the ENGINE is being told the
+      portfolio is worth, so an unlisted balance reads as UNKNOWN rather than as absent.
+
+   ⛔ BELOW 95% COVERAGE IT RETURNS null AND SENDS NOTHING (L47 sourced-or-blank). A partial mix
+      scaled up to 100% is a guess about the part we cannot see, wearing the authority of the part
+      we can. The engine then states its own assumption in `allocation.source`, where a reader can
+      see it — which is the entire point of that field.
+
+   ⚠️ A SAVINGS ACCOUNT IS CASH BY ITS TYPE, NOT BY ITS HOLDINGS. `savings*` maps to the engine's
+      `hysa`, and an HYSA holding cash is the same kind of sourced fact as "a Stock instrument IS
+      equity" one function up — not a guess. Without this line every cash-heavy household would
+      fail the coverage bar and be modelled at 80/17/3 for holding exactly what they said.
+
+   ⚠️ PENSION ROOMS ARE EXCLUDED because the engine excludes their balance from the portfolio
+      entirely (engine/income.py — their `annual_contribution` carries the income instead). Counting
+      a pension balance in this denominator would make every pension household look unclassified. */
+function _householdAssetMix() {
+  var eq = 0, bd = 0, cash = 0, engineValue = 0;
+  (state.accounts || []).filter(_reachesEngine).forEach(function (a) {
+    var engineType = ACCOUNT_TYPE_MAP[a.baseId] || a.baseId;
+    if (engineType === 'pension') return;
+    var v = a.value || 0;
+    if (v <= 0) return;
+    engineValue += v;
+    if (engineType === 'hysa') { cash += v; return; }
+    var s = _diSignals(a);
+    eq += s.eq; bd += s.bd; cash += s.cash;
+  });
+  if (engineValue <= 0) return null;
+  var modelled = eq + bd + cash;
+  /* ⚠️ `modelled` CAN EXCEED `engineValue` when a holdings table prices an account above its
+     stated balance. That is a disagreement between two stores, not a coverage failure — the mix
+     is still fully described — so the test is one-sided and the shares below normalise over
+     `modelled`, which is the only total the three buckets actually add up to. */
+  if (modelled <= 0 || (modelled / engineValue) < 0.95) return null;
+  var e = Math.round((eq / modelled) * 10000) / 10000;
+  var b = Math.round((bd / modelled) * 10000) / 10000;
+  /* ⛔ CASH IS THE REMAINDER SO THE THREE SUM TO EXACTLY 1. The engine refuses a mix that misses
+     by more than a point, and three independently-rounded shares are the ordinary way to miss. */
+  var c = Math.round((1 - e - b) * 10000) / 10000;
+  if (c < 0) c = 0;
+  return { equity: e, bond: b, cash: c };
+}
 const _reachesEngine = a =>
              !FILTERED_TYPES.has(a.baseId)
           && !_conduitIsInformational(a)   // §7.5 count-once guard — an informational Rollover 401(k)'s dollars are counted inside its destination plan, never twice (bank R91; safe-by-default per Captain Fork A)
@@ -15949,6 +16012,26 @@ const _reachesEngine = a =>
             ? (_colaWeighted / _colaWeight)
             : (_pensionRooms.reduce((s, p) => s + (p.cola || 0), 0) / _pensionRooms.length);
           body.pension_cola = _colaPct / 100;
+        }
+        /* ⛔⛔ THE ASSET MIX REACHES THE ENGINE. Sent only when the estate can be classified, the
+           same rule as `filing_status` and `location` directly above: A MISSING ANSWER IS A MISSING
+           KEY, never a null and never a guess.
+           ⚠️ FRACTIONS, NOT PERCENTAGES. `_householdAssetMix` already returns 0..1 to match the
+              engine's vocabulary for every other proportion (`pension_cola`, `ss_haircut`), so
+              unlike the COLA two blocks up THERE IS NO DIVISION HERE — and there must not be one
+              added later by someone pattern-matching on that neighbour.
+           ⚠️ ALL THREE OR NONE. The engine refuses a partial mix by name rather than completing
+              it, so a future edit that drops one of these lines fails loudly instead of letting the
+              engine invent two thirds of a portfolio.
+           ⭐ THE SS MATRIX IS COVERED BY THIS LINE AND NOT BY A SECOND ONE. buildMatrixRequest
+              builds on `window._buildStudioRequest()`'s body (Finding 67's repair), so both egresses
+              describe the same estate from one expression — which is exactly what the co-architect
+              fork failed to do for twelve days. */
+        const _assetMix = _householdAssetMix();
+        if (_assetMix) {
+          body.equity_pct = _assetMix.equity;
+          body.bond_pct   = _assetMix.bond;
+          body.cash_pct   = _assetMix.cash;
         }
         /* ⛔ THE REFUSAL, LANDING ONE COMMIT AFTER THE WIRING, AND THE NARROWING IS DECLARED RATHER
            THAN ASSUMED. The standing rule is that a field becomes required in the SAME commit that
