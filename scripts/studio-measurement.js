@@ -116,6 +116,13 @@
     if (line) line.removeAttribute('d');
     if (area) area.removeAttribute('d');
     if (marks) marks.innerHTML = '';
+    /* ⛔ THE OUT-OF-RANGE SENTENCE IS CLEARED HERE FOR THE SAME REASON THE SURVIVOR DISCLOSURE IS:
+       clearData is the one function every re-render passes through, and a state left standing would
+       tell the NEXT household that THEIR spend is past a range it was never compared against. */
+    var rs = el('mcRangeState');
+    if (rs) { rs.hidden = true; rs.removeAttribute('data-range-state'); }
+    put('mcRangeStateKicker', '');
+    put('mcRangeStateNote', '');
     /* ⛔ CLEARED HERE RATHER THAN ONLY IN renderEmpty, BECAUSE clearData IS THE FUNCTION EVERY
        RE-RENDER GOES THROUGH. A disclosure left standing from the PREVIOUS household while the
        next one's numbers paint over it would name a survivor year belonging to somebody else —
@@ -163,6 +170,35 @@
     return { minSpend: Math.max(0, s.floor - stretch), maxSpend: s.ceiling + stretch };
   }
 
+  /* ⛔⛔ THE HONEST READ — ASK THE ENGINE'S GRID, AND REFUSE ONLY PAST ITS END.
+   * `successAtSpend` below reads the PANEL's resampled curve and clamps, which is correct for
+   * positioning a marker on a chart and WRONG for answering "how confident is this spend". This is
+   * the reader every headline number now uses.
+   * Returns:
+   *   a finite rate  — the engine measured this spend. TRUE, whether or not it is inside the
+   *                    drawn window: the grid runs to at least $250,000 and the window is a few
+   *                    tens of thousands wide, so "above the Ceiling" is almost always MEASURED.
+   *   null           — beyond the grid. Genuinely unmeasured, and the panel must say so rather
+   *                    than print the nearest value it happens to have.
+   * 🔑 THE FILE ALREADY SAID THIS AND NOTHING ENFORCED IT: "a clamp that quietly repeats the
+   *    nearest value is a measurement claim." That note sat above `interpAt` while the headline
+   *    read a clamped resample. A COMMENT IS NOT AN ENFORCEMENT MECHANISM. */
+  function confidenceAt(s, spend) {
+    var v = Number(spend);
+    if (!Number.isFinite(v)) return null;
+    var g = s && s.grid, r = s && s.rates;
+    if (!Array.isArray(g) || !Array.isArray(r) || g.length < 2 || g.length !== r.length) return null;
+    /* Saturation is the same narrow licence interpAt already applies at the low end; past the top
+       of the grid there is no licence at all unless the curve has already bottomed out. */
+    if (v < Number(g[0]) && !(Number(r[0]) >= SATURATED_HI)) return null;
+    if (v > Number(g[g.length - 1]) && !(Number(r[r.length - 1]) <= SATURATED_LO)) return null;
+    var out = interpAt(g, r, v);
+    return Number.isFinite(Number(out)) ? Number(out) : null;
+  }
+
+  /* ⚠️ POSITIONAL ONLY. This clamps ON PURPOSE — it answers "where on this chart" and a point off
+     the chart still has to be drawn somewhere. It must NEVER answer "what is the confidence": that
+     is `confidenceAt` above, and conflating the two is the defect of 2026-09-15. */
   function successAtSpend(s, spend) {
     var v = s.curve, b = bounds(s);
     if (!Number.isFinite(Number(spend))) return NaN;
@@ -295,7 +331,20 @@
       curve.push(v);
     }
 
-    var s = { floor: floor, datum: datum, ceiling: ceiling, curve: curve };
+    /* ⛔⛔ THE ENGINE'S OWN GRID IS KEPT, AND DISCARDING IT WAS THE DEFECT.
+     * This used to build `curve` — 61 points resampled across the PANEL's window — and throw
+     * `grid`/`rates` away. `successAtSpend` then had nothing left to read but that resample, and
+     * since a spend outside the window has no position in it, it CLAMPED to the nearest end.
+     *   ⛔ MEASURED on the Captain's own household, 2026-09-15: window $29,000-$80,000 (Floor-12k
+     *      to Ceiling+12k), target spend $105,000, position 1.49 -> clamped to 1.0. The panel
+     *      printed THE CONFIDENCE AT $80,000 and labelled it "$105k". A $25,000 gap, and the error
+     *      always FLATTERS, because success falls as spend rises.
+     *   ⭐ AND THE NUMBER WAS NEVER MISSING. `make_spend_grid` runs to at least $250,000
+     *      (engine/tiers.py), so his $105,000 was measured — the panel was reading a narrower copy
+     *      of the data instead of the data. A RESAMPLE IS A VIEW, NOT A SOURCE; KEEP THE SOURCE.
+     * ⚠️ `curve` STAYS. It is what the chart draws, at the chart's resolution, and it is correct
+     *    for that job. What changes is that a QUESTION ABOUT A SPEND is now asked of the grid. */
+    var s = { floor: floor, datum: datum, ceiling: ceiling, curve: curve, grid: grid, rates: rates };
 
     /* The terminal estate at the Datum, from the engine's own parallel array. Absent when the
        engine shipped no median_ending — blank, never derived from the balance. */
@@ -367,6 +416,112 @@
 
   function activeDatum(s) { return Number.isFinite(datumSpend) ? datumSpend : s.datum; }
 
+  /* ⛔⛔ AUTHORED COPY, WIRED VERBATIM — Engine Spec, §82.1048 (which SUPERSEDES §82.1043 for the
+   * above-ceiling case). Three states, and the distinction between the first two is the whole
+   * point: ABOVE THE CEILING IS NOT THE SAME AS UNMEASURED.
+   *   A · above the Ceiling but INSIDE the grid — a CONSEQUENCE, NOT AN ABSENCE. The engine ran
+   *       these paths, so the number is shown and named as a trade.
+   *   B · beyond the grid — the rare, genuinely unmeasured case. No percentage, ever.
+   *   C · below the Floor — MUST READ AS GOOD NEWS, not as an error.
+   * ⛔ NOT MY WORDS AND NOT TO BE EDITED HERE. A change to these strings goes back to the
+   *    Architect; L47 — a copy line with no authored source is a STOP, not a draft. */
+  var RANGE_STATES = {
+    above_measured: {
+      kicker: 'Above the tested range',
+      note:   'You have set a level above the range we call supportable. We did measure here: it '
+            + 'holds in {success_pct} of the futures we ran. That is the trade you are making.'
+    },
+    above_unmeasured: {
+      kicker: 'Past what we measured',
+      note:   'This is beyond the range we tested. We are not going to guess at a number we did '
+            + 'not run.'
+    },
+    below_floor: {
+      kicker: 'Below your floor',
+      note:   'You are planning to spend less than the level that held in every test. Every future '
+            + 'we ran supports this. If you want to spend more, the curve shows what it costs.'
+    }
+  };
+
+  /* Which of the three (or none) applies. Kept separate from the copy so the PREDICATE can be
+     read and gated without reading the strings — and so a copy change cannot move a boundary. */
+  function rangeState(s, spend, conf) {
+    if (!Number.isFinite(Number(spend))) return null;
+    var v = Number(spend);
+    if (v < Number(s.floor))   return 'below_floor';
+    if (v > Number(s.ceiling)) return conf == null ? 'above_unmeasured' : 'above_measured';
+    return null;
+  }
+
+  function renderRangeState(s, spend, conf) {
+    var host = el('mcRangeState');
+    if (!host) return;
+    var key = rangeState(s, spend, conf);
+    if (!key) { host.hidden = true; host.removeAttribute('data-range-state'); return; }
+    var copy = RANGE_STATES[key];
+    var k = el('mcRangeStateKicker'), n = el('mcRangeStateNote');
+    if (k) k.textContent = copy.kicker;
+    /* {success_pct} is the ONLY substitution, and it is only reachable in the state whose copy
+       names it — an unmeasured state can never acquire a percentage by templating accident. */
+    if (n) n.textContent = copy.note.replace('{success_pct}', Number.isFinite(conf) ? pct(conf) : '');
+    host.setAttribute('data-range-state', key);
+    host.hidden = false;
+  }
+
+  /* ⛔⛔ THE THREE MARKERS, PORTED FROM THE MOCK AT PARITY. Structure, class names, pill geometry
+   * (72x24, rx 8, offset -36) and the 52/-42 pill clamp are the Mock's, not reinvented — the
+   * standing instruction is that the two files must be indistinguishable side by side.
+   * ⛔ THE DATUM MARKER IS PINNED, NEVER SILENTLY MOVED. When the spend sits outside the drawn
+   *    window its NODE is placed at the edge so it stays visible, and the VALUE ON THE PILL IS
+   *    ALWAYS THE NUMBER THE USER TYPED. That is the Architect's hard rule for all three states
+   *    and the Captain's own instruction: a number that vanishes reads as broken, and a number
+   *    silently rewritten to the edge is worse than either.
+   * ⚠️ `pinned` is exposed as a data attribute so the pin is STYLEABLE and ASSERTABLE rather than
+   *    inferred from a coordinate. */
+  function renderCurveMarkers(s, spend) {
+    var marks = el('mcCurveMarkers');
+    if (!marks) return;
+    var b = bounds(s), span = b.maxSpend - b.minSpend;
+    if (!Number.isFinite(span) || span <= 0) { marks.innerHTML = ''; return; }
+
+    var px = function (v) { return LEFT + ((v - b.minSpend) / span) * W; };
+    var sampleY = function (xVal) {
+      var t = Math.max(0, Math.min(1, (xVal - LEFT) / W));
+      var idx = t * (s.curve.length - 1), lo = Math.floor(idx), hi = Math.min(s.curve.length - 1, Math.ceil(idx));
+      var frac = idx - lo;
+      var val = Number(s.curve[lo]) * (1 - frac) + Number(s.curve[hi]) * frac;
+      return TOP + val * H;
+    };
+
+    var rawX = px(spend);
+    var pinned = rawX < LEFT || rawX > RIGHT;
+    var nodes = [
+      { label: 'Floor',   value: s.floor,   x: px(s.floor),   accent: 'var(--mc-floor)',   kind: 'floor',   pinned: false },
+      { label: 'Spend',   value: spend,     x: Math.max(LEFT, Math.min(RIGHT, rawX)), accent: 'var(--mc-datum)', kind: 'datum', pinned: pinned },
+      { label: 'Ceiling', value: s.ceiling, x: px(s.ceiling), accent: 'var(--mc-ceiling)', kind: 'ceiling', pinned: false }
+    ];
+
+    marks.innerHTML = nodes.map(function (n) {
+      if (!Number.isFinite(n.x) || !Number.isFinite(Number(n.value))) return '';
+      var y = sampleY(n.x);
+      if (!Number.isFinite(y)) return '';
+      var pillY = Math.max(52, y - 42);
+      var datum = n.kind === 'datum';
+      return '<g class="mc-curve-node' + (datum ? ' datum-node' : '') + (n.pinned ? ' is-pinned' : '')
+        + '" transform="translate(' + n.x.toFixed(1) + ' ' + y.toFixed(1) + ')"'
+        + ' style="--mc-accent:' + n.accent + '" data-node-kind="' + n.kind + '"'
+        + (n.pinned ? ' data-pinned="1"' : '') + '>'
+        + (datum ? '<circle class="mc-datum-hit" r="14"></circle>' : '')
+        + '<line x1="0" y1="0" x2="0" y2="' + (BOTTOM - y).toFixed(1) + '"></line>'
+        + (datum ? '<circle class="mc-datum-core" r="6.5"></circle>' : '<circle r="6"></circle>')
+        + '<g transform="translate(-36 ' + (pillY - y).toFixed(1) + ')">'
+        + '<rect class="mc-curve-pill" x="0" y="0" width="72" height="24" rx="8"></rect>'
+        + '<text class="mc-curve-label" x="36" y="10" text-anchor="middle">' + n.label + '</text>'
+        + '<text class="mc-curve-value" x="36" y="19" text-anchor="middle">' + money(n.value) + '</text>'
+        + '</g></g>';
+    }).join('');
+  }
+
   function render(s) {
     if (!el('mcOverlay')) return;
     if (!usable(s)) { current = null; renderEmpty(); return; }
@@ -374,11 +529,21 @@
 
     var b = bounds(s);
     var spend = activeDatum(s);
-    var conf = successAtSpend(s, spend);
+    /* ⛔ THE GRID, NOT THE RESAMPLE. See `confidenceAt`. null means the engine did not measure
+       this spend, and the panel says so below rather than printing the nearest value it has. */
+    var conf = confidenceAt(s, spend);
+    renderRangeState(s, spend, conf);
 
     put('mcClimate', s.label || '');
-    put('mcSuccess', pct(conf));
-    put('mcDatumSuccess', pct(conf));
+    /* ⛔⛔ A NULL CONFIDENCE RENDERS BLANK, NOT "0%", AND THIS WAS CAUGHT IN THIS COMMIT'S OWN
+       TESTING. `pct(null)` returns "0%", so the first version of this repair printed
+       "PLAN CONFIDENCE 0%" beside the sentence "we are not going to guess at a number we did not
+       run" — the exact defect being fixed, reappearing one line over, and reading as a measured
+       certainty of failure rather than an absence. `mcFailure` below was already guarded; these
+       two were not, which is how a guard gets applied to the derived number and missed on the
+       headline it derives from. 🔑 GUARD THE SOURCE, NOT ONLY WHAT IT FEEDS. */
+    put('mcSuccess', Number.isFinite(conf) ? pct(conf) : '');
+    put('mcDatumSuccess', Number.isFinite(conf) ? pct(conf) : '');
     put('mcHorizon', s.horizon || '');
     put('mcFloorValue', money(s.floor));
     put('mcDatumValue', money(spend));
@@ -418,6 +583,9 @@
     var line = el('mcCurveLine'), area = el('mcCurveArea');
     if (line) line.setAttribute('d', dAttr);
     if (area) area.setAttribute('d', dAttr + ' L ' + RIGHT + ' ' + BOTTOM + ' L ' + LEFT + ' ' + BOTTOM + ' Z');
+    /* The markers are part of drawing the curve, not a separate pass — a chart that redraws its
+       line without moving its pins is the shape that lets a marker describe a previous household. */
+    renderCurveMarkers(s, activeDatum(s));
   }
 
   /* ⛔ DEVIATION 2 — the dragger. Every intermediate is checked for finiteness, and a non-finite

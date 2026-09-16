@@ -267,6 +267,26 @@ body.light-mode .mc-convergence-footer .mc-convergence-status{background:linear-
 .mc-curve-node.datum-node.dragging{cursor:grabbing;}
 .mc-datum-hit{fill:transparent;stroke:none;pointer-events:all;cursor:grab;}
 .mc-datum-core{pointer-events:none;}
+/* ⛔ THE PINNED DATUM — a spend outside the drawn window, parked at the edge so it stays VISIBLE.
+   The Mock has no equivalent because the Mock's datum is always in range; everything here is built
+   from the Mock's own tokens so the two files still read as one design.
+   ⚠️ IT MUST LOOK DELIBERATE, NOT LIKE A MARKER THAT DRIFTED. The dashed ring and the leaning stem
+      say "held at the edge"; the pill keeps the user's TYPED value at full strength, because the
+      number is not the uncertain part — its position is. */
+.mc-curve-node.is-pinned circle{stroke-dasharray:3 2.5;}
+.mc-curve-node.is-pinned line{stroke:var(--mc-accent);opacity:.34;stroke-dasharray:2 4;}
+.mc-curve-node.is-pinned .mc-curve-pill{stroke:var(--mc-accent);stroke-opacity:.5;}
+/* ⛔⛔ THE THREE OUT-OF-RANGE STATES (Engine Spec §82.1048). Authored copy, wired verbatim.
+   The left rule takes the colour of the boundary that was crossed — gold below the Floor, red
+   above the Ceiling — so the sentence and the chart agree without the copy naming a colour. */
+.mc-range-state{margin:10px 0 0;padding:9px 12px;border:1px solid rgba(106,132,148,.2);
+  border-left-width:3px;border-radius:8px;background:rgba(255,255,255,.02);}
+.mc-range-state[data-range-state="below_floor"]{border-left-color:var(--mc-floor);}
+.mc-range-state[data-range-state="above_measured"],
+.mc-range-state[data-range-state="above_unmeasured"]{border-left-color:var(--mc-ceiling);}
+.mc-range-state-kicker{font:500 7.5px var(--mono);letter-spacing:.13em;text-transform:uppercase;
+  color:var(--mc-muted);margin:0 0 4px;}
+.mc-range-state-note{font:400 11.5px/1.5 var(--sans);color:var(--mc-ink);margin:0;}
 .mc-curve-axis-left{position:absolute;left:2px;top:18px;bottom:32px;display:flex;flex-direction:column;justify-content:space-between;font:500 7.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:#80939b;}
 .mc-curve-axis-bottom{position:absolute;left:44px;right:18px;bottom:8px;display:flex;justify-content:space-between;font:500 8px var(--mono);letter-spacing:.10em;text-transform:uppercase;color:#83949a;}
 .mc-metrics{display:grid;gap:12px;margin-top:10px;}
