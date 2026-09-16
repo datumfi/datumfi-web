@@ -60,13 +60,28 @@ const PART = 'scripts/studio-measurement.js';
 const KEEP_GRID = 'curve: curve, grid: grid, rates: rates };';
 const DROP_GRID = 'curve: curve };';
 
+/* ⛔⛔ THE SECOND CONTROL, AND IT WAS OWED. `--nogrid` proves the NUMBER leg and leaves L3 GREEN —
+ * so until this existed, "the marker is pinned at the typed value" had never been observed to fail.
+ * A GATE THAT ONLY ASSERTS THE NUMBER GOES GREEN ON A BLANK CHART, and a blank chart is precisely
+ * what the Captain ruled out ("not appearing at all looks like it was messed up"). This removes the
+ * MARKER CAPABILITY — the renderer returns before drawing anything — rather than one marker or one
+ * attribute, so no route can put a pin on the chart. */
+const KEEP_MARKERS = 'function renderCurveMarkers(s, spend) {\n    var marks = el(\'mcCurveMarkers\');\n    if (!marks) return;';
+const DROP_MARKERS = 'function renderCurveMarkers(s, spend) {\n    var marks = el(\'mcCurveMarkers\');\n    if (marks) marks.innerHTML = \'\';\n    if (marks) return;';
+
 const argv = process.argv.slice(2);
 const NOGRID = argv.includes('--nogrid');
+const NOMARKER = argv.includes('--nomarker');
 const CONTROLS = {
   '--nogrid': {
     what: 'drops the engine grid from the scenario — no route can answer a spend honestly',
     anchors: [{ file: PART, literal: KEEP_GRID, count: 1 }],
     reds: ['L1', 'L2'], expect: 'red'
+  },
+  '--nomarker': {
+    what: 'removes the marker capability entirely — nothing can put a pin on the chart',
+    anchors: [{ file: PART, literal: KEEP_MARKERS, count: 1 }],
+    reds: ['L3'], expect: 'red'
   }
 };
 if (argv.includes('--declare-controls')) {
@@ -75,10 +90,18 @@ if (argv.includes('--declare-controls')) {
 }
 
 function poison(rel, body) {
-  if (!NOGRID || rel !== PART) return body;
-  const n = body.split(KEEP_GRID).length - 1;
-  if (n !== 1) { console.log(`ABORT: --nogrid anchor matched ${n} times, expected 1`); process.exit(1); }
-  return body.split(KEEP_GRID).join(DROP_GRID);
+  if (rel !== PART) return body;
+  if (NOGRID) {
+    const n = body.split(KEEP_GRID).length - 1;
+    if (n !== 1) { console.log(`ABORT: --nogrid anchor matched ${n} times, expected 1`); process.exit(1); }
+    body = body.split(KEEP_GRID).join(DROP_GRID);
+  }
+  if (NOMARKER) {
+    const m = body.split(KEEP_MARKERS).length - 1;
+    if (m !== 1) { console.log(`ABORT: --nomarker anchor matched ${m} times, expected 1`); process.exit(1); }
+    body = body.split(KEEP_MARKERS).join(DROP_MARKERS);
+  }
+  return body;
 }
 
 const MIME = { '.html':'text/html', '.css':'text/css', '.js':'text/javascript', '.mjs':'text/javascript',

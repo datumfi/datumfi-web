@@ -17065,9 +17065,26 @@ const _reachesEngine = a =>
           resetOverlayState();   // re-enables the button; the old overlay is inert but this is its one home
 
           if (_timedOut) {
-            /* Authored copy, re-homed verbatim from the retired #c-error-state block — the same
-               sentence the user would have read there, now on the surface that still exists. */
-            _revealPaint('Not yet', 'We could not compute your Range. Please check your inputs and try again.');
+            /* ⛔⛔ A TIMEOUT IS NOT A REJECTION, AND UNTIL 2026-09-15 THIS PRODUCT COULD NOT TELL A
+             * PERSON THE DIFFERENCE. Both this branch and the `!apiResult` branch below printed the
+             * SAME sentence — "We could not compute your Range. Please check your inputs and try
+             * again." — so a compute that merely ran out of clock accused the user of a mistake.
+             *   ⛔ CAPTAIN-MEASURED, AND IT REACHED THROUGH THE SCREEN: a $10M estate exceeded the
+             *      30s budget, was told to check its inputs, and HE REMOVED A ZERO FROM HIS OWN
+             *      ESTATE to satisfy the message. He edited his real household to appease a
+             *      sentence that was describing its own clock.
+             *   🔑 EVERY OTHER REFUSAL IN THIS PRODUCT NAMES ITS CAUSE AND OFFERS A DOOR TO THE
+             *      FIELD. This was the one exception, and it is the one he hit. A MESSAGE THAT
+             *      CANNOT SAY WHY IT REFUSED IS A PROVENANCE DEFECT WEARING A SENTENCE — and the
+             *      first one in this arc aimed at a human being rather than at a number.
+             * ⭐ AUTHORED COPY, WIRED VERBATIM — 'Empty State Copy Bank' §22.1.
+             * ⛔ "Nothing you entered is wrong" IS LOAD-BEARING AND MAY NOT BE TRIMMED FOR BREVITY.
+             *    It is the entire repair: the clause that moves the blame off the person. And
+             *    neither this string nor §22.2 may ever say "check your inputs" again. */
+            _revealPaint('This one is taking longer than we allow.',
+                         'Larger estates take more computing, and this Range passed the time we '
+                       + 'give it. Nothing you entered is wrong — there is nothing to fix. Run it '
+                       + 'again and it will usually come back faster.');
             if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: false, timed_out: true });
             return;
           }
@@ -17082,7 +17099,22 @@ const _reachesEngine = a =>
           }
 
           if (!apiResult) {
-            _revealPaint('Not yet', 'We could not compute your Range. Please check your inputs and try again.');
+            /* ⭐ AUTHORED COPY, WIRED VERBATIM — 'Empty State Copy Bank' §22.2. Distinct from the
+             * timeout above, which is the whole point: two causes may not share one sentence.
+             * ⚠️ THE ARCHITECT ASKS WHETHER THIS CAN NAME THE FIELD, AND ON THIS PATH IT CANNOT —
+             *    MEASURED, NOT ASSUMED. Every refusal the ENGINE can attribute arrives as a 422 and
+             *    is painted by `_datumHandleRefusal` with its own `detail.condition`, which names
+             *    the field and offers the door; that branch returns above via `_datumWasRefusal`.
+             *    What reaches HERE is the residue — a non-2xx with no parseable detail, a network
+             *    failure, or a thrown request — where the client genuinely holds no field name to
+             *    give. So this is not a placeholder standing in for work not done; it is the honest
+             *    floor of what is knowable at this point in the path.
+             *    🔑 IF A FUTURE ENGINE RESPONSE CARRIES AN ATTRIBUTABLE CAUSE HERE, IT MUST BE
+             *       NAMED AND THIS STRING MUST NARROW. The generic form is licensed by the absence
+             *       of information, and by nothing else. */
+            _revealPaint('Something in here does not compute.',
+                         'One of the figures is stopping the calculation. Nothing has been lost. '
+                       + 'Check the values you have entered most recently and run it again.');
             if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: false });
             return;
           }
