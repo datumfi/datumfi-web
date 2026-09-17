@@ -215,19 +215,22 @@
       "live": null
     },
     "allocation.equity": {
-      "bucket": "ENGINE_LACKS",
-      "note": "⛔⛔ THE PRIORITY OF THE ARC. The engine has NO allocation field; it runs a hardcoded glide (GLIDE_START_EQ 0.79 -> GLIDE_END_EQ 0.50 over 30 years, CASH_PCT 0.03) sourced to the Captain's own workbook cells I&A B265-B267. ⚠️ An equity_pct PARAMETER exists but feeds only the MEAN RETURN; volatility comes from glide_vol() which reads the constants and ignores it — so wiring the obvious parameter opens the door HALFWAY. Two defaults already disagree: income 0.80, models 0.79.",
-      "live": null
+      "bucket": "ENGINE_HAS",
+      "note": "STAR WIRED 2026-09-16: the household's own stock/bond/cash split reaches the engine. This row read ENGINE_LACKS for three days AFTER the field landed, which is the census's own stale-map failure: a diff is only as current as the list it diffs against. ⛔⛔ THE PRIORITY OF THE ARC. The engine has NO allocation field; it runs a hardcoded glide (GLIDE_START_EQ 0.79 -> GLIDE_END_EQ 0.50 over 30 years, CASH_PCT 0.03) sourced to the Captain's own workbook cells I&A B265-B267. ⚠️ An equity_pct PARAMETER exists but feeds only the MEAN RETURN; volatility comes from glide_vol() which reads the constants and ignores it — so wiring the obvious parameter open",
+      "live": null,
+      "engine": "equity_pct"
     },
     "allocation.bond": {
-      "bucket": "ENGINE_LACKS",
-      "note": "Same wall as allocation.equity.",
-      "live": null
+      "bucket": "ENGINE_HAS",
+      "note": "STAR WIRED 2026-09-16: the household's own stock/bond/cash split reaches the engine. This row read ENGINE_LACKS for three days AFTER the field landed, which is the census's own stale-map failure: a diff is only as current as the list it diffs against. Same wall as allocation.equity.",
+      "live": null,
+      "engine": "bond_pct"
     },
     "allocation.cash": {
-      "bucket": "ENGINE_LACKS",
-      "note": "Same wall as allocation.equity. Already declared kind:'unsourced' in the engine's constant ledger with a note saying the user cannot touch it.",
-      "live": null
+      "bucket": "ENGINE_HAS",
+      "note": "STAR WIRED 2026-09-16: the household's own stock/bond/cash split reaches the engine. This row read ENGINE_LACKS for three days AFTER the field landed, which is the census's own stale-map failure: a diff is only as current as the list it diffs against. Same wall as allocation.equity. Already declared kind:'unsourced' in the engine's constant ledger with a note saying the user cannot touch it.",
+      "live": null,
+      "engine": "cash_pct"
     },
     "cape": {
       "bucket": "ENGINE_HAS",
@@ -362,6 +365,69 @@
       "bucket": "UI_STATE",
       "note": "Whether the user has acknowledged the panel. Never leaves the browser.",
       "live": null
+    },
+    "feeDrag": {
+      "bucket": "ENGINE_HAS",
+      "engine": "fee_drag",
+      "note": "CRITICAL WIRED 2026-09-17. The panel showed a live slider labelled 'editable engine assumption' while the engine held a literal 0.00109 for every household on earth. MEASURED: a retail 1% fee costs -$5,000 to -$8,000/yr of ladder.",
+      "live": null
+    },
+    "generalInflation": {
+      "bucket": "ENGINE_HAS",
+      "engine": "inflation",
+      "note": "CRITICAL WIRED 2026-09-17. `inflation` was a function default the API could never set, so every household got 3.0%. MEASURED: one point of inflation is worth -$5,000 to -$10,000/yr of ladder.",
+      "live": null
+    },
+    "generalInflationMode": {
+      "bucket": "UI_STATE",
+      "note": "The preset/fine selector in front of generalInflation. UI_STATE - the engine reads the resulting rate, never the mode that produced it.",
+      "live": null
+    },
+    "healthcare.excessInflation": {
+      "bucket": "ENGINE_HAS",
+      "engine": "healthcare_excess_inflation",
+      "note": "CRITICAL WIRED 2026-09-17 and it did not exist in the engine in any form. Stored as an EXCESS over general inflation, which is the panel's own shape ('+2.0 pts above CPI'); an absolute rate would let the two drift apart the first time somebody moved the general one. MEASURED: the panel's own +2.0 points is worth -$2,000 to -$4,000/yr. WARNING: the engine default is 0.0, not 2.0 - a dated transition object so nothing moves for a caller that has not been updated. The removal trigger is the commit that has the panel send it.",
+      "live": null
+    },
+    "expectedReturns.equity": {
+      "bucket": "ENGINE_LACKS",
+      "note": "The panel exposes a nominal-return slider per asset class; the engine computes blended_nominal from HARD-CODED 0.08 / 0.045 / 0.025. Three more sliders that move nothing. Same shape as feeDrag was until today."
+    },
+    "expectedReturns.bond": {
+      "bucket": "ENGINE_LACKS",
+      "note": "See expectedReturns.equity - hard-coded 0.045."
+    },
+    "expectedReturns.cash": {
+      "bucket": "ENGINE_LACKS",
+      "note": "See expectedReturns.equity - hard-coded 0.025."
+    },
+    "pensionInflationPrimary": {
+      "bucket": "ENGINE_LACKS",
+      "note": "Pension inflation PROTECTION (fixed vs CPI-linked), which is not the same field as pension_cola's rate. Distinct row, no engine field."
+    },
+    "pensionInflationCo": {
+      "bucket": "ENGINE_LACKS",
+      "note": "See pensionInflationPrimary."
+    },
+    "machinery.ignoredInputs": {
+      "bucket": "MACHINERY",
+      "note": "The engine reports fields it RECEIVED and does not model. WARNING: it is blind to the larger gap - a control the client never sends is as invisible to it as one the engine never accepts. THIS CENSUS is the instrument for that half."
+    },
+    "machinery.bedrockStress": {
+      "bucket": "MACHINERY",
+      "note": "Stress battery returned by the engine. Diagnostic readout."
+    },
+    "machinery.bridgeAccess": {
+      "bucket": "MACHINERY",
+      "note": "Pre-59.5 access diagnostic returned by the engine."
+    },
+    "machinery.specVersion": {
+      "bucket": "MACHINERY",
+      "note": "Engine version that produced the Range. Provenance, not an input."
+    },
+    "machinery.computationTime": {
+      "bucket": "MACHINERY",
+      "note": "Runtime reported by the engine. Provenance, not an input."
     }
   },
   "engine_only": {
