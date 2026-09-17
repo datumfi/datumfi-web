@@ -15909,8 +15909,65 @@ const _reachesEngine = a =>
                   person; everything else is the household's first, which is correct by
                   construction for a solo household and was the engine's own transition default. */
             const _owner = /_co$/.test(a.baseId) ? 'co_architect' : 'primary';
-            return { type: ACCOUNT_TYPE_MAP[a.baseId] || a.baseId, balance: a.value || 0,
-                     annual_contribution: a.inflow || 0, owner: _owner };
+            /* ⛔⛔ CONTRIBUTIONS ARE PER *PERIOD*, AND THIS LINE SENT THEM AS PER *YEAR*. The
+               contribution box is a rate with a unit beside it — / YR, / MO, / WK, / DY — and the
+               unit DEFAULTS TO / MO on every account this Studio creates. ELEVEN places in this
+               file annualise it as `inflow x freq`; the payload was the twelfth and it sent
+               `inflow` alone.
+               ⛔ SO A HOUSEHOLD TYPING 2,000 WITH THE DEFAULT UNIT SHOWING SAW $24,000/yr ON
+                  EVERY SCREEN IN THE STUDIO AND THE ENGINE WAS TOLD $2,000. Twelvefold on monthly,
+                  fifty-twofold on weekly, three-hundred-and-sixty-five-fold on daily.
+               ⛔ MEASURED, a household twenty years out contributing $37,200/yr across three
+                  accounts: 99.2500% -> 76.4750% confidence, and $977,207 less portfolio at
+                  retirement. THIS ONE UNDERSTATES, which is why it survived six audits that were
+                  all hunting for flattery. A DEFECT THAT FRIGHTENS THE USER IS STILL A DEFECT.
+               🔑 `|| 0` MATCHES THE ELEVEN, AND THE AGREEMENT IS THE POINT. If `freq` is missing
+                  the Studio already displays $0/yr contributions, so the engine is told the same
+                  $0 the household is being shown. Substituting 12 here would make the engine
+                  disagree with the screen in the household's favour — a second store inventing a
+                  fact, which is the defect class this whole line has now produced twice. */
+            const _annualContribution = (a.inflow || 0) * (a.freq || 0);
+            /* ⛔⛔ THE HOLDINGS LAYER, WHICH THIS LINE DISCARDED ENTIRELY UNTIL 2026-09-17. Fifteen
+               per-holding fields are collected, coached, validated, estimated and displayed by this
+               Studio, and every one of them was collapsed into a single `balance` right here. The
+               cost basis is not a field we were missing — IT IS A FIELD WE WERE THROWING AWAY, on
+               the same line that was already caught throwing away `owner`. §82.2671 / §82.2672.
+               ⛔ AND THE PRODUCT PROMISES IN WRITING THAT WE USE IT: "We use it to find your real
+                  embedded gain, so the capital-gains tax is exact instead of a guess." The engine
+                  priced a taxable brokerage identically to a Roth, to the cent, while that sentence
+                  shipped. §82.2673 — copy promising a field is used BINDS the engine.
+               ⚠️ RATES ARE STORED HERE AS PERCENTS AND THE ENGINE WANTS DECIMALS. `dividendYield`
+                  renders as `x.toFixed(2) + "%"` and `intRate` is divided by 100 wherever it is
+                  read, so both are scaled at this boundary. Forwarding them raw would have taxed a
+                  household on 450% of its cash every year, silently. The engine refuses anything
+                  above 1.0 at the door precisely so this conversion cannot go missing quietly.
+               ⚠️ A BLANK BASIS TRAVELS AS `null`, NEVER AS 0. Zero is a CLAIM — that the whole
+                  position is gain — and the engine must be able to tell "they told us nothing"
+                  from "they told us zero", because it refuses the first by name and prices the
+                  second. */
+            const _num0 = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+            const _numN = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
+            const _pct  = v => { const n = parseFloat(v); return isFinite(n) ? n / 100 : null; };
+            const _holdings = (a.holdings || []).map(h => ({
+              value:                _num0(h.price) * _num0(h.shares),
+              cost_basis:           _numN(h.costBasis),
+              cost_basis_estimated: !!h.costBasisEst,
+              cost_basis_est_rate:  _numN(h.costBasisEstRate),
+              cost_basis_est_year:  _numN(h.costBasisEstYear),
+              acquisition_date:     h.acquisitionDate || null,
+              asset_class:          h.assetClass || null,
+              instrument_type:      h.instrumentType || null,
+              dividend_yield:       _pct(h.dividendYield)
+            })).filter(h => h.value > 0);
+            const _acct = { type: ACCOUNT_TYPE_MAP[a.baseId] || a.baseId, balance: a.value || 0,
+                            annual_contribution: _annualContribution, owner: _owner };
+            /* ⚠️ OMITTED RATHER THAN SENT EMPTY. An absent `holdings` means "this account was not
+               itemised", which the engine reads as unpriceable-and-says-so; an empty array would
+               mean the same thing but costs a key on every non-investment account in the estate. */
+            if (_holdings.length) _acct.holdings = _holdings;
+            const _rate = _pct(a.intRate);
+            if (_rate !== null && _rate > 0) _acct.interest_rate = _rate;
+            return _acct;
           });
 
         /* ⛔ `location: 'FL'` DELETED (2026-09-05) — HYGIENE, NOT A WIRING CHANGE, AND THE
