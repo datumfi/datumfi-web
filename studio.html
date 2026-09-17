@@ -15891,7 +15891,26 @@ const _reachesEngine = a =>
           .filter(_reachesEngine)
           .map(a => {
             if (!ACCOUNT_TYPE_MAP[a.baseId]) console.warn('[DATUM FI] Unmapped account type:', a.baseId);
-            return { type: ACCOUNT_TYPE_MAP[a.baseId] || a.baseId, balance: a.value || 0, annual_contribution: a.inflow || 0 };
+            /* ⛔⛔ WHOSE ACCOUNT THIS IS, AND IT WAS NEVER MISSING — IT WAS DISCARDED ON THIS LINE.
+               ACCOUNT_TYPE_MAP holds 36 baseIds of which 15 carry a `_co` suffix and 5 a
+               `_primary` suffix, and the map collapses every one of them onto the same owner-blind
+               engine enum: `pretax401k` and `pretax401k_co` arrive as the identical word. The
+               Studio has modelled fifteen co-architect account rooms the whole time and thrown the
+               person away at the payload boundary.
+               ⛔ MEASURED IN THE ENGINE, 2026-09-16: a joint household with $2.0M in ONE person's
+                  401(k) and the same household with $1.0M each returned the BYTE-IDENTICAL ladder,
+                  because every age-gated rule — the 10% early-withdrawal penalty above all — was
+                  applied to a merged fiction with one birthday.
+               🔑 DERIVED FROM THE MAP'S OWN KEYS, NEVER FROM A HAND-WRITTEN LIST. A list of the
+                  fifteen `_co` ids would be a second declaration of a fact the map already holds,
+                  kept in agreement with it by nothing but attention — and the 36th baseId added
+                  next month would join the map and not the list.
+               ⚠️ `_primary` AND A BARE ID ARE THE SAME STATEMENT. Only `_co` names the second
+                  person; everything else is the household's first, which is correct by
+                  construction for a solo household and was the engine's own transition default. */
+            const _owner = /_co$/.test(a.baseId) ? 'co_architect' : 'primary';
+            return { type: ACCOUNT_TYPE_MAP[a.baseId] || a.baseId, balance: a.value || 0,
+                     annual_contribution: a.inflow || 0, owner: _owner };
           });
 
         /* ⛔ `location: 'FL'` DELETED (2026-09-05) — HYGIENE, NOT A WIRING CHANGE, AND THE
