@@ -15959,8 +15959,23 @@ const _reachesEngine = a =>
               instrument_type:      h.instrumentType || null,
               dividend_yield:       _pct(h.dividendYield)
             })).filter(h => h.value > 0);
+            /* ⛔⛔ THE RULE OF 55, WHICH THIS PRODUCT PROMISES IN WRITING AND NEVER SENT. `useRule55`
+               is a toggle the household switches on, and switching it on prints an authored
+               paragraph that says: "You've switched on Rule of 55 — so if you leave THIS employer in
+               or after the year you turn 55, this account opens four years early, penalty-free."
+               ⛔ `rule_of_55_eligible` APPEARED NOWHERE IN THIS FILE. The engine's field has always
+                  existed and always defaulted to false, so `trad_401k_r55_balance` WAS $0 FOR EVERY
+                  HOUSEHOLD THAT HAS EVER USED THE STUDIO, and the entire mechanism — repaired only
+                  yesterday to ask each OWNER about their own plan, including the solo case that was
+                  structurally impossible before — was a repair to a pool nothing ever filled.
+               ⛔ MEASURED, a single household retiring at 56 on a $1.4M 401(k): the toggle carries
+                  $39,994 OF LIFETIME EARLY-WITHDRAWAL PENALTY and 1.23 points of confidence. The
+                  product charges them a penalty it told them, in a paragraph, they would not owe.
+               🔑 §82.2673 AGAIN, AND THIS IS THE THIRD FIELD ON THIS LINE TO BREAK IT: copy that
+                  promises a field is used is an OBLIGATION ON THE ENGINE, not documentation. */
             const _acct = { type: ACCOUNT_TYPE_MAP[a.baseId] || a.baseId, balance: a.value || 0,
-                            annual_contribution: _annualContribution, owner: _owner };
+                            annual_contribution: _annualContribution, owner: _owner,
+                            rule_of_55_eligible: !!a.useRule55 };
             /* ⚠️ OMITTED RATHER THAN SENT EMPTY. An absent `holdings` means "this account was not
                itemised", which the engine reads as unpriceable-and-says-so; an empty array would
                mean the same thing but costs a key on every non-investment account in the estate. */
