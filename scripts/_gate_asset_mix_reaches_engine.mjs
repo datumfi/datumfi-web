@@ -23,11 +23,21 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { lift } from './_gate_extract.mjs';
 
+/* ⛔ studioSource() IS THE ONLY DOOR TO THE SHELL. This file shipped 2026-09-16 with a bare
+ *    `fs.readFileSync(ROOT/studio.html)` and was the ONE file `_gate_studio_source`'s P1 leg
+ *    reported — the single newly-red gate in the suite, and a red that had nothing to do with the
+ *    room it guards, which is precisely the failure mode that helper exists to prevent.
+ * ⚠️ `fs` STAYS, because P1 bans disk-reading THE SHELL, not reading files. The fixture below is a
+ *    saved household and is read directly on purpose. */
+const require = createRequire(import.meta.url);
+const { studioSource } = require('./_studio_source.cjs');
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+const SRC = studioSource();
 
 const FAILED = [];
 function check(leg, what, ok, detail = '') {

@@ -16511,7 +16511,26 @@ const _reachesEngine = a =>
           { label: 'Profile',        ok: !!(age && retYear) },
           { label: 'Estate',         ok: accts.some(function(a) { return (a.value || 0) > 0; }) },
           { label: 'Datum',          ok: spendVal > 0 },
-          { label: 'SS Timing',      ok: !!sessionStorage.getItem('ss_timing_locked_key') },
+          /* ⛔ THE TICK NOW REQUIRES THE CHOICE TO AGREE WITH THE CONTROLS THE REQUEST READS.
+             It used to read `ss_timing_locked_key` alone — a key no request has ever consulted —
+             so it reported a setting as ready while the payload carried a different one. That was
+             the third surface confirming a choice the engine never received, and it is the one
+             most likely to outlive the other two because it looks like bookkeeping. A READINESS
+             CHECK MUST ASSERT THE THING THAT TRAVELS, NEVER A RECORD THAT IT WAS ASKED FOR. */
+          { label: 'SS Timing',      ok: (function () {
+              var stored = sessionStorage.getItem('ss_timing_locked_key');
+              if (!stored) return false;
+              /* ⚠️ BOTH HELPERS LIVE IN A LATER <script> BLOCK THAN THIS CHECKLIST (14 vs 8), so
+                 both are reached through `window` and both are typeof-guarded. A bare call here
+                 would be a ReferenceError on any render that beat that block, and AN INIT THROW
+                 INVALIDATES EVERY GREEN ON THE PAGE. Absent helper -> not ready, which is the
+                 honest answer when we cannot check. */
+              var live = (typeof window._ssLockedKeyFromControls === 'function')
+                ? window._ssLockedKeyFromControls() : null;
+              var canon = (typeof window._ssCanonKey === 'function')
+                ? window._ssCanonKey(stored) : null;
+              return !!live && !!canon && live === canon;
+            })() },
           { label: 'Market Outlook', ok: !!document.querySelector('.climate-option.active') },
         ];
 
@@ -19918,7 +19937,13 @@ const _reachesEngine = a =>
          locked key would match no cell, so the user's own chosen claiming path would quietly lose
          its badge — a smaller version of the same defect, and the one that would have been blamed
          on the user. Idempotent, so a key already in this file's spelling is unchanged. */
-      var currentPlanKey = _ssCanonKey(sessionStorage.getItem('ss_timing_locked_key') || result.current_plan_key || null);
+      /* ⛔ THE CONTROLS COME FIRST, BECAUSE THEY ARE WHAT THE ENGINE WILL BE SENT. The stored key
+         stays as the fallback for a session restored before the controls have been rehydrated, and
+         the engine's own answer after that. Before 2026-09-16 the stored key led and the controls
+         were never consulted, which is exactly how the badge came to name a plan the payload did
+         not carry. A BADGE MUST NOT BE ABLE TO SAY ANYTHING THE ENGINE WILL NOT BE TOLD. */
+      var currentPlanKey = _ssCanonKey(_ssLockedKeyFromControls()
+        || sessionStorage.getItem('ss_timing_locked_key') || result.current_plan_key || null);
 
       var strats   = ['early_62', 'full_67', 'optimal_70'];
       var ageLabel = { early_62: '62', full_67: '67', optimal_70: '70' };
@@ -20762,8 +20787,70 @@ const _reachesEngine = a =>
     };
 
     // ── A310-b: lock selected SS timing path — stays in Studio, no API call ─
+    /* ⛔⛔ THE ONLY THING ON THIS SCREEN THAT THE ENGINE EVER HEARS. Until 2026-09-16
+       `lockTimingPath` moved the gold styling, moved the "Your Plan" badge, wrote a sessionStorage
+       key and printed "Timing path set." — AND TOUCHED NONE OF THE CONTROLS THE PAYLOAD READS.
+       `buildStudioRequest` takes the primary strategy from `.ss-btn.active` (:15861) and the
+       secondary from `.ss-sec-btn.active` (:15389). `ss_timing_locked_key` had exactly three
+       readers — this grid's re-render, the range-readiness checklist, and session restore. NONE OF
+       THEM IS THE REQUEST.
+    ⛔ SO THE PRODUCT MARKED A CELL "THIS IS YOUR PLAN", CONFIRMED IT IN WRITING, TICKED A
+       READINESS BOX — AND THEN COMPUTED A DIFFERENT PLAN. Every Range run after choosing a timing
+       path other than 67/67 was computed on a plan the user was told had been adopted.
+    ⚠️ AND IT IS REAL MONEY, MEASURED IN THE ENGINE: primary at 62 costs $4,000 of keystone against
+       67; at 70 it gains $2,500. The co-architect axis moves it too.
+    🔑 A CONFIRMATION IS A PROMISE THAT THE SYSTEM ACTED. Three separate surfaces confirmed this
+       choice and not one of them was connected to the thing that computes — and THE STRENGTH OF
+       THE CONFIRMATION IS WHAT MADE IT A LIE. A silent click would merely have failed; this one
+       was believed. `scripts/_gate_timing_path_reaches_payload.mjs` runs this function against a
+       stub DOM and reads the buttons back. */
+    var _SS_AGE_LABEL = { early_62: '62', full_67: '67', optimal_70: '70' };
+    function _ssApplyTimingPathToControls(caseKey) {
+      var canon = _ssCanonKey(caseKey);
+      if (typeof canon !== 'string' || !canon) return false;
+      var i    = canon.indexOf('_x_');
+      /* A SOLO key is a single axis (`case_key = pri`), not a pair — the shape the engine adopted
+         on 13 Sep. Its secondary half is ABSENT, never a default: writing one here would invent a
+         claiming age for a co-architect who does not exist, which is the defect `_current_plan_key`
+         was repaired for on both sides of the wire. */
+      var pri  = i === -1 ? canon : canon.slice(0, i);
+      var sec  = i === -1 ? null  : canon.slice(i + 3);
+      var wrote = false;
+      function apply(sel, strategy) {
+        var label = _SS_AGE_LABEL[strategy];
+        if (!label) return;                       // unknown strategy -> touch nothing
+        var group = document.querySelectorAll(sel);
+        if (!group.length) return;
+        group.forEach(function (btn) {
+          var t = ((btn.querySelector('strong') || {}).textContent || '').trim();
+          btn.classList.toggle('active', t === label);
+        });
+        wrote = true;
+      }
+      apply('.ss-btn', pri);
+      if (sec) apply('.ss-sec-btn', sec);
+      return wrote;
+    }
+
+    /* THE BADGE'S SOURCE OF TRUTH, READ BACK OFF THE CONTROLS THE REQUEST USES. Deriving it from
+       the same place the payload reads is what stops the badge and the computation from drifting
+       apart again — the badge now cannot say anything the engine will not be told. */
+    function _ssLockedKeyFromControls() {
+      var p = document.querySelector('.ss-btn.active strong');
+      var s = document.querySelector('.ss-sec-btn.active strong');
+      var inv = { '62': 'early_62', '67': 'full_67', '70': 'optimal_70' };
+      var pri = p ? inv[(p.textContent || '').trim()] : null;
+      if (!pri) return null;
+      var sec = s ? inv[(s.textContent || '').trim()] : null;
+      return sec ? pri + '_x_' + sec : pri;
+    }
+    window._ssLockedKeyFromControls = _ssLockedKeyFromControls;
+
     function lockTimingPath(caseKey) {
       if (!caseKey) return;
+      /* ⛔ FIRST, BEFORE ANY STYLING. The controls are the only half of this function that changes
+         an answer; everything below it changes an appearance. */
+      _ssApplyTimingPathToControls(caseKey);
       var grid        = document.getElementById('ss-matrix-grid');
       var hadPrevious = !!sessionStorage.getItem('ss_timing_locked_key');
 
