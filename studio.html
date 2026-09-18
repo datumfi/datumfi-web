@@ -15905,7 +15905,7 @@ const _reachesEngine = a =>
               estate of only-empty rooms arrives here as a zero-length array and is refused by the
               same line. A room the user created and never filled is not an estate. */
         // STU-010: filter Group 4, remap to engine enums, warn on unmapped future additions
-        let _matchExcluded = 0;
+        let _matchExcluded = 0, _matchNoSalary = false;
         const accounts = state.accounts
           .filter(_reachesEngine)
           .map(a => {
@@ -16023,6 +16023,13 @@ const _reachesEngine = a =>
                  shown. Without this the engine simply sees a smaller contribution and reports
                  nothing, which is a conservative assumption with no disclosure. */
               if (_matchAnnual === 0 && _mAnnual > 0) _matchExcluded += _mAnnual;
+              /* ⛔ A MATCH SET AS A PERCENTAGE OF PAY WITH NO PAY TO APPLY IT TO. Distinct from
+                 the vesting-blank case: there is no dollar figure to withhold here, because the
+                 match could never be SIZED. Without this flag the engine sees an ordinary
+                 contribution and has nothing to be suspicious about. Copy Bank row 308. */
+              if (_m && _m.rate !== null && _m.upTo !== null && !(isFinite(_sal) && _sal > 0)) {
+                _matchNoSalary = true;
+              }
             } catch (e) {
               /* ⛔ LOUD, NEVER SILENT. A swallowed exception here would restore the exact defect
                  this block closes — the match quietly absent — with the evidence removed. */
@@ -16188,6 +16195,7 @@ const _reachesEngine = a =>
               describe the same estate from one expression — which is exactly what the co-architect
               fork failed to do for twelve days. */
         if (_matchExcluded > 0) body.match_excluded_annual = _matchExcluded;
+        if (_matchNoSalary) body.match_salary_missing = true;
         const _assetMix = _householdAssetMix();
         if (_assetMix) {
           body.equity_pct = _assetMix.equity;
