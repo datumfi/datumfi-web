@@ -80,8 +80,30 @@ if (payloadStart < 0 || payloadEnd < 0) {
   console.error(DIM('     If the builder was renamed, FIX THIS ANCHOR — do not delete the check.'));
   process.exit(1);
 }
-const payload = SRC.slice(payloadStart, payloadEnd);
-const readsField = f => new RegExp(`\\ba\\.${f}\\b`).test(payload);
+let payload = SRC.slice(payloadStart, payloadEnd);
+
+/* ⛔⛔ CONSUMPTION THROUGH A FUNCTION CALL IS STILL CONSUMPTION, AND THE FIRST VERSION OF THIS FILE
+ *    COULD NOT SEE IT. It tested for a literal `a.<field>` inside the payload region only. The
+ *    employer-match repair hands the WHOLE ACCOUNT to `_di401kMatch(a, base, salary)`, which reads
+ *    matchRate, matchUpTo and vestedPct itself — so the moment the defect was fixed, this census
+ *    went on reporting it as unfixed.
+ * 🔑 AN INSTRUMENT THAT ONLY RECOGNISES ONE SHAPE OF CORRECTNESS WILL CALL EVERY OTHER SHAPE A
+ *    DEFECT, and a census that cries wolf gets its reds ignored — which costs more than the reds
+ *    were worth. So the payload text is extended with the bodies of the functions it CALLS.
+ * ⚠️ ONE LEVEL DEEP AND BOUNDED, AND THAT LIMIT IS DECLARED RATHER THAN HIDDEN. A field read only
+ *    by a function called BY a function called by the payload is still invisible here. That is a
+ *    known gap, not a clean bill: if this census ever goes green, it has proven one level. */
+const called = new Set();
+for (const m of payload.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)) called.add(m[1]);
+for (const name of called) {
+  const at = SRC.indexOf(`function ${name}(`);
+  if (at < 0) continue;
+  const next = SRC.indexOf('\n    function ', at + 1);
+  payload += '\n' + SRC.slice(at, next > at ? next : at + 20000);
+}
+
+const readsField = f => new RegExp(`\\ba\\.${f}\\b`).test(payload)
+                     || new RegExp(`\\bacc\\.${f}\\b`).test(payload);
 
 /* ── EXEMPT, WITH A REASON EACH ──────────────────────────────────────────────────────────────
  * ⛔ A REASON IS MANDATORY. "Not needed" is not a reason; it is the sentence that was true about
@@ -128,14 +150,13 @@ const FAMILIES = [
  *    listed separately so that the red is EXPLAINED rather than mysterious — and they keep the
  *    exit code red, because a census that goes green while naming a live defect has changed from
  *    an instrument into a filing cabinet. */
-const PENDING = {
-  employerContrib:      'THE EMPLOYER MATCH NEVER REACHES THE ENGINE.',
-  matchRate:            'THE EMPLOYER MATCH NEVER REACHES THE ENGINE.',
-  matchUpTo:            'THE EMPLOYER MATCH NEVER REACHES THE ENGINE.',
-  matchBalance:         'THE EMPLOYER MATCH NEVER REACHES THE ENGINE.',
-  vestedPct:            'THE EMPLOYER MATCH NEVER REACHES THE ENGINE.',
-  profitSharingBalance: 'THE EMPLOYER MATCH NEVER REACHES THE ENGINE.',
-};
+/* ✅ EMPTIED 2026-09-17, THE SAME DAY IT WAS FILLED. The employer match this census found on its
+ *    first run is wired: matchRate, matchUpTo and vestedPct now travel through `_di401kMatch` into
+ *    `annual_contribution`, at the vested percentage (§82.2704).
+ * ⚠️ THE BLOCK STAYS, EMPTY. Deleting it would delete the mechanism for saying "this is a defect
+ *    we have measured and not fixed" — and the next finding would have nowhere to go but an
+ *    exemption, which is where real defects go to be forgotten. */
+const PENDING = {};
 const PENDING_NOTE =
   'studio.html carries a whole §8 401(k) EMPLOYER-MATCH ENGINE — it reads matchRate, matchUpTo, '
 + 'vestedPct and the household\'s salary and computes an annual match in dollars. The payload sends '
@@ -169,12 +190,73 @@ const EXEMPT = {
   term:          'debt term; the engine models no debt amortisation, so there is nothing to send it to',
   trustType:     'trust shape; no engine concept',
   disbursement:  'trust shape; no engine concept',
+  matchBalance:  'A PORTION OF THE BALANCE, NEVER ADDED TO IT. The Studio splits an existing Roth 401(k) balance into employer / rolled-in / own-Roth buckets for display; the account total is unchanged, so the engine already has every dollar. It is read by _di401kMatch on the payload path and discarded one frame later.',
+  profitSharingBalance: 'A PORTION OF THE BALANCE, NEVER ADDED TO IT. Same as matchBalance - a display split of money the engine already holds in full.',
+  rolloverBalance: 'A PORTION OF THE BALANCE, NEVER ADDED TO IT, and _conduitIsInformational already stops an informational rollover being counted twice at the payload filter.',
+  employerContrib: '⛔ AN HSA FIELD, NOT THE 401(k) MATCH - it offsets the household contribution against the IRS HSA limit for a display read. The engine does not police contribution limits, so there is nothing for it to change. ⚠️ IT IS NOT THE EMPLOYER MATCH and must not be wired as one: the 401(k) match travels via _di401kMatch.',
   cola:          '⛔ PER-ACCOUNT, and the engine takes ONE pension COLA at request level. A real '
                + 'mismatch, on the backlog — a household with two pensions on different '
                + 'adjustments cannot be expressed today',
   catchUp50:     'not yet an engine concept — contribution limits are not modelled',
   rateType:      'debt rate shape; no engine concept',
 };
+
+
+/* ═══ ARM 2 · DOES EVERY COLLECTED FIELD REACH A CONSUMER? ══════════════════════════════════
+ * §82.2705, Captain-ruled. Arm 1 asks whether an account's fields reach the engine. This asks the
+ * mirror question about the CONTROLS THEMSELVES: the Studio puts a box on screen, a household types
+ * a fact into it, and then nothing reads it.
+ * ⛔⛔ IT IS THE INVERSE OF §82.2673. That law says copy promising a field is an obligation on the
+ *    engine. This is its other half: A CONTROL THAT ASKS A HOUSEHOLD FOR A FACT AND THEN DISCARDS
+ *    IT IS A QUESTION ASKED IN BAD FAITH — and it is invisible to every instrument we own, because
+ *    nothing is RED when nothing is WRONG, only unused.
+ * ⭐ GROSS SALARY WAS THE FIRST ONE FOUND AND IT WAS FOUND BY THE CAPTAIN, NOT BY A TOOL: collected
+ *    in the Architect Profile, read by a tooltip and an upkeep calculation, and never reaching the
+ *    model at all — while the §8 match engine sitting beside it needed exactly that number. It is
+ *    on the wire as of today.
+ */
+function arm2() {
+  const ids = new Set();
+  for (const m of SRC.matchAll(/<(?:input|select|textarea)\b[^>]*\bid=["']([^"']+)["'][^>]*>/gi)) {
+    ids.add(m[1]);
+  }
+  /* ⚠️ A TEMPLATED ID IS NOT A CONTROL, IT IS A FAMILY OF THEM. An id written with a template
+   *    placeholder names one box PER ROOM; counting its literal source text as an id would report a
+   *    permanent phantom orphan that nobody can ever close. */
+  const TEMPLATE_MARK = '$' + '{';
+  const real = [...ids].filter(id => !id.includes(TEMPLATE_MARK));
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const bStart = SRC.indexOf('function buildStudioRequest');
+  const bEnd = SRC.indexOf('window.buildStudioRequest = buildStudioRequest');
+  if (bStart < 0 || bEnd < 0 || bEnd < bStart) {
+    console.log(RED('  ⛔ ARM 2 CANNOT RUN — buildStudioRequest not found by its anchors.'));
+    return 1;
+  }
+  const builder = SRC.slice(bStart, bEnd);
+
+  const onWire = [], orphans = [], displayOnly = [];
+  for (const id of real) {
+    if (builder.includes(id)) { onWire.push(id); continue; }
+    const refs = (SRC.match(new RegExp(esc(id), 'g')) || []).length;
+    if (refs <= 1) orphans.push(id); else displayOnly.push(id);
+  }
+
+  console.log('');
+  console.log(B('  ARM 2 · EVERY COLLECTED FIELD MUST REACH A CONSUMER') + DIM('   §82.2705'));
+  console.log(`  population: ${B(real.length)} input / select / textarea controls carrying an id`);
+  console.log(GRN(`    ${String(onWire.length).padStart(2)}  reach the request builder`));
+  console.log(YEL(`    ${String(displayOnly.length).padStart(2)}  read somewhere, but NOT by the request — display, or a gap; NOT YET TRIAGED`));
+  console.log(RED(`    ${String(orphans.length).padStart(2)}  read NOWHERE but their own element`));
+  for (const o of orphans) console.log(RED(`          ${o}`));
+  console.log('');
+  console.log(DIM('  ⚠️ THE MIDDLE ROW IS A DECLARED GAP, NOT A PASS. Salary sat in it: read by a tooltip'));
+  console.log(DIM('     and an upkeep sum, and never by the model. Until each of those is adjudicated'));
+  console.log(DIM('     display-or-defect, this arm reports a POPULATION and a SPLIT — not a verdict.'));
+  console.log(DIM('     A census that called the middle row green would be the empty-green species it'));
+  console.log(DIM('     exists to catch.'));
+  return orphans.length ? 1 : 0;
+}
 
 console.log('');
 console.log(B('  THE LIVE-CLIENT CONTROL CENSUS') + DIM('   — studio.html, the file that is served'));
@@ -195,7 +277,16 @@ for (const f of [...accountFields].sort()) {
   findings.push(f);
 }
 
-console.log(GRN(`  ${String(sent.length).padStart(2)}  REACH THE WIRE`) + DIM(`   ${sent.join(' · ')}`));
+console.log(GRN(`  ${String(sent.length).padStart(2)}  ON THE PAYLOAD PATH`) + DIM(`   ${sent.join(' · ')}`));
+/* ⚠️ "ON THE PAYLOAD PATH" IS A SMALLER CLAIM THAN "REACHES THE ENGINE", AND THE LABEL WAS
+ *    CHANGED THE MOMENT THE DIFFERENCE BECAME REAL. Since the call-following above, a field
+ *    counts as reached if ANY function on the payload path mentions it — and `_di401kMatch`
+ *    reads matchBalance, profitSharingBalance and rolloverBalance while the payload uses only
+ *    `annualMatch` and `vested` from what it returns.
+ * 🔑 SO THREE OF THE NAMES IN THIS ROW ARE READ AND DISCARDED ONE FRAME LATER. Calling that
+ *    row "reaches the wire" would have been a FALSE GREEN of exactly the species this file
+ *    exists to catch, manufactured by the fix for the previous one. Those three are declared
+ *    below on their own merits, not on this row's. */
 console.log('');
 console.log(`  ${String(exempt.length).padStart(2)}  ` + DIM('declared, with a reason each:'));
 for (const f of exempt) {
@@ -231,10 +322,12 @@ if (!findings.length && !pending.length) {
   console.log(DIM('     level controls — sliders, toggles, the profile — are a second population and'));
   console.log(DIM('     this census does not walk them yet. A clean bill here is not a clean bill'));
   console.log(DIM('     for the Studio.'));
-  process.exit(stale.length ? 1 : 0);
+  const _a2 = arm2();
+  process.exit(stale.length || _a2 ? 1 : 0);
 }
 
 if (!findings.length) { process.exit(1); }
+arm2();
 console.log(RED(`  ⛔ ${findings.length} FIELD(S) COLLECTED BY THE STUDIO AND NEITHER SENT NOR DECLARED:`));
 for (const f of findings) console.log(RED(`        ${f}`));
 console.log('');
