@@ -428,6 +428,52 @@
     "machinery.computationTime": {
       "bucket": "MACHINERY",
       "note": "Runtime reported by the engine. Provenance, not an input."
+    },
+    "healthcare.irmaaEnabled": {
+      "bucket": "ENGINE_LACKS",
+      "live": null,
+      "note": "IRMAA — the Medicare income surcharge. RESHAPED BY THE ARCHITECT 2026-09-17 and the reshape is the finding: it was drawn PER PERSON, and it cannot be. The bracket is a JOINT income test — one household income decides the band — and the premium is then charged per person, so \"model it for one spouse and not the other\" IS NOT A STATE THAT EXISTS. It is now one household-level control writing this single flag. ⛔ The engine has no IRMAA at all, so this is a BUILD, and it is on the Obligation Ledger as one of the 13 absent obligations."
+    },
+    "v257.irmaa": {
+      "bucket": "ALT_SPELLING",
+      "same_as": "healthcare.irmaaEnabled",
+      "live": null,
+      "note": "The v257 segmented control's own state ('model' / 'ignore'), which writes healthcare.irmaaEnabled. Not a second input — the same answer in the control's vocabulary. A control here still has to agree with its twin."
+    },
+    "v257.rebalancing": {
+      "bucket": "ENGINE_LACKS",
+      "live": null,
+      "note": "How the stock/bond/cash mix is MAINTAINED over the horizon — hold the target / let it drift / glide to conservative. ⭐ THE ARCHITECT'S OWN ARGUMENT FOR IT IS THAT MOST OF THE VALUE IS MAKING THE DEFAULT VISIBLE: holding 80/17/3 for thirty years MEANS selling stocks and buying bonds every year, and nothing on any screen currently says that a fixed mix is a behaviour. ⛔ The engine rebalances implicitly and has no field to say otherwise."
+    },
+    "v257.longevityPrimary": {
+      "bucket": "ENGINE_LACKS",
+      "live": null,
+      "note": "Fixed horizon vs modeled lifespan, for the PRIMARY. ⛔⛔ THIS IS A CLAUSE 1 ROW, NOT A SETTINGS ROW: modelled lifespan is one of the two remaining gaps on two-people-becoming-one, and it is BLOCKED ON FAILURE MAGNITUDE (§82.2727) exactly as the guardrail bands are. ⚠️ The spread is a DATED SOURCED TABLE, never a slider — a user-tuned mortality spread has no obviously wrong value, so nobody could ever tell it was working."
+    },
+    "v257.longevityCo": {
+      "bucket": "ENGINE_LACKS",
+      "live": null,
+      "note": "The same control for the CO-ARCHITECT, and it is a SEPARATE ROW rather than a shared one BY THE CAPTAIN'S FIRST CLAUSE: two people have two death dates and the survivor's finances are not the couple's halved. ⚠️ Flagged by the Architect while specifying it: the panel screenshot shows CO PLAN-THROUGH AGE 107 — test data or a real entry, it is the kind of value that quietly doubles a horizon."
+    },
+    "v257.taxSunset": {
+      "bucket": "ENGINE_LACKS",
+      "live": null,
+      "note": "After the sunset, assume current law continues / scheduled reversion. ⛔⛔ NOT A GENERIC CONTROL — it is the same row as the enhanced senior deduction, which EXPIRES AFTER 2028, and as the ordinary brackets. Projecting a dated rule thirty years forward is the identical defect in the identical FLATTERING direction. ⚠️ Its chip and switch copy is [COPY-OWED] to the Architect and must not be filled with placeholder wording."
+    },
+    "v257.rothConversion": {
+      "bucket": "CONFIG",
+      "live": null,
+      "note": "RULED NOT PANEL WORK by the Architect: a conversion is a DECISION, and the Systems Panel is a specification surface for assumptions. Present in the Mock as state only. ⚠️ When it is built it is a single policy selector — fill to the 12/22/24% bracket each year until RMDs begin — which the engine could answer; it CANNOT answer \"should I convert this year?\", which is an optimisation over a sequence of decisions and a different kind of run."
+    },
+    "v257.healthcareArchitectView": {
+      "bucket": "UI_STATE",
+      "live": null,
+      "note": "Which person's healthcare figures the panel is currently SHOWING. Browser-only: it selects a view, never a fact about the household. ⚠️ Deliberately distinguished from the IRMAA row above, which LOOKS like a per-person control and is not one."
+    },
+    "rangeTriggered": {
+      "bucket": "UI_STATE",
+      "live": null,
+      "note": "Whether the Reveal has been fired from the panel this session. Panel bookkeeping; never leaves the browser."
     }
   },
   "engine_only": {
@@ -446,6 +492,30 @@
     "portfolio_at_retirement_override": {
       "bucket": "PANEL_SILENT",
       "note": "Exact portfolio FV from a spreadsheet cell. Same status as accum_years_override."
+    },
+    "target_equity_pct": {
+      "bucket": "PANEL_SILENT",
+      "note": "The household's TARGET mix, as distinct from the mix they hold today. ⭐ A SECOND FACT, NOT A RESTATEMENT (2026-09-17): allocation.* says what the portfolio IS; this says what it is meant to become. The Mock's rebalancing control is the surface that will eventually set it — see v257.rebalancing, which is why these two rows must be read together and not closed separately."
+    },
+    "target_bond_pct": {
+      "bucket": "PANEL_SILENT",
+      "note": "See target_equity_pct — the bond leg of the same target mix."
+    },
+    "target_cash_pct": {
+      "bucket": "PANEL_SILENT",
+      "note": "See target_equity_pct — the cash leg of the same target mix."
+    },
+    "allocation_classified_pct": {
+      "bucket": "PANEL_SILENT",
+      "note": "⛔⛔ WHAT SHARE OF THE PORTFOLIO THE HOUSEHOLD ACTUALLY CLASSIFIED, AND IT EXISTS TO KILL A CLIFF. `_householdAssetMix` used to return NULL below 95% coverage, so A HOUSEHOLD WHO CLASSIFIED 94% OF THEIR MONEY WAS HANDED A STRANGER'S ALLOCATION FOR ALL OF IT — silently, and failing in the worst available direction. Nobody ever ruled that threshold. MEASURED: nothing-classified keystone 126,000 against 94%-classified 137,000. The engine now blends its neutral default into the REMAINDER by value and discloses the unclassified dollars by name. ⚠️ No panel row shows it because it is not an ANSWER, it is a MEASURE OF THE ANSWER'S COVERAGE."
+    },
+    "match_excluded_annual": {
+      "bucket": "PANEL_SILENT",
+      "note": "⛔ THE EMPLOYER MATCH WE COULD NOT COUNT because vesting is blank. Without it the engine would see a smaller contribution and report nothing — a conservative assumption with NO DISCLOSURE, which is indistinguishable from a defect (§82.2702). It travels so the answer can say what it left out. Panel-silent by nature: it is a statement about missing input, not an input."
+    },
+    "match_salary_missing": {
+      "bucket": "PANEL_SILENT",
+      "note": "The THIRD distinct match condition: a match set as a PERCENTAGE OF PAY with no pay to apply it to. Unlike the vesting-blank case there is no dollar figure to withhold — the match cannot be SIZED at all — so a flag is the only honest form. ⚠️ IT IS ONE OF THE SIX FIELDS THAT STILL CARRY A DEFAULT (False), and it is the one where the default is least arguable: absent salary genuinely is the common case."
     }
   }
 }

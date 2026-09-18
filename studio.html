@@ -47,6 +47,13 @@
         #mcOverlay itself. 🔑 A TOKEN THAT EXISTS IN BOTH FILES IS NOT A TOKEN THAT REACHES BOTH
         SURFACES. -->
 <link rel="stylesheet" href="/styles/measurement.css">
+  <!-- ⛔ AFTER measurement.css ON PURPOSE. Section 06's tiles are a Measurement-phase surface and
+       the cascade is LAST-WINS; moving this <link> above it is a cascade change, not a tidy.
+       Its rules are the Mock's own (md5 e7f463163a7576c994b9099ab989c6a1, markers to V258) and it
+       carries the font tokens and inherited colour at the mount, for the reason the comment above
+       measurement.css records: A TOKEN THAT EXISTS IN BOTH FILES IS NOT A TOKEN THAT REACHES BOTH
+       SURFACES. -->
+  <link rel="stylesheet" href="/styles/market-climate.css">
   <link rel="stylesheet" href="/styles/profile.css">
 <style>
   :root {    --danger: #e24b4a;
@@ -1684,30 +1691,16 @@
   .picker-subgroup .l2-lbl { padding-left: 32px; color: var(--gold); opacity: 0.85; }
   .space-option.coming-soon { opacity: 0.38; pointer-events: none; cursor: default; }
 
-  /* HVAC Climate Control */
-  .climate-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-  .climate-option { padding: 15px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; cursor: pointer; transition: 0.2s; position: relative; }
-  .climate-option:hover { border-color: var(--teal-mid); }
-  .climate-option.active { border-color: var(--teal); background: rgba(29, 158, 117, 0.05); }
-  
-  .hvac-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-  .climate-name { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--white); }
-  .hvac-badge { font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border-radius: 2px; letter-spacing: 0.1em; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); }
-  
-  .climate-option[data-outlook="History Repeats"] .hvac-badge { color: var(--white); border-color: rgba(255,255,255,0.3); }
-  .climate-option.active[data-outlook="Valuations Matter"] .hvac-badge { color: var(--gold); border-color: var(--gold); background: rgba(201,168,76,0.1);}
-  .climate-option[data-outlook="Valuations Matter"] .hvac-badge { color: var(--gold); border-color: rgba(201,168,76,0.3); }
-  .climate-option[data-outlook="Cautious"] .hvac-badge { color: var(--cold); border-color: rgba(100, 180, 255, 0.3); }
-  .climate-option[data-outlook="Optimistic"] .hvac-badge { color: var(--danger); border-color: rgba(226, 75, 74, 0.3); }
-  .climate-option[data-outlook="Custom Matrix"] .hvac-badge { color: var(--muted); }
-
-  .climate-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
-  
-  .climate-tooltip { position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%); background: #060b14; border: 1px solid rgba(93, 202, 165, 0.4); padding: 12px; width: 280px; border-radius: 4px; z-index: 50; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.8); pointer-events: none; }
-  .climate-option:hover .climate-tooltip { display: block; }
-  .tt-title { font-family: var(--font-mono); font-size: 9px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;}
-  .tt-row { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 9px; color: var(--white); margin-bottom: 4px; text-transform: uppercase;}
-  .tt-val { color: var(--teal-mid); }
+  /* ⛔⛔ THE CLIMATE CONTROL'S CSS LEFT THIS FILE 2026-09-18 — styles/market-climate.css.
+     A PORT MAY NOT THICKEN THE SHELL (§82.2736): CSS lands in the stylesheet, markup lands in its
+     own part, nothing lands here. What used to sit at this spot was the four-tile "HVAC" treatment
+     plus `.climate-tooltip` / `.tt-title` / `.tt-row` / `.tt-val` — the weighting-table component.
+     🔑 THOSE FOUR RULES WERE NOT MOVED, THEY WERE DELETED, because what they styled was deleted:
+        four tables stating model weights the engine does not use, the default one INVERTED against
+        its own copy. Deletion counts as porting.
+     ⚠️ `.climate-grid` IS NOW DECLARED IN THE STYLESHEET, NOT HERE. It is the mount, and it also
+        carries the --serif/--mono/--sans tokens and the inherited colour the Mock supplies
+        globally and this file supplies only to #studioOverlayWrap. */
 
   /* Custom Matrix Override */
   .custom-climate-box { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); cursor: default; }
@@ -4320,119 +4313,57 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
       </div>
 
       <div data-phase="measurement" class="studio-section">
-        <div class="section-header-wrapper">
-            <button class="section-tag" onclick="toggleSection('sec-climate', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>06 / Climate Control — Market Outlook</span> <span class="toggle-icon">−</span>
+        <!-- ⛔ THE MOCK'S OWN ACTIVITY HEAD, NOT THE STUDIO'S SECTION TAG (2026-09-18, Captain-caught
+             on the eyes-on). The old header read "06 / Climate Control — Market Outlook" beside a
+             pin; the Mock names this activity `Market Climate` over `Model design · Monte Carlo ·
+             sensitivity` and carries a rotate-to-close toggle and NO PIN.
+             ⚠️ THE NAME CHANGE IS NOT COSMETIC. "Climate Control" was the four-preset vocabulary —
+             a weather the household picks. The five designs are METHODS, and the Mock's own V164
+             note says the pill "now communicates Model Design rather than false temperature
+             semantics". The header was the last place the old metaphor was still spoken.
+             ⚠️ `toggleSection` IS REUSED UNCHANGED — it is what every other section already calls,
+             and the class it toggles is what `.toggle-icon` is styled on. L48: the collapse
+             behaviour is not re-implemented, only re-dressed. -->
+        <div class="section-header-wrapper activity-head-wrap climate-activity-head">
+            <button class="activity-head" type="button" onclick="toggleSection('sec-climate', this)">
+                <span class="activity-index">06</span>
+                <span class="activity-name"><strong>Market Climate</strong><small>Model design &middot; Monte Carlo &middot; sensitivity</small></span>
+                <span class="activity-toggle toggle-icon">+</span>
             </button>
-            <button class="pin-btn" onclick="togglePin('sec-climate', this)" title="Pin section open">📌</button>
         </div>
-        
+
         <div id="sec-climate" class="section-content" style="display: block;">
-          <div class="panel-sub" style="margin-bottom: 15px; text-transform:none; color:var(--muted); font-size:11px; line-height:1.4;">Establish the market conditions your portfolio will face. This calibrates the algorithmic blend used to stress-test your estate and project your Range.</div>
+          <!-- ⛔ THE INTRO MOVED INTO THE PART 2026-09-18, AND ITS COPY WAS SUPERSEDED, NOT RESTYLED.
+               It read "Establish the market conditions your portfolio will face. This calibrates the
+               algorithmic blend used to stress-test your estate and project your Range." — TRUE OF THE
+               FOUR PRESETS AND FALSE OF THE FIVE DESIGNS: there is no longer an algorithmic blend being
+               calibrated, there are five model designs and four of them are a single lens.
+               ⚠️ AND IT WAS NEARLY UNREADABLE IN LIGHT MODE — var(--muted) on cream, caught in a
+                  screenshot, not by a test. The Mock authors this paragraph; the part renders it. -->
           
-          <div class="climate-grid">
-            
-            <!-- ⛔⛔ TWO MEASUREMENTS BANKED HERE 2026-09-09 — RECORDED, DELIBERATELY NOT REPAIRED.
-                 There is a PAUSED ARC on Monte Carlo / Market Climate whose planned change is to replace
-                 these four blend presets with the MODELS THEMSELVES carrying their own weights. A gate or a
-                 fix here would go red on purpose the week that lands and cost a window explaining itself.
-                 🗓️ EXPIRY: BOTH NOTES DIE WHEN THE CLIMATE PRESETS ARE REPLACED BY NAMED MODELS.
+          <!-- ⛔⛔ THE MARKET CLIMATE IS A PART NOW — scripts/studio-market-climate.js (2026-09-18).
+               This grid used to hold four tiles and ~35 lines of banked findings about them. Both
+               are gone: the tiles were History Repeats / Valuations Matter / Cautious / Optimistic,
+               each showing a four-row weighting table, and ALL FOUR TABLES STATED MODEL WEIGHTS THE
+               ENGINE DOES NOT USE. The DEFAULT one was inverted against its own description — CAPE
+               shown at 15%, the lowest of its four, beside copy reading "Trusts valuation-aware
+               models more", while the engine weighted CAPE at 40%, the highest.
+               🔑 A WRONG NUMBER SHOWN TO A HOUSEHOLD IS WORSE THAN NO NUMBER, BECAUSE IT IS A NUMBER
+                  THEY CAN ACT ON. The banked note said "a dead control that lies is still lying" and
+                  set its own expiry: THE PRESETS ARE REPLACED BY NAMED MODELS. That is this commit.
 
-                 (1) THE CONTROL IS A DEAD INPUT. test_input_reachability.py reports market_outlook as
-                     "user changes it, answer does not move", and that is PRE-EXISTING — reproduced at
-                     HEAD before any of this arc's work.
-                     ⚠️ AND THE CAUSE IS NOT WHAT IT LOOKS LIKE. The presets are NOT near-identical: their
-                     weight vectors differ by up to 0.20. MEASURED on a $2.5M household, 2,000 trials:
-                       per-MODEL tiers      bedrock 92,000..115,000   capstone 150,000..181,000
-                                            spread 23,000-31,000  (15.6%-20.0%)
-                       per-PRESET blends    spread 1,000-2,000    (tier rounding IS 1,000)
-                     ⇒ THE FOUR MODELS DISAGREE BY ~20%; REWEIGHTING THEM MOVES THE LADDER BY ~1%. Every
-                       preset is a near-centroid blend (min weight .15, max .40), so each lands close to
-                       the average of four disagreeing models. AVERAGING THINGS THAT DISAGREE, WITH MILDLY
-                       DIFFERENT WEIGHTS, GIVES YOU NEARLY THE SAME AVERAGE.
-                     ⭐ THAT IS AN ARGUMENT **FOR** THE PLANNED ARC, NOT JUST AGAINST THIS CONTROL:
-                       exposing the models directly is a REAL lever — CAPE vs regime is a $23,000
-                       difference at bedrock where Cautious vs Optimistic is $1,000.
-
-                 (2) ⛔ EVERY TOOLTIP BELOW STATES A WEIGHTING THE ENGINE DOES NOT USE. Four of four.
-                     displayed (para/boot/cape/regime)   vs   engine _resolve_weights at the default CAPE
-                       History Repeats     25/25/25/25   vs   25/30/20/25
-                       Valuations Matter   30/40/15/15   vs   15/15/40/30   ← the DEFAULT, and INVERTED
-                       Cautious            50/30/10/10   vs   20/20/35/25
-                       Optimistic          15/25/25/35   vs   25/25/25/25
-                     🔑 THE DEFAULT IS THE WORST AND IT CONTRADICTS ITS OWN DESCRIPTION TWO LINES BELOW
-                        IT: the tooltip shows CAPE at 15% — the LOWEST of its four — while the copy says
-                        "Trusts valuation-aware models more" and the engine actually weights CAPE at 40%,
-                        the HIGHEST. One of those three is a lie and it is the number.
-                     ⚠️ THIS IS A LIVE USER-FACING FALSEHOOD ABOUT OUR OWN METHOD, on a control whose
-                        value does not currently reach the answer — which is the only reason it is
-                        survivable enough to defer. IF THE PAUSED ARC SLIPS, THIS NOTE IS THE REASON TO
-                        FIX THE NUMBERS ANYWAY: a dead control that lies is still lying. -->
-            <div class="climate-option" data-outlook="History Repeats">
-              <div class="climate-tooltip">
-                <div class="tt-title">Active Methodology & Weighting</div>
-                <div class="tt-row"><span>Historical Bootstrap</span><span class="tt-val">25%</span></div>
-                <div class="tt-row"><span>Parametric Log-Normal</span><span class="tt-val">25%</span></div>
-                <div class="tt-row"><span>Regime Bootstrap</span><span class="tt-val">25%</span></div>
-                <div class="tt-row"><span>CAPE-Adjusted</span><span class="tt-val">25%</span></div>
-              </div>
-              <div class="hvac-header">
-                <span class="climate-name">History Repeats</span>
-                <span class="hvac-badge">[ AMB ]</span>
-              </div>
-              <div class="climate-desc">Equal trust in all models. The full historical record speaks equally.</div>
-            </div>
-            
-            <div class="climate-option active" data-outlook="Valuations Matter">
-              <div class="climate-tooltip">
-                <div class="tt-title">Active Methodology & Weighting</div>
-                <div class="tt-row"><span>Historical Bootstrap</span><span class="tt-val">40%</span></div>
-                <div class="tt-row"><span>Parametric Log-Normal</span><span class="tt-val">30%</span></div>
-                <div class="tt-row"><span>Regime Bootstrap</span><span class="tt-val">15%</span></div>
-                <div class="tt-row"><span>CAPE-Adjusted</span><span class="tt-val">15%</span></div>
-              </div>
-              <div class="hvac-header">
-                <span class="climate-name">Valuations Matter</span>
-                <span class="hvac-badge">[ BARO ]</span>
-              </div>
-              <div class="climate-desc">Current high CAPE predicts lower returns. Trusts valuation-aware models more.</div>
-            </div>
-
-            <div class="climate-option" data-outlook="Cautious">
-              <div class="climate-tooltip">
-                <div class="tt-title">Active Methodology & Weighting</div>
-                <div class="tt-row"><span>Parametric Log-Normal</span><span class="tt-val">50%</span></div>
-                <div class="tt-row"><span>Historical Bootstrap</span><span class="tt-val">30%</span></div>
-                <div class="tt-row"><span>Regime Bootstrap</span><span class="tt-val">10%</span></div>
-                <div class="tt-row"><span>CAPE-Adjusted</span><span class="tt-val">10%</span></div>
-              </div>
-              <div class="hvac-header">
-                <span class="climate-name">Cautious</span>
-                <span class="hvac-badge">[ CRYO ]</span>
-              </div>
-              <div class="climate-desc">Structurally pessimistic. Overweights the regime model mapping expensive markets.</div>
-            </div>
-
-            <div class="climate-option" data-outlook="Optimistic">
-              <div class="climate-tooltip">
-                <div class="tt-title">Active Methodology & Weighting</div>
-                <div class="tt-row"><span>Regime Bootstrap</span><span class="tt-val">35%</span></div>
-                <div class="tt-row"><span>Historical Bootstrap</span><span class="tt-val">25%</span></div>
-                <div class="tt-row"><span>CAPE-Adjusted</span><span class="tt-val">25%</span></div>
-                <div class="tt-row"><span>Parametric Log-Normal</span><span class="tt-val">15%</span></div>
-              </div>
-              <div class="hvac-header">
-                <span class="climate-name">Optimistic</span>
-                <span class="hvac-badge">[ THRM ]</span>
-              </div>
-              <div class="climate-desc">Trusts the full historical record more — markets have always eventually recovered.</div>
-            </div>
-            
-            <!-- ⛔ THE CUSTOM MATRIX TILE WAS REMOVED 2026-09-13 — retired by the five-button
-                 Market Climate control. It took four weights from the user and sent them as
-                 market_outlook:'custom'. The Mock has no such tile; this was live-only. -->
-
-          </div>
+               ⛔ THE GRID IS DELIBERATELY EMPTY IN THIS FILE. If the part fails to load the
+                  household sees NO climate control rather than a stale contradictory one — the same
+                  contract scripts/datum-footer.js holds for the disclosure footer. Its ABSENCE is
+                  visible; it can never be WRONG.
+               ⚠️ THE SCRIPT TAG BELOW IS POSITIONED, NOT PLACED. It is classic and in-body, so it
+                  runs at parse time and the tiles exist before any later script. THREE existing
+                  consumers depend on that and none of them guards for it: the shell's own
+                  .climate-option click binding, the Range-readiness check, and
+                  studio-blueprint.js's commit listener. Adding defer, or moving this to <head>,
+                  renders the tiles with nothing listening — silent, and green everywhere. -->
+          <div class="climate-grid"></div>
+          <script src="/scripts/studio-market-climate.js"></script>
         </div>
       </div>
 
@@ -5877,13 +5808,17 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
        IT. The grep that found this was looking for something else.
     ⚠️ openCustomMatrix / closeCustomMatrix and the four-weight sum listener are gone with it:
        their only callers were the removed tile's inline handlers, so they were unreachable and
-       would have thrown on the null tile if anything had reached them. */
-    document.querySelectorAll('.climate-option').forEach(opt => {
-      opt.addEventListener('click', () => {
-        document.querySelectorAll('.climate-option').forEach(o => o.classList.remove('active'));
-        opt.classList.add('active');
-      });
-    });
+       would have thrown on the null tile if anything had reached them.
+
+    ⛔⛔ AND THE SELECT-ONE-OF-FIVE BINDING ITSELF LEFT THIS FILE 2026-09-18. It lived in
+       scripts/studio-market-climate.js the moment the tiles did, because a control and the thing
+       that makes it a control are one object — leaving the binding here would have kept a
+       per-element listener bound at DOMContentLoaded over markup written by another file, which is
+       precisely the ordering trap the note above is about.
+    🔑 THE PART DELEGATES ON document RATHER THAN BINDING PER TILE, so it cannot be defeated by
+       render order at all. It also carries the keyboard half the old binding never had, though the
+       tiles have shipped tabindex="0" the whole time — A FOCUSABLE ELEMENT WITH NO KEY HANDLER IS
+       A CONTROL THAT ADVERTISES ITSELF TO SOMEBODY IT THEN REFUSES TO SERVE. */
 
     // --- CO-ARCHITECT LOGIC ---
     const coToggle = document.getElementById('co-arch-toggle');
@@ -15008,11 +14943,13 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         if (_spend) { var s = document.getElementById('spend-input');
           if (s) { var _sv = '$' + Math.round(_spend).toLocaleString('en-US'); s.value = _sv;
                    if (_sv !== s.defaultValue) _restoredAnything = true; } }
+        /* ⛔ ONE OF THREE LABEL MAPS DELETED 2026-09-18, NOT SYNCHRONISED. The tile now carries the
+           engine's own enum in data-outlook-key, so there is nothing left to translate — and no
+           second place for the translation to drift to. The four retired names resolve to the
+           Blend in ONE home, scripts/studio-market-climate.js, because that is what the engine
+           does with them. An unknown value lights NOTHING rather than guessing. */
         var _clEnum = bp.climate && bp.climate.outlook;
-        if (_clEnum) {
-          var _clLabel = { history_repeats: 'History Repeats', valuations_matter: 'Valuations Matter', cautious: 'Cautious', optimistic: 'Optimistic', custom: 'Custom Matrix' }[_clEnum];
-          if (_clLabel) document.querySelectorAll('.climate-option').forEach(function (el) { el.classList.toggle('active', el.dataset.outlook === _clLabel); });
-        }
+        if (_clEnum && window.marketClimateSetKey) window.marketClimateSetKey(_clEnum);
         var _ssEnum = bp.ss && bp.ss.strategy_primary;
         if (_ssEnum) {
           var _ssLabel = { early_62: '62', full_67: '67', optimal_70: '70' }[_ssEnum];
@@ -15258,15 +15195,13 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
     updateSVGs();
     // === CINEMATIC OVERLAY V2 + REVEAL RANGE ===
     (function() {
-      // STU-023: 'history_repeats' confirmed valid in engine v1.7 — unchanged
-      const OUTLOOK_MAP = {
-        'History Repeats':   'history_repeats',
-        'Valuations Matter': 'valuations_matter',
-        'Cautious':          'cautious',
-        'Optimistic':        'optimistic'
-        // 'Custom Matrix' was retired 2026-09-13. The label map below is KEPT so a blueprint saved
-        // before that date still RENDERS its stored outlook; nothing builds or sends 'custom' now.
-      };
+      /* ⛔⛔ OUTLOOK_MAP DELETED 2026-09-18 — THE THIRD AND LAST OF THE LABEL MAPS.
+         It existed only because the tile stored a DISPLAY LABEL in data-outlook and every consumer
+         had to decode it. Three copies of that decode had accumulated — two here, one in
+         scripts/studio-blueprint.js — and A RULE KEPT IN THREE LANGUAGES HAS ALREADY DRIFTED.
+         🔑 THE FIX WAS NOT TO SYNCHRONISE THEM. The tile now carries `data-outlook-key` holding the
+            engine's own market_outlook enum, so the DOM carries the answer and there is nothing
+            left to translate. Zero maps, not three that agree today. */
 
       // STU-010: engine enum map — Groups 1 (retirement) + 2 (liquid) + 3 (pension)
       const ACCOUNT_TYPE_MAP = {
@@ -15849,26 +15784,27 @@ const _reachesEngine = a =>
           ? Math.min(120, Math.max(_planEndAgeMin, parseInt((document.getElementById('sl-plan-through')?.value) || '', 10)))
           : null;
 
-        const activeClimate = document.querySelector('.climate-option.active');
-        const climateLabel  = activeClimate?.dataset?.outlook || '';
-
         /* ⛔ CUSTOM MATRIX RETIRED 2026-09-13. The five-button Market Climate control replaced it;
            the design retired it, the workbook recorded it retired, AND THE PRODUCT KEPT ASKING.
-           Studio Mock.html contains ZERO occurrences of "Custom Matrix" — the tile was live here
-           only, and a user could still click it and hand us four weights nobody had ruled on.
            MEASURED before removal: choosing it moved keystone 204,000 -> 214,000 and the ceiling
            239,000 -> 243,000, so this was not a dormant branch.
         ⚠️ THE SCHEMA FIELD custom_weights STILL EXISTS AND IS STILL ACCEPTED BY THE ENGINE. That
            removal is an engine change and waits behind §6.9. Until then the field is a door with
            nothing walking through it — accepted, never sent. */
-        /* ⚠️ THE `|| 'valuations_matter'` FALLBACK IS NOT THE TRUTHY-ZERO CLASS — the operand is a
-           STRING, and '' is genuinely absent rather than a meaningful answer. Left as-is deliberately.
-           ⛔ BUT NOTE THE TELL: THE DEFAULT AND THE FALLBACK ARE THE SAME VALUE, so "the user chose
-              Valuations Matter" and "we could not read the control" are indistinguishable downstream.
-           ⛔ AND THIS INPUT IS DEAD AT HEAD (pre-existing): changing the preset does not move the
-              answer. Banked at the climate markup with the per-model and per-preset spreads.
-              RECORDED, NOT REPAIRED. 🗓️ This note dies with the presets. */
-        const outlookValue = OUTLOOK_MAP[climateLabel] || 'valuations_matter';
+        /* ⭐⭐ NO DECODE LEFT. `data-outlook-key` IS the engine's market_outlook enum, so this reads
+           the answer straight off the control the household clicked. The label->enum map that used
+           to sit here is deleted, not moved.
+        ⚠️ THE FALLBACK MOVES TO 'blend' BECAUSE THE SHIPPED DEFAULT DID. It is not the truthy-zero
+           class — the operand is a STRING and '' is genuinely absent.
+           ⛔ AND THE TELL SURVIVES THE PORT, SO IT IS RESTATED RATHER THAN QUIETLY INHERITED: THE
+              DEFAULT AND THE FALLBACK ARE STILL THE SAME VALUE, so "the household chose the Blend"
+              and "we could not read the control" remain indistinguishable downstream. Narrowing
+              that is a refusal question, not a port question, and it is not settled here.
+        ✅ THE "DEAD INPUT" NOTE THAT USED TO SIT HERE IS RETIRED BY MEASUREMENT, NOT BY OPINION:
+           the five designs spread $13,000 of keystone (Blend 142k · Parametric 137k · Historical
+           149k · CAPE 147k · Regime 136k) where the four presets spread $0 after the ladder's own
+           $1,000 rounding. The control was wired to a weighted average — §82.2723 — not unwired. */
+        const outlookValue = (window.marketClimateSelectedKey && window.marketClimateSelectedKey()) || 'blend';
 
         const activeSS   = document.querySelector('.ss-btn.active strong');
         /* ⚠ A DEAD DEFAULT MUST STILL AGREE WITH ITS LIVE CONTROL. This read 'optimal_70' while
@@ -18141,10 +18077,14 @@ const _reachesEngine = a =>
        *    before filling, so the ordering race between this re-assert and the async dossier seed
        *    stops deciding whose numbers a person sees. */
       _datumApplyProfileFields(prof, 'saved_file');
+      /* ⛔ THE SECOND OF THE THREE LABEL MAPS, DELETED FOR THE SAME REASON — and this is the pair
+         that made the fork dangerous. THE TWO RESTORE PATHS ARE NOT EQUAL (the saved-file path
+         restores 2 of 14 fields where the draft path restores all of them), so a map corrected in
+         one and missed in the other would have lit the right tile on one route and no tile at all
+         on the other, with nothing thrown either way. Both now call the one home. */
       var clEnum = bp.climate && bp.climate.outlook;
       if (clEnum) {
-        var clLabel = { history_repeats: 'History Repeats', valuations_matter: 'Valuations Matter', cautious: 'Cautious', optimistic: 'Optimistic', custom: 'Custom Matrix' }[clEnum];
-        if (clLabel) document.querySelectorAll('.climate-option').forEach(function (el) { el.classList.toggle('active', el.dataset.outlook === clLabel); });
+        if (window.marketClimateSetKey) window.marketClimateSetKey(clEnum);
       }
       var ssEnum = bp.ss && bp.ss.strategy_primary;
       if (ssEnum) {

@@ -1,0 +1,256 @@
+/* market-climate.css — SECTION 06, THE MARKET CLIMATE, PORTED FROM THE CAPTAIN'S MOCK.
+ *
+ * SOURCE: Studio Mock.html — md5 e7f463163a7576c994b9099ab989c6a1, internal markers to V258
+ * (<style id="v258-surgical-pass">). The rules below are the Mock's own, in the Mock's ORDER,
+ * drawn from six of its style blocks: the base "market outlook" block, v85 (the Measurement
+ * treatment), v87 (one surgical override), v93 (the per-tile help), v94 (the methodology
+ * accordion), v129 (the intro width) and v164 (the five Model Design colours).
+ *   ⛔ A PORT SOURCE IS A DEPENDENCY WITH A VERSION. Record the mock's md5 AND its internal marker
+ *      in every port commit — "faithful to the mock" means nothing without saying WHICH mock.
+ *      styles/measurement.css was SIX REVISIONS STALE within a day of its own port.
+ *
+ * ⛔⛔ ORDER IS LOAD-BEARING AND MUST NOT BE TIDIED. The cascade is LAST-WINS and the light-mode
+ *    overrides sit AFTER their base rules on purpose.
+ *    🔑 A CSS RULE THAT DOES NOT APPLY LOOKS IDENTICAL TO ONE THAT WAS NEVER WRITTEN — "overridden"
+ *       and "absent" produce the same pixels, so this failure is invisible by construction and
+ *       would survive a green build, a green suite and a casual look. Sorting these selectors,
+ *       deduping them or hoisting them is "tidying" that silently changes what renders. DO NOT.
+ *
+ * ── ⚠️ THE ONE STRUCTURAL DEVIATION, NAMED AND COUNTED AT ONE ─────────────────────────────────
+ * In the Mock these tiles live in the left sidebar and every rule is scoped
+ * `.sidebar[data-active-phase="MEASUREMENT"] .outlook`. In the product they live in section 06 of
+ * the vertical Studio, which has no such ancestor, and the live class name is `.climate-option`.
+ * The selectors are therefore re-scoped to `.climate-grid .climate-option`.
+ *   ⚖️ §82.2736 — PARITY IS MEASURED ON WHAT A HOUSEHOLD SEES AND CAN REACH, never on what was
+ *      copied across. Declarations are unchanged; only their reach is. The Mock's `.outlook` base
+ *      rules and its MEASUREMENT overrides are MERGED here in that order, because in the Mock the
+ *      second set always wins over the first on this surface.
+ *   ⚠️ `.outlook-tag` KEEPS ITS MOCK NAME. It is the Mock's own element, it has no live
+ *      counterpart, and inventing a second name for it would be a fork with nothing to gain.
+ *
+ * ── ⛔ THE FONT TOKENS AND THE INHERITED COLOUR — THE MEASUREMENT ROOM'S MEASURED DEFECT ───────
+ * The mock declares --serif/--mono/--sans GLOBALLY. studio.html declares the same three names
+ * SCOPED to #studioOverlayWrap, so every `font:` shorthand below would resolve to NOTHING and the
+ * panel would render in the wrong typeface with no error, no warning and nothing in a diff.
+ *   🔑 A TOKEN THAT EXISTS IN BOTH FILES IS NOT A TOKEN THAT REACHES BOTH SURFACES.
+ * The same applies one property over: the tiles set no `color` of their own for text that is not
+ * explicitly coloured, and studio.html's chain supplies a different inherited value than the
+ * Mock's. Both are pinned at the mount below, exactly as styles/measurement.css pins them for
+ * #mcOverlay — L48, the decision is reused rather than re-taken.
+ *   ⚖️ SOURCED, NOT INVENTED (L47): the literals are the Mock's own --white (#f2f5f2) and
+ *      --text-main (#16242d).
+ *
+ * LINK POSITION MATTERS: loaded AFTER measurement.css so these rules sit last among the
+ * Measurement-phase surfaces. Moving the <link> is a cascade change.
+ */
+
+.climate-grid {
+  --serif: "Fraunces", Georgia, serif;
+  --mono: "DM Mono", "Courier New", monospace;
+  --sans: "DM Sans", Arial, sans-serif;
+  /* ⛔⛔ --phase-accent IS THE SAME DEFECT ONE TOKEN OVER, AND IT IS THE THIRD TIME.
+     styles/profile.css ports `.workspace-kicker` UNSCOPED but declares --phase-accent only under
+     [data-profile-port]. So the rule reaches this panel and its COLOUR DOES NOT: an unresolved
+     var() makes the whole declaration invalid and it is DISCARDED, silently, leaving the kicker at
+     whatever it inherits. Declared here so the kicker is gold on this surface too.
+     🔑 A RULE THAT APPLIES WITH ONE DECLARATION DROPPED LOOKS EXACTLY LIKE A RULE THAT APPLIES. */
+  --phase-accent: var(--teal);
+  font-family: var(--sans);
+  color: #f2f5f2;
+}
+body.light-mode .climate-grid { color: #16242d; --lm-gold: #9d7228; }
+
+/* ── THE WORKSPACE CARD — the box the whole activity lives in.
+   ⛔ CAPTAIN-CAUGHT ON THE EYES-ON, 2026-09-18, AND IT WAS MISSING ENTIRELY. The Mock wraps this
+   activity in <div class="workspace-card market-climate-workspace"> and the MEASUREMENT phase
+   restyles that card with a subtle BLUE border and a blue radial in its top-left corner. The
+   first port shipped the contents without the container.
+   🔑 ELEVEN GREEN GATE LEGS COULD NOT SEE IT. Tiles rendered, copy was verbatim, colours resolved,
+      the tooltip worked — and nothing asserts the shape of a thing that is not there. A PICTURE
+      CAUGHT WHAT THE TESTS WERE STRUCTURALLY UNABLE TO NOTICE.
+   ⚠️ `.workspace-card` EXISTS IN styles/profile.css ALREADY, ported for the Architect Profile with
+   the Mock's DEFAULT grey treatment. These rules are the MEASUREMENT override that sits on top of
+   it — mirroring the Mock, where the base rule and the phase override are also two separate
+   blocks. Scoped under .climate-grid so the Profile's card is untouched. ───────────────────── */
+.climate-grid .workspace-card{
+  position:relative;
+  padding:16px;
+  border:1px solid rgba(122,192,255,.16);
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.018),transparent 24%),
+    radial-gradient(circle at 12% 0%,rgba(122,192,255,.055),transparent 34%),
+    #07111d;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.018);
+}
+body.light-mode .climate-grid .workspace-card{
+  border:1px solid rgba(34,73,82,.16) !important;
+  background:
+    radial-gradient(circle at 10% 0%,rgba(29,158,117,.055),transparent 34%),
+    linear-gradient(180deg,rgba(255,255,255,.98),rgba(244,242,236,.98)) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.96),0 14px 28px rgba(25,45,54,.055) !important;
+}
+
+/* ── THE KICKER IS BLUE HERE, NOT GREEN, AND THAT IS THE MOCK'S OWN OVERRIDE.
+   ⛔ SECOND CAPTAIN CATCH ON THE SAME SCREENSHOT. The base `.workspace-kicker` reads
+   `color:var(--phase-accent)`, which is --teal — GREEN. The Mock overrides it for MEASUREMENT to
+   #93b8c8, a blue-grey, and in light mode to #8a6723. The port declared --phase-accent so the
+   declaration would resolve at all (see the token note above) and then inherited the WRONG
+   COLOUR — a fix that worked and still looked wrong.
+   🔑 MAKING A RULE APPLY IS NOT THE SAME AS MAKING IT RIGHT. ───────────────────────────────── */
+.climate-grid .workspace-kicker{
+  margin-bottom:12px;
+  color:#93b8c8;
+}
+body.light-mode .climate-grid .workspace-kicker{
+  color:#8a6723 !important;font-weight:700;letter-spacing:.15em;
+}
+
+/* ── THE ACTIVITY HEAD — NOT RE-PORTED. L48.
+   styles/profile.css ALREADY carries `.activity-head` / `.activity-name` / `.activity-toggle` /
+   `.activity-index`, ported from this same Mock for the Plan Configuration header, and every one
+   of those rules is UNSCOPED — so they already reach this section. Writing a second copy here
+   would be a fork of a surface the Architect owns, and the two would agree on the day they were
+   written and drift the day the Mock's header moves.
+   ⛔⛔ WHAT IS *NOT* ALREADY REACHING IS THE TOKENS THEY READ, AND THIS IS THE THIRD TIME IN ONE
+   FILE. `.activity-name strong` asks for `var(--mono)`; profile.css declares --mono only under
+   `[data-profile-port]`, which this section is not. The rule would apply and its `font:` shorthand
+   would be DISCARDED WHOLE — family, size AND weight together — leaving the header at the
+   inherited face with nothing in a diff to say so.
+   🔑 A TOKEN THAT EXISTS IN BOTH FILES IS NOT A TOKEN THAT REACHES BOTH SURFACES. Declared here,
+      on the header only, so the shared rules resolve. ────────────────────────────────────────── */
+.climate-activity-head{
+  --serif: "Fraunces", Georgia, serif;
+  --mono: "DM Mono", "Courier New", monospace;
+  --sans: "DM Sans", Arial, sans-serif;
+}
+
+/* ⭐ THE HAIRLINE RULE MOVED TO styles/profile.css 2026-09-18, onto .activity-head-wrap,
+   because it was never a Market Climate problem — it is the same misplaced border under ALL THREE
+   headers the Mock chrome has been ported onto. Fixing it here would have left two of the three
+   wrong while looking finished. ONE RULE, ONE HOME. */
+
+/* ── the mock's base "market outlook" block ─────────────────────────────────────────── */
+.climate-grid .outlook-list { display:grid;gap:7px }
+.climate-grid .climate-option { display:grid;grid-template-columns:1fr auto;gap:12px;
+  padding:11px 12px;
+  border:1px solid rgba(142,160,168,.14);
+  background:#07111d; }
+.climate-grid .climate-option.active { border-color:rgba(213,173,99,.50) }
+.climate-grid .climate-option strong { font:500 9px var(--mono);letter-spacing:.08em;text-transform:uppercase }
+.climate-grid .climate-option p { grid-column:1/-1;margin:0;font:300 10.5px/1.45 var(--sans);color:#8f9da4 }
+.climate-grid .outlook-tag { align-self:start;
+  font:500 7.5px var(--mono);
+  letter-spacing:.08em;color:var(--gold);
+  border:1px solid rgba(213,173,99,.38);padding:4px 6px; }
+
+/* ── V85 — Measurement left-panel polish + plain-spoken climate markers ────────────────────── */
+.climate-grid .outlook-list { gap:8px }
+.climate-grid .climate-option { position:relative;
+  overflow:hidden;
+  padding:12px 12px 12px 15px;
+  border-color:rgba(142,160,168,.16);
+  background:linear-gradient(180deg,rgba(11,23,35,.92),rgba(7,17,29,.98));
+  transition:border-color .2s ease,background .2s ease,transform .2s ease; }
+.climate-grid .climate-option::before { content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:#d5ad63;opacity:.55; }
+.climate-grid .climate-option.active { border-color:rgba(122,192,255,.38);
+  background:linear-gradient(180deg,rgba(122,192,255,.055),rgba(7,17,29,.98));
+  box-shadow:inset 0 0 0 1px rgba(122,192,255,.06),0 9px 18px rgba(0,0,0,.08); }
+.climate-grid .climate-option strong { color:#e8efed;font-size:9.5px;letter-spacing:.07em; }
+.climate-grid .climate-option p { margin-top:3px;color:#9dabb2;font-size:10.7px;line-height:1.48; }
+.climate-grid .outlook-tag { min-width:58px;text-align:center;padding:5px 7px;border-radius:4px;
+  background:rgba(213,173,99,.045);color:#d5ad63;border-color:rgba(213,173,99,.34);
+  font-size:7px;letter-spacing:.10em; }
+body.light-mode .climate-grid .climate-option { border:1px solid rgba(34,73,82,.14) !important;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.98),rgba(246,244,238,.98)) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.92),0 7px 16px rgba(30,50,58,.035) !important; }
+body.light-mode .climate-grid .climate-option:hover { border-color:rgba(34,73,82,.25) !important;transform:translateY(-1px); }
+body.light-mode .climate-grid .climate-option.active { border-color:rgba(54,108,122,.34) !important;
+  background:
+    linear-gradient(180deg,rgba(232,244,246,.98),rgba(247,245,239,.98)) !important;
+  box-shadow:inset 3px 0 0 #5a9cb2,inset 0 1px 0 #fff,0 9px 18px rgba(30,50,58,.05) !important; }
+body.light-mode .climate-grid .climate-option strong { color:#102a33 !important;font-weight:700 }
+body.light-mode .climate-grid .climate-option p { color:#536a72 !important;font-weight:400 }
+body.light-mode .climate-grid .outlook-tag { color:#7e6327 !important;background:rgba(201,168,76,.08) !important;border-color:rgba(145,107,30,.26) !important;font-weight:700; }
+
+/* ── V87 — surgical polish ─────────────────────────────────────────────────────────────────── */
+body.light-mode .climate-grid .climate-option strong { color:#2b454d!important }
+
+/* ── V93 — the per-tile help. ⭐ THE MOCK RENDERS IT FROM THE ATTRIBUTE, IN CSS.
+   `content:attr(data-help)` with `white-space:pre-line` — there is no help panel and no second
+   surface to build, which is why all five authored help blocks are reachable here for free.
+   ⚠️ IT IS HOVER/FOCUS ONLY, AS IN THE MOCK. A touch-only visitor reaches it by focus, not hover;
+      the methodology accordion below carries the same ground and is reachable by click. ───────── */
+.climate-grid .climate-option[data-help] { overflow:visible;z-index:1;cursor:pointer;outline:none }
+.climate-grid .climate-option[data-help]:hover,
+.climate-grid .climate-option[data-help]:focus-visible { z-index:30 }
+.climate-grid .climate-option[data-help]::after { content:attr(data-help);position:absolute;left:10px;right:10px;top:calc(100% + 7px);z-index:90;
+  padding:11px 12px;border:1px solid rgba(122,192,255,.24);border-radius:8px;
+  background:rgba(5,14,24,.99);box-shadow:0 16px 34px rgba(0,0,0,.36);
+  font:400 9.5px/1.48 var(--sans);letter-spacing:0;text-transform:none;color:#c7d3d7;
+  white-space:pre-line;opacity:0;visibility:hidden;transform:translateY(-3px);
+  transition:opacity .14s ease,transform .14s ease,visibility .14s ease;pointer-events:none; }
+.climate-grid .climate-option[data-help]:hover::after,
+.climate-grid .climate-option[data-help]:focus-visible::after { opacity:1;visibility:visible;transform:translateY(0) }
+body.light-mode .climate-grid .climate-option[data-help]::after { background:rgba(255,254,249,.995);border-color:rgba(47,91,104,.22);color:#35535b;
+  box-shadow:0 14px 30px rgba(35,57,64,.14),inset 0 1px 0 #fff; }
+
+/* ── V94 — Measurement methodology ─────────────────────────────────────────────────────────── */
+.climate-grid .datum-methodology { margin:10px 0 12px;border:1px solid rgba(122,192,255,.16);border-radius:9px;background:linear-gradient(180deg,rgba(122,192,255,.035),rgba(255,255,255,.01));overflow:hidden }
+.climate-grid .datum-methodology-toggle { width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:0;background:transparent;color:#dfe8e9;text-align:left;cursor:pointer }
+.climate-grid .datum-methodology-toggle>span:first-child { min-width:0 }
+.climate-grid .datum-methodology-toggle strong { display:block;font:500 8px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:#dbe7e9 }
+.climate-grid .datum-methodology-toggle small { display:block;margin-top:3px;font:400 8.5px/1.35 var(--sans);color:#81969f }
+.climate-grid .datum-methodology-screw { width:24px;height:24px;flex:0 0 24px;display:grid;place-items:center;border:1px solid rgba(142,160,168,.20);background:rgba(255,255,255,.018);color:#8da0a8;font:400 15px var(--sans);transition:transform .18s ease,color .18s ease,border-color .18s ease }
+.climate-grid .datum-methodology.open .datum-methodology-screw { transform:rotate(45deg);color:#7ac0ff;border-color:rgba(122,192,255,.42) }
+.climate-grid .datum-methodology-body { padding:0 13px 14px;border-top:1px solid rgba(122,192,255,.10) }
+.climate-grid .datum-methodology-body[hidden] { display:none!important }
+.climate-grid .datum-methodology-body p { margin:12px 0 0;font:400 9.4px/1.62 var(--sans);color:#a6b6bb }
+.climate-grid .datum-methodology-body h4 { margin:15px 0 -5px;font:500 8.2px/1.25 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:#7ac0ff }
+body.light-mode .climate-grid .datum-methodology { border-color:rgba(47,91,104,.16);background:linear-gradient(180deg,rgba(93,202,165,.055),rgba(255,255,255,.56));box-shadow:inset 0 1px 0 rgba(255,255,255,.92) }
+body.light-mode .climate-grid .datum-methodology-toggle { color:#29454d }
+body.light-mode .climate-grid .datum-methodology-toggle strong { color:#29454d }
+body.light-mode .climate-grid .datum-methodology-toggle small { color:#667d84 }
+body.light-mode .climate-grid .datum-methodology-screw { background:linear-gradient(180deg,#fff,#f4f2ec);border-color:rgba(47,91,104,.18);color:#61787f }
+body.light-mode .climate-grid .datum-methodology.open .datum-methodology-screw { color:#2d6c82;border-color:rgba(45,108,130,.30) }
+body.light-mode .climate-grid .datum-methodology-body { border-top-color:rgba(47,91,104,.11) }
+body.light-mode .climate-grid .datum-methodology-body p { color:#536b72 }
+body.light-mode .climate-grid .datum-methodology-body h4 { color:#2f6f85 }
+
+/* ── V164 — the read cone. ⭐ "The pill shape remains, but now communicates Model Design rather
+   than false temperature semantics." The Mock's own comment, and it is the same correction this
+   port makes in the copy: the four old tiles claimed a weather, not a method. ───────────────── */
+.climate-grid .climate-option[data-outlook-key="blend"]::before { background:#1D9E75 !important; }
+.climate-grid .climate-option[data-outlook-key="parametric"]::before { background:#4DA8DA !important; }
+.climate-grid .climate-option[data-outlook-key="historical"]::before { background:#C9A84C !important; }
+.climate-grid .climate-option[data-outlook-key="cape"]::before { background:#5DCAA5 !important; }
+.climate-grid .climate-option[data-outlook-key="regime"]::before { background:#6B7BC4 !important; }
+.climate-grid .climate-option[data-outlook-key="blend"] .outlook-tag { color:#79dec7 !important;border-color:rgba(121,222,199,.34) !important;background:rgba(121,222,199,.055) !important; }
+.climate-grid .climate-option[data-outlook-key="parametric"] .outlook-tag { color:#72b9df !important;border-color:rgba(77,168,218,.34) !important;background:rgba(77,168,218,.055) !important; }
+.climate-grid .climate-option[data-outlook-key="historical"] .outlook-tag { color:#d5ad63 !important;border-color:rgba(201,168,76,.34) !important;background:rgba(201,168,76,.055) !important; }
+.climate-grid .climate-option[data-outlook-key="cape"] .outlook-tag { color:#79dec7 !important;border-color:rgba(93,202,165,.34) !important;background:rgba(93,202,165,.055) !important; }
+.climate-grid .climate-option[data-outlook-key="regime"] .outlook-tag { color:#a69ee8 !important;border-color:rgba(107,123,196,.38) !important;background:rgba(107,123,196,.06) !important; }
+body.light-mode .climate-grid .climate-option[data-outlook-key="blend"] .outlook-tag { color:#17624f !important; }
+body.light-mode .climate-grid .climate-option[data-outlook-key="parametric"] .outlook-tag { color:#2f6d85 !important; }
+body.light-mode .climate-grid .climate-option[data-outlook-key="historical"] .outlook-tag { color:#80631f !important; }
+body.light-mode .climate-grid .climate-option[data-outlook-key="cape"] .outlook-tag { color:#15785f !important; }
+body.light-mode .climate-grid .climate-option[data-outlook-key="regime"] .outlook-tag { color:#4f5e9d !important; }
+
+/* ── THE INTRO. ⚠️ `.phase-workspace-intro` HAS ZERO OCCURRENCES IN LIVE — measured, not assumed —
+   so unlike `.workspace-kicker` (already ported into profile.css) this one has to come across.
+   ⛔ IT REPLACED A PARAGRAPH THAT WAS UNREADABLE IN LIGHT MODE. The shell's version was
+   `color:var(--muted)` on the cream panel; the light-mode rule below is the Mock's own #4f6870 and
+   it is the reason this block is not optional. A SCREENSHOT FOUND THAT, NOT A GATE. ─────────── */
+.climate-grid .phase-workspace-intro{
+  margin:7px 0 13px;
+  max-width:60ch;
+  font:400 11.2px/1.62 var(--sans);
+  color:#aebbc0;
+}
+body.light-mode .climate-grid .phase-workspace-intro{
+  color:#4f6870!important;
+}
+
+/* ── V129 — the intro paragraph's measure ──────────────────────────────────────────────────── */
+.market-climate-intro { max-width:60ch;
+  margin-bottom:13px; }

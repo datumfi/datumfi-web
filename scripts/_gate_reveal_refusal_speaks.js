@@ -194,41 +194,16 @@ const spoken = (page) => page.evaluate(() => {
     await ctx.close();
   }
 
-  /* S3 — custom-matrix weights routed through the SAME global */
-  {
-    const ctx = await browser.newContext({ viewport: { width: 1440, height: 1200 } });
-    await ctx.addInitScript(INIT); await blockNet(ctx);
-    const pg = await ctx.newPage(); await open(pg);
-    await fundRoom(pg);
-    await pg.evaluate(() => window._studioEnterRoom('data'));
-    await pg.waitForTimeout(300);
-    await pg.fill('#pri-dob', '08/1982'); await pg.fill('#target-ret', '03/2035');
-    await pg.evaluate(() => { ['pri-dob', 'target-ret'].forEach((id) => { var e = document.getElementById(id); if (e) e.dispatchEvent(new Event('change', { bubbles: true })); }); });
-    await pg.waitForTimeout(700);
-    await pg.evaluate(() => window._studioEnterRoom('measurement'));
-    await pg.waitForTimeout(400);
-    const armed = await pg.evaluate(() => {
-      var opt = Array.prototype.slice.call(document.querySelectorAll('.climate-option'))
-        .filter(function (o) { return (o.dataset.outlook || '') === 'Custom Matrix'; })[0];
-      if (!opt) return { ok: false, why: 'no Custom Matrix option' };
-      opt.click();
-      var w = document.querySelectorAll('.c-weight');
-      if (!w.length) return { ok: false, why: 'no .c-weight inputs' };
-      w.forEach(function (el) { el.value = '10'; el.dispatchEvent(new Event('input', { bubbles: true })); });
-      var total = Array.prototype.map.call(w, function (e) { return parseFloat(e.value) || 0; }).reduce(function (a, b) { return a + b; }, 0);
-      return { ok: true, weights: w.length, total: total };
-    });
-    console.log('S3 fixture ' + JSON.stringify(armed));
-    check('S3 fixture armed an invalid Custom Matrix (a sum of 100 would not refuse)',
-      armed.ok && armed.total !== 100, JSON.stringify(armed));
-    await pg.waitForTimeout(400);
-    await pg.click('.action-btn'); await pg.waitForTimeout(1200);
-    const s = await spoken(pg);
-    console.log('S3 ' + JSON.stringify(s));
-    check('S3 the weights refusal is routed through window._buildRequestError', !!s.buildErr, String(s.buildErr));
-    check('S3 and it is visible in the same box', s.visibleCount >= 1, s.ids || 'NOTHING VISIBLE');
-    await ctx.close();
-  }
+  /* ⛔⛔ S3 DELETED 2026-09-18 — IT TESTED A REFUSAL THE PRODUCT CAN NO LONGER REACH.
+     The scenario armed an invalid Custom Matrix (four weights summing to 40) and asserted that the
+     WEIGHTS_MUST_SUM refusal spoke. The Custom Matrix TILE was removed 2026-09-13; from that day
+     its fixture could not arm, and the leg stood on `armed.ok` being false.
+     🔑 THE POINT IS NOT THAT IT WAS RED. It is that a scenario whose FIXTURE cannot be built is
+        not testing the product — it is testing its own setup, and it would have gone green again
+        the moment somebody "fixed" it by deleting the assertion instead of the scenario.
+     ⚠️ THE REFUSAL ITSELF STILL EXISTS IN THE ENGINE and custom_weights is still an accepted field.
+        If a Custom Matrix ever returns, this scenario returns with it — and it must return
+        RED-FIRST, demonstrated against a build that cannot satisfy it, before it counts. */
 
   /* S8 — THE COLD STUDIO. ⛔ THE ONE STATE EVERY NEW USER IS GUARANTEED TO PASS THROUGH, AND THE
      ONE STATE THIS GATE NEVER TESTED. S1/S2/S3 each arrange exactly ONE thing wrong; a Studio
@@ -391,19 +366,14 @@ const spoken = (page) => page.evaluate(() => {
       const e = document.getElementById('co-dob'); if (e) { e.value = '08 / 0000';
         e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); } });
   });
-  await auditReason('WEIGHTS_MUST_SUM', async (pg) => {
-    await fundRoom(pg);
-    await pg.evaluate(() => window._studioEnterRoom('data')); await pg.waitForTimeout(300);
-    await setDates(pg); await pg.waitForTimeout(600);
-    await pg.evaluate(() => window._studioEnterRoom('measurement')); await pg.waitForTimeout(400);
-    await pg.evaluate(() => {
-      const opt = Array.prototype.slice.call(document.querySelectorAll('.climate-option'))
-        .filter((o) => (o.dataset.outlook || '') === 'Custom Matrix')[0];
-      if (opt) opt.click();
-      document.querySelectorAll('.c-weight').forEach((el) => { el.value = '10';
-        el.dispatchEvent(new Event('input', { bubbles: true })); });
-    });
-  });
+  /* ⛔⛔ THE WEIGHTS_MUST_SUM ARRANGEMENT DELETED 2026-09-18 — THE SILENT HALF, AND THE WORSE HALF.
+     It read `if (opt) opt.click()` against a tile removed 2026-09-13, so for five days it selected
+     NOTHING, armed NOTHING, and then audited the WEIGHTS_MUST_SUM refusal in a state where that
+     refusal could not fire — reporting doors=0 problems it never had, and PASSING.
+     🔑 S3 ABOVE AT LEAST SAID SO. This one did not, because `if (opt)` turns a missing fixture into
+        a no-op instead of a failure. A GUARD THAT LETS A TEST CONTINUE WITHOUT ITS FIXTURE CONVERTS
+        A RED INTO A GREEN, WHICH IS THE ONLY DIRECTION THAT MATTERS. */
+
 
   console.log('');
   console.log('-- F79 AUDIT: reason -> target -> rendered --');

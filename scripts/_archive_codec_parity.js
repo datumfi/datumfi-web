@@ -107,8 +107,16 @@ function slimBlueprint(seed, n) {
       pri_overrides_monthly: { v62: 1800 + seed, v67: 2600 + seed, v70: 3200 + seed },
       sec_overrides_monthly: { v62: 1500, v67: 2200, v70: 2900 } },
     income: { pension_primary_annual: Math.round(Math.abs(rnd(seed * 3)) * 60000), pension_secondary_annual: Math.round(Math.abs(rnd(seed * 4)) * 40000) },
-    climate: { outlook: ['valuations_matter','history_repeats','cautious','optimistic','custom'][seed % 5],
-      custom_weights: (seed % 5 === 4) ? { bootstrap: 0.3, parametric: 0.2, regime: 0.25, cape: 0.25 } : null },
+    /* ⛔ THE POPULATION IS BOTH VOCABULARIES ON PURPOSE (2026-09-18). The five Model Designs are
+       what the product writes TODAY; the four retired names are what is ALREADY IN THE CAPTAIN'S
+       ARCHIVES, and 'custom' is in older ones still. AN ARCHIVE CODEC WHOSE FIXTURE ONLY CARRIES
+       TODAY'S VOCABULARY IS UNTESTED ON EVERY FILE IT WILL ACTUALLY BE ASKED TO OPEN.
+       ⚠️ 'custom' MOVED FROM INDEX 4 TO INDEX 9 AND THE WEIGHTS PREDICATE MOVED WITH IT. A seeded
+          index coupled to an array length is exactly the kind of pairing that silently decouples
+          when somebody extends the array and not the modulus. */
+    climate: { outlook: ['blend','parametric','historical','cape','regime',
+                         'valuations_matter','history_repeats','cautious','optimistic','custom'][seed % 10],
+      custom_weights: (seed % 10 === 9) ? { bootstrap: 0.3, parametric: 0.2, regime: 0.25, cape: 0.25 } : null },
     tax: { filing: ['Married Filing Jointly','Single','Head of Household'][seed % 3], location: ['CA','NY','FL','TX'][seed % 4], working_year_effective_rate: 0.18 + (seed % 20) / 100,
       /* schema 1.1.0 — see the note in `profile` above. */
       method: ['bracket','effective','estimated'][seed % 3],
@@ -130,7 +138,7 @@ function slimSketch(seed) {
     s1_datum: 140000 + seed * 1111, s1_ceil: 230000 + seed * 2222, s1_floor: 95000 + seed * 900, s1_resolved_state: ['STRETCHED','SECURE'][seed % 2],
     s2_design: { ceilDelta: 20000 + seed * 100, floorDelta: 7000 + seed * 50, datumDelta: 12000 + seed * 80, portDelta: Math.round(rnd(seed) * 100) / 100,
       age: 42 + seed, retire: 60 + seed % 8, planThroughAge: 90 + seed % 16, port: Math.round(Math.abs(rnd(seed * 2)) * 900) / 100, datum: 150 + seed, contrib: 90000 + seed * 1000 },
-    market_outlook: ['valuations_matter','history_repeats','cautious'][seed % 3], tax_rate: 18 + seed % 20, inflation_mode: (seed % 2) ? 'real' : 'nominal', plan_end_age: 90 + seed % 16 };
+    market_outlook: ['blend','parametric','historical','cape','regime','valuations_matter'][seed % 6], tax_rate: 18 + seed % 20, inflation_mode: (seed % 2) ? 'real' : 'nominal', plan_end_age: 90 + seed % 16 };
 }
 
 console.log('datum-archive-codec parity + budget gate');

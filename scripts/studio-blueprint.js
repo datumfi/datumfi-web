@@ -146,7 +146,13 @@
         pension_primary_annual:   0,
         pension_secondary_annual: 0
       },
-      climate: { outlook: 'valuations_matter', custom_weights: null },
+      /* ⛔ THE SHIPPED DEFAULT, AND IT WAS ONE OF THE NAMED PLACES THE CAPTAIN'S OWN STANCE WAS THE
+         PRODUCT'S STANCE. 'valuations_matter' until 2026-09-18 — a market opinion nobody chose,
+         written into every new blueprint. It now matches the tile the panel ships active, and the
+         two are checked against each other by scripts/_gate_market_climate_port.mjs.
+         ⚠️ NOT A NUMBER CHANGE: the engine already resolved 'valuations_matter' to the Blend, so a
+            plan saved yesterday and one saved today compute the same Range. Clause 2, not Clause 1. */
+      climate: { outlook: 'blend', custom_weights: null },
       // Sketch global assumptions carried so Studio recomputes boundaries identically.
       // Distinct from climate.outlook (the Studio climate lens) — these mirror the Sketch
       // market/inflation radios. Defaults match Sketch's defaults (average / real).
@@ -1609,13 +1615,14 @@
     return bp;
   }
 
-  var OUTLOOK_LABEL_TO_ENUM = {
-    'History Repeats':   'history_repeats',
-    'Valuations Matter': 'valuations_matter',
-    'Cautious':          'cautious',
-    'Optimistic':        'optimistic',
-    'Custom Matrix':     'custom'
-  };
+  /* ⛔⛔ OUTLOOK_LABEL_TO_ENUM DELETED 2026-09-18 — THE THIRD COPY, AND THE ONE THAT MADE THE FORK
+     DANGEROUS RATHER THAN MERELY UNTIDY. It lived in a DIFFERENT FILE from the two in studio.html,
+     so the three could disagree without any single diff showing it, on the value that decides which
+     market model a saved plan replays under.
+     🔑 NOT SYNCHRONISED — DELETED. The tile now carries the engine's own market_outlook enum in
+        `data-outlook-key`, so a capture reads the answer rather than decoding a display label.
+     ⚠️ 'Custom Matrix' went with it. The tile was removed 2026-09-13 and this map was the last
+        thing in the product still able to name it. */
   var SS_LABEL_TO_ENUM = { '62': 'early_62', '67': 'full_67', '70': 'optimal_70' };
 
   /* THE TYPE TEST moneyToInt CANNOT DO, AND THE REASON THE SALARY GUARD COULD NOT BE FIXED IN
@@ -1833,21 +1840,17 @@
       }
     }
 
+    /* ⭐ THE CONTROL CARRIES THE ENUM, SO THE CAPTURE IS A READ, NOT A DECODE.
+       ⚠️ THE custom_weights BRANCH IS GONE WITH THE MAP THAT COULD PRODUCE 'custom'. The tile was
+          removed 2026-09-13; `.c-weight` has not existed since, so this branch has been
+          unreachable for five days and the only thing keeping it alive was a map entry naming a
+          tile that no longer exists. A BRANCH WHOSE CONDITION CANNOT BE MET IS NOT A SAFETY NET.
+       ⚠️ custom_weights STAYS ON THE OBJECT, written null, because the engine still accepts the
+          field and the archive codec still round-trips the key. */
     var act = d.querySelector('.climate-option.active');
-    if (act && act.dataset && act.dataset.outlook) {
-      bp.climate.outlook = OUTLOOK_LABEL_TO_ENUM[act.dataset.outlook] || bp.climate.outlook;
-      if (bp.climate.outlook === 'custom') {
-        var weights = Array.prototype.map.call(d.querySelectorAll('.c-weight'),
-          function (el) { return parseFloat(el.value) || 0; });
-        if (weights.length === 4) {
-          bp.climate.custom_weights = {
-            bootstrap: weights[0] / 100, parametric: weights[1] / 100,
-            regime:    weights[2] / 100, cape:        weights[3] / 100
-          };
-        }
-      } else {
-        bp.climate.custom_weights = null;
-      }
+    if (act && act.dataset && act.dataset.outlookKey) {
+      bp.climate.outlook = act.dataset.outlookKey;
+      bp.climate.custom_weights = null;
     }
 
     var ssAct = d.querySelector('.ss-btn.active strong');

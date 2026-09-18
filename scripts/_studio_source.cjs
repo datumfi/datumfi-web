@@ -114,7 +114,19 @@ const PARTS = [
      sliced it between two anchors would have gone silently EMPTY while printing green. They now
      brace-walk via extractWindowFn(). REGISTRATION IS NOT WIRING: the <script src> in studio.html's
      head is the other half, and _gate_parts_wired proves it separately. */
-  'scripts/studio-account-modal.js'
+  'scripts/studio-account-modal.js',
+  /* ⭐ THE SIXTH PART, REGISTERED 2026-09-18 — the Market Climate. Five Model Designs, their
+     authored copy, the methodology accordion, and the ONE remaining alias table.
+     ⛔ IT IS REGISTERED FOR A REASON THE OTHERS ARE NOT: this part holds the LAST TRANSLATION
+     between a stored market_outlook and a tile. Three copies of that translation used to live in
+     two files; a gate that reads the Studio source has to be able to resolve the survivor, or the
+     next person re-creates a fourth somewhere the diff will not show it.
+     ⚠️ REGISTRATION IS NOT WIRING. The <script src> half sits IN BODY, immediately after the mount,
+     because the tiles must exist at parse time for three existing consumers that do not guard for
+     their absence. _gate_parts_wired proves the tag exists AND precedes first use; it does not and
+     cannot prove the tag is in the right PLACE in the body — that is what
+     _gate_market_climate_port.mjs asserts, in a real browser, by clicking a tile. */
+  'scripts/studio-market-climate.js'
 ];
 
 const PART_OPEN  = (rel) => '/* ═════ studioSource PART BEGIN · ' + rel + ' ═════ */';

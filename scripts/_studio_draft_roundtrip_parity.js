@@ -75,7 +75,7 @@ const PORT = 8175;
       priDob: (document.getElementById('pri-dob') || {}).value || '',
       targetRet: (document.getElementById('target-ret') || {}).value || '',
       spend: (document.getElementById('spend-input') || {}).value || '',
-      climate: ((document.querySelector('.climate-option.active') || {}).dataset || {}).outlook || '',
+      climate: ((document.querySelector('.climate-option.active') || {}).dataset || {}).outlookKey || '',
       legacyWritten: window.__legacyDraftWritten
     };
   });

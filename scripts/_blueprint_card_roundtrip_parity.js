@@ -78,7 +78,11 @@ const out = { findings: [], pageErrors: [] };
     setSlider('slider-activation', 68);
     setSlider('sl-plan-through', 88);
     var s = document.getElementById('spend-input'); if (s) s.value = '$88,000';
-    document.querySelectorAll('.climate-option').forEach(function (el) { el.classList.toggle('active', el.dataset.outlook === 'Optimistic'); });
+    /* ⚠️ 'regime' BECAUSE IT IS NOT THE DEFAULT. The five designs replaced four presets on
+       2026-09-18 and the old non-default here was 'Optimistic'; seeding the shipped default
+       ('blend') would collapse the variable this leg exists to move and the round-trip would pass
+       on a value that never travelled. */
+    document.querySelectorAll('.climate-option').forEach(function (el) { el.classList.toggle('active', el.dataset.outlookKey === 'regime'); });
     // 05/ Market Conditions paradigm (the card's "Climate") + inflation — non-defaults.
     function checkRadio(name, value) { var r = document.querySelector('input[name="' + name + '"][value="' + value + '"]'); if (r) { r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); } }
     checkRadio('market', 'stress');
@@ -167,7 +171,7 @@ const out = { findings: [], pageErrors: [] };
     return {
       priDob: val('pri-dob'),
       targetRet: val('target-ret'),
-      climate: ((document.querySelector('.climate-option.active') || {}).dataset || {}).outlook || '',
+      climate: ((document.querySelector('.climate-option.active') || {}).dataset || {}).outlookKey || '',
       rooms: document.querySelectorAll('#rooms-container .room-input-container').length,
       sliderExact: sp && sp.dataset ? sp.dataset.exactVal : null,
       // the RENDERED slider scalars that actually drive the Shape

@@ -93,7 +93,14 @@ const EXPECT = [
   { id: 'architecture', label: 'PHASE II — ARCHITECTURE',  secs: ['02 / Estate Drafting — Accounts & Assets'],     next: 'Next: TENSION' },
   { id: 'tension',      label: 'PHASE III — TENSION',      secs: ['03 / Operating Upkeep — Living Expenses'], next: 'Next: UNCERTAINTY' },
   { id: 'uncertainty',  label: 'PHASE IV — UNCERTAINTY',   secs: ['05 / Income Timing — Social Security & Pensions'], next: 'Next: MEASUREMENT' },
-  { id: 'measurement',  label: 'PHASE V — MEASUREMENT',    secs: ['06 / Climate Control — Market Outlook'],        next: 'Next: ALIGNMENT' },
+  /* ⚠️ RENAMED 2026-09-18 WITH THE MARKET CLIMATE PORT, and the rename is the point rather than a
+     relabel: "06 / Climate Control — Market Outlook" was the FOUR-PRESET vocabulary, a weather the
+     household picks. The five Model Designs are METHODS, and the Mock's own V164 note retires the
+     temperature metaphor explicitly. This header was the last surface still speaking it.
+     ⛔ THE EXPECTATION IS UPDATED, NOT LOOSENED. It still names the section exactly; a gate that
+        answered this with a substring or a regex would stop being able to tell the two vocabularies
+        apart, which is the only thing it is here to notice. */
+  { id: 'measurement',  label: 'PHASE V — MEASUREMENT',    secs: ['Market Climate'],                               next: 'Next: ALIGNMENT' },
   { id: 'alignment',    label: 'PHASE VI — ALIGNMENT',     secs: [],                                              next: 'Next: ENDURANCE' },
   { id: 'endurance',    label: 'PHASE VII — ENDURANCE',    secs: ['04 / DEFINE YOUR DATUM'],                       next: 'Back to The Studio' },
 ];

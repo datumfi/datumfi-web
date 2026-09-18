@@ -118,6 +118,24 @@ body.light-mode [data-profile-port]{
   transition:.18s ease;}
 .activity-body{display:none;
   padding:0 0 17px 0;}
+
+/* ⛔⛔ `.activity-head-wrap` — THE HOOK THIS PORT ADDED AND NEVER USED, FILLED IN 2026-09-18.
+   Three headers now carry the Mock's two-line activity name: Plan Configuration, Architect Profile
+   and (from today) Market Climate. All three sit on `.section-header-wrapper`, which carries
+   `border-bottom: 1px solid rgba(201,168,76,0.2)` — DATUM FI'S GOLD — so all three wore the Mock's
+   type on the old chrome's rule.
+   🔑 AND IT IS NOT A COLOUR PROBLEM, WHICH IS WHY RECOLOURING IT WAS THE WRONG FIX FIRST. The Mock
+      draws its rule on the WHOLE `.activity` — head plus body — so the line falls BELOW an activity
+      and separates it from the NEXT one. On `.section-header-wrapper` the same 1px lands BETWEEN a
+      header and its own content and cuts the activity in half. A BORDER ON THE WRONG ELEMENT IS A
+      STRUCTURAL ERROR WEARING A COLOUR'S CLOTHES; matching its colour only made it look deliberate.
+   ⚠️ TWO CLASSES, NOT ONE, AND THIS IS LOAD-BEARING: `.activity-head-wrap` alone ties with
+      `.section-header-wrapper`, and that rule lives in studio.html's INLINE <style>, which the
+      browser applies AFTER every external stylesheet. The shell wins every tie. "My stylesheet
+      loads last" is a claim about the LINKS only.
+   ⚠️ MARGIN AND PADDING ARE KEPT — removing the spacing with the line would close the gap the Mock
+      holds open between a head and its card. Only the rule goes. */
+.section-header-wrapper.activity-head-wrap{ border-bottom: none; }
 .workspace-card{border:1px solid rgba(142,160,168,.14);
   background:
     linear-gradient(180deg,rgba(255,255,255,.008),transparent 22%),
