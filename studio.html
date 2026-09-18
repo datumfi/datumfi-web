@@ -15652,14 +15652,32 @@ function _householdAssetMix() {
      stated balance. That is a disagreement between two stores, not a coverage failure — the mix
      is still fully described — so the test is one-sided and the shares below normalise over
      `modelled`, which is the only total the three buckets actually add up to. */
-  if (modelled <= 0 || (modelled / engineValue) < 0.95) return null;
+  /* ⛔⛔ THE 95% CLIFF IS GONE. §82.2707. This line used to read
+        `if (modelled <= 0 || (modelled / engineValue) < 0.95) return null;`
+     and NOBODY EVER RULED THAT THRESHOLD. It converted a mostly-known portfolio into a wholly
+     assumed one: A HOUSEHOLD WHO CLASSIFIED 94% OF THEIR MONEY — who did almost all of the work —
+     WAS HANDED A STRANGER'S ALLOCATION FOR ALL OF IT, INCLUDING THE 94% WE COULD SEE. Silent, and
+     failing in the worst available direction.
+     🔑 THE CLIFF IS NOW A SLOPE. The classified portion governs; the engine applies its neutral
+        default to the remainder only, blended BY VALUE, and discloses the unclassified dollars by
+        name. The answer degrades in proportion to what we do not know rather than all at once, and
+        the household who did more work gets more of their own answer back.
+     ⛔ THE ALL-OR-NOTHING FORM IS CORRECT ONLY WHEN NOTHING IS CLASSIFIED — which is the one case
+        left below, because a mix derived from no holdings at all is not a measurement.
+     ⚠️ THE BLEND LIVES IN THE ENGINE, NOT HERE. This function ships the FACTS — the mix of the
+        classified slice and how much of the portfolio that slice is. Which default fills the rest
+        is a RULE, and a rule kept in two languages drifts. L48. */
+  if (modelled <= 0) return null;
   var e = Math.round((eq / modelled) * 10000) / 10000;
   var b = Math.round((bd / modelled) * 10000) / 10000;
   /* ⛔ CASH IS THE REMAINDER SO THE THREE SUM TO EXACTLY 1. The engine refuses a mix that misses
      by more than a point, and three independently-rounded shares are the ordinary way to miss. */
   var c = Math.round((1 - e - b) * 10000) / 10000;
   if (c < 0) c = 0;
-  return { equity: e, bond: b, cash: c };
+  /* ⚠️ CAPPED AT 1. `modelled` can EXCEED `engineValue` when a holdings table prices an account
+     above its stated balance — a disagreement between two stores, not coverage above 100%. */
+  var cov = Math.min(1, Math.round((modelled / engineValue) * 10000) / 10000);
+  return { equity: e, bond: b, cash: c, classified: cov };
 }
 const _reachesEngine = a =>
              !FILTERED_TYPES.has(a.baseId)
@@ -15887,6 +15905,7 @@ const _reachesEngine = a =>
               estate of only-empty rooms arrives here as a zero-length array and is refused by the
               same line. A room the user created and never filled is not an estate. */
         // STU-010: filter Group 4, remap to engine enums, warn on unmapped future additions
+        let _matchExcluded = 0;
         const accounts = state.accounts
           .filter(_reachesEngine)
           .map(a => {
@@ -15984,18 +16003,26 @@ const _reachesEngine = a =>
                      is silently short. FLAGGED, NOT INVENTED — I do not write brand copy.
                ⚠️ THE SALARY IS THE PROFILE'S OWN FIELD, PER ROOM OWNER — `co-salary` for a `_co`
                   room, `pri-salary` otherwise — read exactly as §8's own caller reads it. */
-            let _matchAnnual = 0;
+            let _matchAnnual = 0, _mAnnual = 0;
             try {
               const _base = (typeof getBaseType === 'function') ? getBaseType(a.baseId) : null;
               if (_base && typeof _di401kMatch === 'function') {
                 const _salEl = document.getElementById(_base.type === 'coarch' ? 'co-salary' : 'pri-salary');
                 const _sal = _salEl ? parseFloat(String(_salEl.value || '').replace(/[^0-9.]/g, '')) : null;
                 const _m = _di401kMatch(a, _base, isFinite(_sal) ? _sal : null);
-                if (_m && _m.annualMatch !== null && isFinite(_m.annualMatch)
-                       && _m.vested !== null && isFinite(_m.vested)) {
-                  _matchAnnual = _m.annualMatch * (Math.max(0, Math.min(100, _m.vested)) / 100);
+                if (_m && _m.annualMatch !== null && isFinite(_m.annualMatch)) {
+                  _mAnnual = _m.annualMatch;
+                  if (_m.vested !== null && isFinite(_m.vested)) {
+                    _matchAnnual = _m.annualMatch * (Math.max(0, Math.min(100, _m.vested)) / 100);
+                  }
                 }
               }
+              /* ⛔ THE MATCH WE COULD NOT COUNT, REPORTED SO THE ANSWER CAN SAY SO. §82.2709 —
+                 wherever a conservative reading is applied because a FACT IS MISSING rather than
+                 because a fact is known, the missing fact is named and the amount at stake is
+                 shown. Without this the engine simply sees a smaller contribution and reports
+                 nothing, which is a conservative assumption with no disclosure. */
+              if (_matchAnnual === 0 && _mAnnual > 0) _matchExcluded += _mAnnual;
             } catch (e) {
               /* ⛔ LOUD, NEVER SILENT. A swallowed exception here would restore the exact defect
                  this block closes — the match quietly absent — with the evidence removed. */
@@ -16160,11 +16187,19 @@ const _reachesEngine = a =>
               builds on `window._buildStudioRequest()`'s body (Finding 67's repair), so both egresses
               describe the same estate from one expression — which is exactly what the co-architect
               fork failed to do for twelve days. */
+        if (_matchExcluded > 0) body.match_excluded_annual = _matchExcluded;
         const _assetMix = _householdAssetMix();
         if (_assetMix) {
           body.equity_pct = _assetMix.equity;
           body.bond_pct   = _assetMix.bond;
           body.cash_pct   = _assetMix.cash;
+          /* ⛔⛔ HOW MUCH OF THE PORTFOLIO THAT MIX ACTUALLY COVERS. §82.2707. Without it the
+             client has to decide alone whether a partly-classified portfolio is worth sending at
+             all, and the threshold it used — 95%, never ruled by anyone — meant a household who
+             classified 94% of their money got a stranger's allocation applied to the whole estate.
+             🔑 THE ENGINE BLENDS: classified slice at the household's own mix, neutral default on
+                the remainder, by value, disclosed by name with the unclassified dollars beside it. */
+          body.allocation_classified_pct = _assetMix.classified;
         }
         /* ⛔ THE REFUSAL, LANDING ONE COMMIT AFTER THE WIRING, AND THE NARROWING IS DECLARED RATHER
            THAN ASSUMED. The standing rule is that a field becomes required in the SAME commit that
