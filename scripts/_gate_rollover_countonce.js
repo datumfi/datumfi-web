@@ -8,6 +8,7 @@
    Red-first: on ce9c112 (A2) the Conduit feeds the engine → sum is $208k → RED.
    serve :8001, node scripts/_gate_rollover_countonce.js */
 const { chromium } = require('playwright');
+const { seedCompleteHousehold } = require('./_seed_household.cjs');
 const LABEL = process.argv[2] || 'RUN';
 const URL = 'http://127.0.0.1:8001/studio.html';
 
@@ -41,24 +42,39 @@ const URL = 'http://127.0.0.1:8001/studio.html';
       recalcPortfolio(roll); roll.value = 108000;
       out.rollId = roll.id;
 
-      /* ⚠️ MINIMAL FIELDS SO buildStudioRequest() DOESN'T NULL OUT — and "minimal" grew twice.
-         Hand-typing three ids here was correct when written and went stale on 2026-09-09
-         (location) and again on 2026-09-10 (Social Security, filing status). It did not red the
-         first time, because the builder used to return a TRUTHY BODY while holding unresolved
-         refusals -- so this fixture measured a request the engine would have refused.
-         🔑 THE SUMS BELOW ARE THE SUBJECT; THE HOUSEHOLD IS SCENERY. Scenery still has to be
-            complete, or the subject is measured over a null. */
-      const setV = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; } };
-      setV('pri-dob', '01 / 1980'); setV('target-ret', '01 / 2040'); setV('spend-input', '$100,000');
-      setV('ss-pri-67', '2,400');
-      const _sel = (id, match) => {
-        const e = document.getElementById(id); if (!e) return;
-        const o = Array.prototype.find.call(e.options, (x) => String(x.value).trim() !== ''
-          && (!match || match.test(String(x.value))));
-        if (o) { e.value = o.value; e.dispatchEvent(new Event('change', { bubbles: true })); }
-      };
-      _sel('pri-location'); _sel('filing-status');
+      out.built = true;
+    } catch (e) { out.err = String(e && e.message || e); }
+    return out;
+  });
 
+  /* ⛔⛔ THE SCENERY IS SEEDED BY THE SHARED SEEDER AS OF 2026-09-19, AND IT IS THE THIRD REPAIR
+     TO THIS BLOCK. It hand-typed the ids it knew about and went stale on 2026-09-09 (location),
+     on 2026-09-10 (Social Security, filing status) and again now: the two failing legs were
+     reading `null`, so THEY WERE NOT REPORTING $100k INSTEAD OF $208k — THEY WERE REPORTING THAT
+     THEY COULD NOT LOOK.
+  🔑 ITS OWN COMMENT SAID SO BEFORE ANYONE READ IT: the sums are the subject, the household is
+     scenery, and scenery still has to be complete or the subject is measured over a null.
+  ⚠️ THE SEEDER MUST NOT TOUCH THE TWO ACCOUNTS — they ARE the subject and they are already built
+     above. It answers profile/tax/timing doors only. */
+  const seed = await seedCompleteHousehold(p, { quiet: true });
+  await p.evaluate(() => {
+    /* ⚠️ PINNED AWAY FROM THE SEEDER'S FIRST-OPTION DEFAULT, WHICH IS ALABAMA — one of exactly
+       three jurisdictions that REFUSE. Texas has no state income tax, so the state layer cannot
+       move the sums this gate reads. ⛔ ASSERTED BELOW RATHER THAN ASSUMED (§82.2748): an earlier
+       fixture carried "every jurisdiction resolves to zero" as a COMMENT, which was true when
+       written and false six days later. A claim that a dimension cannot matter is a DEPENDENCY on
+       that dimension and is written as an assertion. */
+    const el = document.getElementById('pri-location');
+    if (el) { el.value = 'Texas'; el.dispatchEvent(new Event('change', { bubbles: true })); }
+    return el ? el.value : null;
+  }).then((v) => { R.pinnedLocation = v; });
+  await p.waitForTimeout(400);
+
+  /* R2 carries the measurement; R carried the build. One object for the assertions below. */
+  const R2 = await p.evaluate(() => {
+    const out = {};
+    try {
+      const roll = window.state.accounts.filter(x => x.baseId === 'rollover401k').pop();
       const sumPretax = () => {
         const body = (typeof window.buildStudioRequest === 'function') ? window.buildStudioRequest() : null;
         if (!body || !body.accounts) return null;
@@ -76,6 +92,8 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     } catch (e) { out.err = String(e); }
     return out;
   });
+  Object.assign(R, R2);
+  R.seedComplete = seed.complete;
   await b.close();
 
   const has = (t) => R.html && R.html.indexOf(t) !== -1;
@@ -87,6 +105,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     ['pretax401k is NEVER informational (false)', R.pretaxNever === false],
     ['LOAD-BEARING: default payload counts ONE balance ($100k, not $208k)', R.sumDefault === 100000],
     ['standalone opt-in restores the Conduit ($208k)', R.sumStandalone === 208000],
+    ["ASSERTED, NOT ASSUMED (82.2748): the pinned jurisdiction really is Texas -- a claim that a dimension cannot matter is a DEPENDENCY on it", R.pinnedLocation === 'Texas'],
     ['visible "already counted in [X]" flag renders', has('already counted')],
   ];
   const pass = results.filter(r => r[1]).length, total = results.length;

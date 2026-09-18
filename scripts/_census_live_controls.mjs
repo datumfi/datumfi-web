@@ -27,7 +27,65 @@
  */
 import { readFileSync } from 'node:fs';
 
-const SRC = readFileSync(new URL('../studio.html', import.meta.url), 'utf8');
+/* ⛔⛔ THE SHELL COMES THROUGH studioSource(), NEVER off disk. _gate_studio_source P1 asserts it
+   is the ONLY door and this file was the last one breaking that rule — it read studio.html
+   directly because it was written before the split, and its own header still explains that it
+   reads 'the file that is actually served'. THAT REASONING SURVIVES; the door does not.
+   ⚠️ studioSource() RETURNS THE SHELL PLUS THE REGISTERED PARTS, which is a DIFFERENT population
+      from the 24 parts the PAGE loads — and the difference is the whole point of PAGE_PARTS below.
+      Both are kept: the registry feeds every other gate's resolver, the page's own script tags feed
+      this census's reachability count. A NARROWER POPULATION AND A WIDER ONE ARE NOT INTERCHANGEABLE
+      JUST BECAUSE BOTH ARE 'THE SOURCE'. */
+const { studioSource } = await import('./_studio_source.cjs');
+const SRC = studioSource();
+
+/* ══ THE SERVED PAGE, NOT THE SHELL — §82.2735 ═══════════════════════════════════════════════════
+ * ⛔⛔ THIS CENSUS SHIPPED READING ONE FILE AND SURVEYING TWENTY-THREE, AND IT REPORTED A CONFIDENT
+ *    WRONG ANSWER IN THE LESS OBVIOUS DIRECTION: a FALSE RED. `d2-slider-datum` was reported "read
+ *    NOWHERE but its own element" while scripts/studio-wantface.js reads it in four places. The
+ *    instrument could not see the file.
+ *    🔑 AN INSTRUMENT'S POPULATION IS PART OF ITS RESULT. "One control is read nowhere" and "one
+ *       control is read nowhere in the one file I looked at" ARE DIFFERENT CLAIMS, and only the
+ *       second was ever true.
+ *    ⭐ THIRD INSTANCE OF ONE CLASS, and the class is now named: the $1,000 tier rounding hiding a
+ *       live state-tax signal, ignored_inputs reporting a cache-key touch as consumption, and this.
+ *       AN UNDER-RESOLVED INSTRUMENT DOES NOT REPORT UNCERTAINTY — IT REPORTS A CONFIDENT WRONG
+ *       ANSWER, AND IT CAN COME OUT IN EITHER COLOUR.
+ *
+ * ⛔ THE POPULATION IS READ OFF THE PAGE'S OWN <script src> TAGS, NEVER A LIST TYPED HERE. A
+ *    twenty-fourth part joins the moment studio.html loads it, with nobody remembering to come back.
+ *    A POPULATION A HUMAN MAINTAINS IS A POPULATION THAT WILL BE WRONG.
+ *
+ * ⚠️ NAMED RESIDUAL, PRINTED EVERY RUN RATHER THAN RECORDED HERE AND FORGOTTEN: the REQUEST-BUILDER
+ *    side is still sliced out of the shell alone. If a part ever contributed to the payload, this
+ *    census would under-report what is WIRED — the same defect in the opposite direction, and two
+ *    parts already touch market_outlook. Not fixed blind; stated. */
+const PAGE_PARTS = [...new Set(
+  [...SRC.matchAll(/<script[^>]*\bsrc=["']\/?(scripts\/[^"']+\.js)["']/gi)].map(m => m[1])
+)];
+const PART_SRC = PAGE_PARTS.map((rel) => {
+  try { return readFileSync(new URL('../' + rel, import.meta.url), 'utf8'); }
+  catch (e) {
+    /* ⛔ A PART THE PAGE LOADS AND THIS CENSUS CANNOT READ MUST NEVER BE SKIPPED QUIETLY — that is
+       the exact shape of the defect above, one layer down. */
+    throw new Error('census: studio.html loads "' + rel + '" and it could not be read. '
+      + 'A part that cannot be read must not be silently dropped from the population.');
+  }
+}).join('\n');
+/* ⛔⛔ --redfirst · THE DEMONSTRATION THAT THIS CENSUS CAN STILL BITE.
+ * Widening a population is the one change that can silently turn an instrument into a rubber stamp:
+ * read enough files and EVERY id is "referenced somewhere". So the widening ships with its own
+ * falsification — a control that genuinely nothing reads is injected, and the arm must find it.
+ *   🔑 A NEW CHECK SHIPS ONLY WITH A DEMONSTRATION THAT IT CAN FAIL. If this mode prints 0 orphans,
+ *      the green in normal mode is worth nothing and the run exits non-zero saying so.
+ * ⚠️ THE PROBE IS ADDED TO THE MARKUP ONLY, NEVER TO THE READ POPULATION — that asymmetry IS the
+ *    test. An id that appears in a part would prove the opposite of what is wanted. */
+const CENSUS_RED_FIRST = process.argv.includes('--redfirst');
+const PROBE_ID = '__census_orphan_probe';
+const SRC_FOR_MARKUP = CENSUS_RED_FIRST
+  ? SRC.replace('</body>', '<input type="text" id="' + PROBE_ID + '">\n</body>')
+  : SRC;
+const SERVED = SRC + '\n' + PART_SRC;
 
 const B = s => `[1m${s}[0m`;
 const DIM = s => `[2m${s}[0m`;
@@ -217,7 +275,7 @@ const EXEMPT = {
  */
 function arm2() {
   const ids = new Set();
-  for (const m of SRC.matchAll(/<(?:input|select|textarea)\b[^>]*\bid=["']([^"']+)["'][^>]*>/gi)) {
+  for (const m of SRC_FOR_MARKUP.matchAll(/<(?:input|select|textarea)\b[^>]*\bid=["']([^"']+)["'][^>]*>/gi)) {
     ids.add(m[1]);
   }
   /* ⚠️ A TEMPLATED ID IS NOT A CONTROL, IT IS A FAMILY OF THEM. An id written with a template
@@ -238,13 +296,17 @@ function arm2() {
   const onWire = [], orphans = [], displayOnly = [];
   for (const id of real) {
     if (builder.includes(id)) { onWire.push(id); continue; }
-    const refs = (SRC.match(new RegExp(esc(id), 'g')) || []).length;
+    /* ⛔ COUNTED OVER THE SERVED PAGE — shell PLUS every part it loads. Counted over the shell alone
+       this produced a false red on a control that four lines of studio-wantface.js read. */
+    const refs = (SERVED.match(new RegExp(esc(id), 'g')) || []).length;
     if (refs <= 1) orphans.push(id); else displayOnly.push(id);
   }
 
   console.log('');
   console.log(B('  ARM 2 · EVERY COLLECTED FIELD MUST REACH A CONSUMER') + DIM('   §82.2705'));
   console.log(`  population: ${B(real.length)} input / select / textarea controls carrying an id`);
+  console.log(`  read across: ${B(1 + PAGE_PARTS.length)} files — studio.html plus the ${PAGE_PARTS.length} parts it loads`
+            + DIM('   (off its own <script src> tags, never a typed list)'));
   console.log(GRN(`    ${String(onWire.length).padStart(2)}  reach the request builder`));
   console.log(YEL(`    ${String(displayOnly.length).padStart(2)}  read somewhere, but NOT by the request — display, or a gap; NOT YET TRIAGED`));
   console.log(RED(`    ${String(orphans.length).padStart(2)}  read NOWHERE but their own element`));
@@ -255,6 +317,27 @@ function arm2() {
   console.log(DIM('     display-or-defect, this arm reports a POPULATION and a SPLIT — not a verdict.'));
   console.log(DIM('     A census that called the middle row green would be the empty-green species it'));
   console.log(DIM('     exists to catch.'));
+  console.log('');
+  console.log(YEL('  ⚠️ NAMED RESIDUAL — what this arm still cannot see (§82.2735):'));
+  console.log(DIM('     The REQUEST-BUILDER side is sliced out of studio.html ALONE, so a control read'));
+  console.log(DIM('     only by a PART that contributes to the payload would land in the middle row'));
+  console.log(DIM('     instead of the top one — under-reporting what is WIRED. Two parts already'));
+  console.log(DIM('     touch market_outlook. This is stated every run rather than fixed blind,'));
+  console.log(DIM('     because widening it without a red-first would be the empty-green species'));
+  console.log(DIM('     arriving as the cure for the false red.'));
+  if (CENSUS_RED_FIRST) {
+    console.log('');
+    const caught = orphans.includes(PROBE_ID);
+    if (!caught) {
+      console.log(RED('  ❌ RED-FIRST FAILED — a control that NOTHING reads was injected into the markup'));
+      console.log(RED('     and this arm did not report it. Widening the population has turned the'));
+      console.log(RED('     census into a rubber stamp; its green in normal mode proves nothing.'));
+      return 1;
+    }
+    console.log(GRN('  ✅ RED-FIRST OK — the injected unread control was reported as an orphan by name.'));
+    console.log(DIM('     The widened population can still go red, so a clean run is evidence.'));
+    return 0;
+  }
   return orphans.length ? 1 : 0;
 }
 

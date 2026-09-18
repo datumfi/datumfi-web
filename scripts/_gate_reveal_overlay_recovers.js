@@ -38,8 +38,10 @@
  *   R3 · THE ARM THAT MUST NOT FIRE — overlay NOT active, button disabled BY HAND, dispatch
  *        `pageshow`: the button MUST STAY DISABLED. ⛔ Without this, an unguarded recovery that
  *        stomps state on every single load passes R1 and R2 perfectly.
- *   R4 · THE REAL PATH STILL WORKS — a valid reveal still reaches range.html.
- *   R5 · THE HOIST DID NOT BREAK THE RETRY BUTTON (structural).
+ *   R4 · THE REAL PATH STILL WORKS — a valid reveal opens the Range overlay IN the Studio
+ *        (re-pointed 2026-09-19; it asserted range.html until the 2026-09-14 cutover).
+ *   R5 · THE HOIST DID NOT BREAK resetOverlayState (structural). The retry-button half was
+ *        RETIRED 2026-09-19 — `retryBtn` no longer exists anywhere in the shell.
  *
  * ── CONTROLS — DISJOINT RED SETS ─────────────────────────────────────────────────────────────
  *   --defect   : unwires the pageshow recovery.        R1 + R2 RED, R3 green.
@@ -52,6 +54,7 @@
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
+const { seedCompleteHousehold } = require('./_seed_household.cjs');
 const { studioSource } = require('./_studio_source.cjs');   // the ONLY door to the program's source
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8583;
@@ -144,88 +147,45 @@ async function open(page) {
   await page.waitForFunction(() => typeof window._studioEnterRoom === 'function', null, { timeout: 9000 });
 }
 async function seedForReveal(page) {
+  /* ⛔⛔ REPLACED 2026-09-19 WITH THE SHARED SEEDER (§82.2743, REPAIR of the fixture).
+     The hand-rolled version enumerated the doors it knew about — dates, then filing status
+     (added 2026-09-06), then retirement location (added 2026-09-09) — and was repaired once per
+     door, always after the fact, always with the same note: THE REPAIR IS THE FIXTURE, NOT THE
+     GATE. It was about to need a fourth repair.
+     ⛔ AND IT CARRIED A FALSIFIED INVARIANT: "every jurisdiction resolves to zero state tax, so no
+        choice here can move anything R4 reads". True when written; false since 2026-09-13. It took
+        the first answerable option, which is ALABAMA — one of three jurisdictions that refuse on
+        income source.
+     🔑 A FIXTURE THAT ENUMERATES THE DOORS GOES STALE THE NEXT TIME A DOOR IS ADDED. The seeder
+        answers whatever the product refuses on, in a loop, until nothing is refused. */
   await page.evaluate(() => window._studioEnterRoom('data'));
   await page.waitForTimeout(400);
-  await page.fill('#pri-dob', '08/1982');
-  await page.fill('#target-ret', '03/2035');
-  await page.evaluate(() => { ['pri-dob', 'target-ret'].forEach((id) => { var e = document.getElementById(id); if (e) e.dispatchEvent(new Event('change', { bubbles: true })); }); });
-  await page.waitForTimeout(700);
-  /* ⛔ FILING STATUS BECAME A REQUIRED FIELD 2026-09-06, so a seed that omits it is now
-     REFUSED at the reveal — correctly. This fixture predates the requirement and R4 went red
-     over a product that had just become MORE honest. The repair is the fixture, not the gate.
-     ⚠️ THE ASSIGNMENT IS ASSERTED, NOT ASSUMED: setting a <select> to a value it does not have
-        is SILENT — it takes '' — so a future re-wording of these option labels would put this
-        fixture back exactly where it was, refused, with nothing saying why. */
-  const filedAs = await page.evaluate(() => {
-    const el = document.getElementById('filing-status');
-    if (!el) return '(no #filing-status)';
-    const opt = Array.prototype.find.call(el.options, (o) => String(o.value).trim() !== '');
-    if (!opt) return '(no answerable option)';
-    el.value = opt.value;
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-    return el.value;
-  });
-  if (!filedAs || filedAs.charAt(0) === '(') {
-    console.log('⛔ SEED FAILED — filing status could not be set: ' + filedAs);
+  const seed = await seedCompleteHousehold(page, { quiet: true });
+  if (!seed.complete) {
+    console.log('⛔ SEED FAILED — still refusing: '
+      + (seed.refusing || []).map((r) => r.field + '[' + r.target + ']').join(', '));
     process.exit(2);
   }
-  /* ⛔ AND RETIREMENT LOCATION BECAME REQUIRED 2026-09-09 — THE SAME EVENT, THREE DAYS LATER, AND
-     THE SAME REPAIR. R4 went red over a product that had just become more honest; the fixture
-     predates the requirement. THE REPAIR IS THE FIXTURE, NOT THE GATE.
-     ⚠️ ASSERTED, NOT ASSUMED, for the reason written above filing status: assigning a <select> a
-        value it does not carry is SILENT — it takes '' — and this select's options are BARE, so
-        each option's value IS its visible label. A future re-wording of a state name would put
-        this fixture straight back where it was, refused, with nothing saying why.
-     ⚠️ THE VALUE IS IRRELEVANT AND MUST STAY SO: every jurisdiction resolves to zero state tax, so
-        no choice here can move anything R4 reads. It answers a question; it does not supply a rate. */
-  const locatedAt = await page.evaluate(() => {
+  /* ⚠️ THE STATE IS PINNED AWAY FROM THE SEEDER'S FIRST-OPTION DEFAULT. Texas has no state income
+     tax, so it contributes nothing to what this gate reads — which is what the old comment CLAIMED
+     of every jurisdiction and is now true of exactly this one. */
+  await page.evaluate(() => {
     const el = document.getElementById('pri-location');
-    if (!el) return '(no #pri-location)';
-    const opt = Array.prototype.find.call(el.options, (o) => String(o.value).trim() !== '');
-    if (!opt) return '(no answerable option)';
-    el.value = opt.value;
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-    return el.value;
+    if (el) { el.value = 'Texas'; el.dispatchEvent(new Event('change', { bubbles: true })); }
   });
-  if (!locatedAt || locatedAt.charAt(0) === '(') {
-    console.log('⛔ SEED FAILED — retirement location could not be set: ' + locatedAt);
-    process.exit(2);
-  }
-  /* ⛔ AND SOCIAL SECURITY BECAME REQUIRED 2026-09-10 — THE THIRD INSTANCE OF THIS EXACT EVENT IN
-     FIVE DAYS, AND THE THIRD TIME THE REPAIR IS THE FIXTURE RATHER THAN THE GATE. The engine
-     stopped answering a blank benefit from one household's hardcoded PIA table, so a seed that
-     omits it is now refused at the reveal — correctly, and R4 went red over a product that had
-     just become more honest.
-     🔑 THREE REPAIRS, ONE SHAPE, AND THAT IS THE ARGUMENT FOR THE SHARED SEEDER. Each of these
-        paragraphs was written by someone who had just been surprised. scripts/_seed_household.cjs
-        derives the required set from the product's own refusals precisely so the fourth one costs
-        nobody an afternoon. This gate stays hand-rolled ONLY because its seed is asserted
-        field-by-field with its own failure messages, which the shared helper reports differently.
-     ⚠️ A TEXT FIELD, SO THE SILENT-ASSIGNMENT TRAP ABOVE DOES NOT APPLY — but it is still READ BACK,
-        because a currency mask that rejects the input would otherwise leave this blank with nothing
-        saying why. MONTHLY, NOT ANNUAL: the Studio multiplies by 12 on the way to the engine. */
-  const claimedSS = await page.evaluate(() => {
-    const el = document.getElementById('ss-pri-67');
-    if (!el) return '(no #ss-pri-67)';
-    el.value = '2,400';
-    ['input', 'change', 'blur'].forEach((ev) => el.dispatchEvent(new Event(ev, { bubbles: true })));
-    return el.value;
-  });
-  if (!claimedSS || claimedSS.charAt(0) === '(' || !/\d/.test(claimedSS)) {
-    console.log('⛔ SEED FAILED — Social Security estimate could not be set: ' + claimedSS);
-    process.exit(2);
-  }
-  await page.waitForTimeout(200);
-
-  const room = await page.evaluate(() => {
-    window.addInstance('taxable');
-    var a = state.accounts[state.accounts.length - 1]; a.value = 1000000;
-    if (typeof renderInputs === 'function') renderInputs();
-    return state.accounts.filter((x) => (x.value || 0) > 0).length;
-  });
-  await page.evaluate(() => window._studioEnterRoom('measurement'));
+  await page.waitForTimeout(300);
+  /* the Reveal button lives in the MEASUREMENT phase; the seeder finishes in DATA. */
+  await page.evaluate(() => { if (typeof window._studioEnterRoom === 'function') window._studioEnterRoom('measurement'); });
   await page.waitForTimeout(500);
-  return room;
+  return page.evaluate(() => {
+    if (window.state && (!window.state.accounts || !window.state.accounts.length)) {
+      window.state.accounts = [{ id: 'rv1', baseId: 'pretax401k', value: 900000, inflow: 1000,
+                                 freq: 12, name: 'Pre-Tax 401(k)', holdings: [] }];
+      if (typeof renderInputs === 'function') renderInputs();
+    }
+    return (window.state && window.state.accounts)
+      ? window.state.accounts.filter((a) => (a.value || 0) > 0).length : 0;
+  });
 }
 
 (async () => {
@@ -302,11 +262,24 @@ async function seedForReveal(page) {
     const pg = await ctx.newPage(); await open(pg);
     const rooms = await seedForReveal(pg);
     check('R4 fixture has a funded room (a reveal over an empty estate proves nothing)', rooms > 0, 'funded rooms=' + rooms);
+    /* ⛔⛔ RE-POINTED 2026-09-19 (§82.2743, disposition 2). THIS LEG ASSERTED range.html AND THE
+       PRODUCT DELIBERATELY STOPPED GOING THERE ON 2026-09-14. The cutover is recorded in
+       studio.html's own SACRED pin: Reveal no longer walks the user to range.html — it forces
+       Split, hands the fetch promise to the Convergence swarm, and opens #mcOverlay IN PLACE.
+       The gate was faithfully reporting a ruled change and has been red for five days for it.
+    🔑 RE-POINTING IS NOT LOWERING THE BAR. The old leg asked "did we leave the page", which was
+       only ever a PROXY for "did the reveal complete". The new leg asks the real question — the
+       overlay opens, ON studio.html — and it is STRICTER: the old one would have passed on any
+       navigation to range.html, including one carrying no Range at all.
+    ⚠️ IT ALSO ASSERTS WE DID NOT NAVIGATE. A reveal that still walked away would be a regression
+       against the cutover, and this leg catches it in that direction too. */
     await pg.click('.action-btn');
-    let reached = false;
-    try { await pg.waitForURL(/range\.html/, { timeout: 25000 }); reached = true; } catch (_e) {}
-    console.log('R4  reveal -> ' + new URL(pg.url()).pathname);
-    check('R4 a valid reveal still reaches range.html', reached, new URL(pg.url()).pathname);
+    let revealed = false;
+    try { await pg.waitForSelector('#mcOverlay', { state: 'visible', timeout: 25000 }); revealed = true; } catch (_e) {}
+    const landed = new URL(pg.url()).pathname;
+    console.log('R4  reveal -> ' + landed + '  overlay=' + revealed);
+    check('R4 a valid reveal opens the Range overlay IN the Studio (the 2026-09-14 cutover)',
+          revealed && /studio\.html/.test(landed), landed + '  overlay=' + revealed);
 
     /* R6 (F74) — THE WORK COMES HOME. Reveal your Range, press Back, and the estate you drafted
        must still be there. It was not: the reveal called _studioClearDraft() immediately before
@@ -318,24 +291,43 @@ async function seedForReveal(page) {
           🔑 HALF-RESTORED IS WORSE THAN EITHER EXTREME — it looks like it worked, so the user
              hits Reveal and is refused for a reason they believe they already satisfied.
        ⚖️ Captain-ruled: the draft simply survives. No "already revealed" state was invented. */
-    if (reached) {
-      await pg.goBack({ waitUntil: 'load' });
-      await pg.waitForTimeout(1800);
+    /* ⛔ RE-POINTED WITH R4, 2026-09-19. The gesture changed from "press Back" to "close the
+       overlay", because the reveal no longer leaves the page. The QUESTION is unchanged and is
+       the one that mattered: the reveal used to destroy the draft on its way out, and the rooms
+       live in the draft. ⚠️ It runs only when the overlay actually opened — not as a silent skip,
+       but because R4 above has ALREADY FAILED LOUDLY in that case, so this is a dependent leg
+       rather than a suppressed one. */
+    if (revealed) {
+      await pg.evaluate(() => {
+        const close = document.querySelector('#mcOverlay [data-mc-close], #mcOverlay .mc-close');
+        if (close) close.click();
+        else { const o = document.getElementById('mcOverlay'); if (o) o.classList.remove('active'); }
+      });
+      await pg.waitForTimeout(1200);
       const home = await pg.evaluate(() => ({
         rooms: (typeof state !== 'undefined' && state.accounts) ? state.accounts.length : 'no state',
         funded: (typeof state !== 'undefined' && state.accounts) ? state.accounts.filter((a) => (a.value || 0) > 0).length : 0,
         dob: (document.getElementById('pri-dob') || {}).value
       }));
-      console.log('R6  after Back from the Range: ' + JSON.stringify(home));
+      console.log('R6  after closing the Range overlay: ' + JSON.stringify(home));
       check('R6 fixture precondition — the profile came home (so this leg is about ROOMS)', !!home.dob, 'pri-dob="' + home.dob + '"');
-      check('R6 THE WORK COMES HOME — the drafted estate survives a Back from the Range',
+      check('R6 THE WORK COMES HOME — the drafted estate survives the Range overlay closing',
         home.funded > 0, 'funded rooms after Back = ' + home.funded + ' (0 = the draft was destroyed on the way out)');
     }
     await ctx.close();
   }
 
-  /* R5 · THE HOIST DID NOT BREAK THE RETRY BUTTON (structural) */
-  check('R5 the retry button is still wired to the reset', /retryBtn\.onclick = resetOverlayState/.test(STUDIO_SRC), 'source read');
+  /* R5 · THE HOIST DID NOT BREAK resetOverlayState (structural)
+     ⛔ THE RETRY-BUTTON LEG WAS RETIRED 2026-09-19 (§82.2743, disposition 3), AND HERE IS WHY,
+     because a retire without a reason reads as missing coverage to the next person who looks:
+     it asserted `retryBtn.onclick = resetOverlayState`, and `retryBtn` NOW HAS ZERO OCCURRENCES
+     IN studio.html. The button belonged to #cinematic-overlay, which the 2026-09-14 cutover
+     left as dead surface — deliberately uncalled rather than deleted. THE THING IT GUARDED IS
+     GONE, so the assertion could never pass again and was reporting the cutover, not a defect.
+     ⚠️ IF A RETRY CONTROL RETURNS ON THE NEW OVERLAY IT NEEDS A NEW LEG AGAINST THAT CONTROL,
+        not this one restored — the old one names an element that no longer has a meaning here.
+     ⭐ THE SECOND LEG SURVIVES UNCHANGED: resetOverlayState still has seven references and is
+        still the one home of the button re-enable, so the hoist question is still live. */
   check('R5 exactly one resetOverlayState definition survives the hoist',
     (STUDIO_SRC.match(/function resetOverlayState\(\)/g) || []).length === 1,
     (STUDIO_SRC.match(/function resetOverlayState\(\)/g) || []).length + ' definitions');
