@@ -15959,6 +15959,48 @@ const _reachesEngine = a =>
               instrument_type:      h.instrumentType || null,
               dividend_yield:       _pct(h.dividendYield)
             })).filter(h => h.value > 0);
+            /* ⛔⛔ THE EMPLOYER MATCH, WHICH THIS FILE HAS COMPUTED ALL ALONG AND NEVER SENT. §8
+               above is a whole 401(k) MATCH ENGINE — `_di401kMatch` reads matchRate, matchUpTo,
+               vestedPct and the household's own Gross-Salary and produces an annual match IN
+               DOLLARS, sourced-or-blank. The payload sent `inflow x freq`, WHICH IS THE EMPLOYEE
+               DEFERRAL ONLY, so every dollar the employer puts in was invisible to the engine for
+               the whole accumulation.
+               ⛔ MEASURED: an employee deferring $24,000 with a 100%-up-to-6% match on a $150,000
+                  salary is $9,000/yr short — 66.7000% -> 44.5250% confidence and $257,914 of
+                  portfolio at retirement. IT UNDERSTATES, which is why nothing was pointed at it.
+               ⭐ FOUND BY `npm run census:controls` ON ITS FIRST RUN, by nobody suspecting it.
+               🔑 REUSED, NOT REBUILT (L48). The formula is not copied here — `_di401kMatch` is
+                  CALLED, so the number the engine is told is the same number the modal shows the
+                  household. A second copy of `(rate/100) * min(deferral, upTo% * salary)` would
+                  agree on the day it was written and drift the first time the match rules move.
+               ⛔ AT THE VESTED PERCENTAGE, NOT THE GROSS (§82.2704). Unvested employer money is
+                  money the household DOES NOT OWN YET and may never own; a plan that spends it is
+                  describing an outcome contingent on an employment decision nobody has made.
+               ⚠️ AND WHERE VESTING IS NOT STATED, NOTHING IS COUNTED — not the gross. That is the
+                  conservative direction and it is deliberately the SAME as today's behaviour, so
+                  this line cannot move a number for a household that has told us nothing.
+                  ⛔ IT IS ALSO UNDISCLOSED, WHICH §82.2702 FORBIDS, AND THE STRING IS THE
+                     ARCHITECT'S TO AUTHOR. A household with a match configured and vesting blank
+                     is silently short. FLAGGED, NOT INVENTED — I do not write brand copy.
+               ⚠️ THE SALARY IS THE PROFILE'S OWN FIELD, PER ROOM OWNER — `co-salary` for a `_co`
+                  room, `pri-salary` otherwise — read exactly as §8's own caller reads it. */
+            let _matchAnnual = 0;
+            try {
+              const _base = (typeof getBaseType === 'function') ? getBaseType(a.baseId) : null;
+              if (_base && typeof _di401kMatch === 'function') {
+                const _salEl = document.getElementById(_base.type === 'coarch' ? 'co-salary' : 'pri-salary');
+                const _sal = _salEl ? parseFloat(String(_salEl.value || '').replace(/[^0-9.]/g, '')) : null;
+                const _m = _di401kMatch(a, _base, isFinite(_sal) ? _sal : null);
+                if (_m && _m.annualMatch !== null && isFinite(_m.annualMatch)
+                       && _m.vested !== null && isFinite(_m.vested)) {
+                  _matchAnnual = _m.annualMatch * (Math.max(0, Math.min(100, _m.vested)) / 100);
+                }
+              }
+            } catch (e) {
+              /* ⛔ LOUD, NEVER SILENT. A swallowed exception here would restore the exact defect
+                 this block closes — the match quietly absent — with the evidence removed. */
+              console.warn('[DATUMAE] employer match not computed for', a.baseId, e);
+            }
             /* ⛔⛔ THE RULE OF 55, WHICH THIS PRODUCT PROMISES IN WRITING AND NEVER SENT. `useRule55`
                is a toggle the household switches on, and switching it on prints an authored
                paragraph that says: "You've switched on Rule of 55 — so if you leave THIS employer in
@@ -15974,7 +16016,7 @@ const _reachesEngine = a =>
                🔑 §82.2673 AGAIN, AND THIS IS THE THIRD FIELD ON THIS LINE TO BREAK IT: copy that
                   promises a field is used is an OBLIGATION ON THE ENGINE, not documentation. */
             const _acct = { type: ACCOUNT_TYPE_MAP[a.baseId] || a.baseId, balance: a.value || 0,
-                            annual_contribution: _annualContribution, owner: _owner,
+                            annual_contribution: _annualContribution + _matchAnnual, owner: _owner,
                             rule_of_55_eligible: !!a.useRule55 };
             /* ⚠️ OMITTED RATHER THAN SENT EMPTY. An absent `holdings` means "this account was not
                itemised", which the engine reads as unpriceable-and-says-so; an empty array would
