@@ -77,6 +77,16 @@ const ANSWERS = {
   'hc-pre65-monthly': '1,150', 'pri-location': 'Alabama', 'filing-status': 'Single / Individual'
 };
 
+/* ⛔ DOORS ANSWERED BY A CLICK, NOT A VALUE. Added 2026-09-19 with the three refusals that made
+   them reachable. The SELECTOR IS RELATIVE TO THE REFUSAL'S OWN TARGET, so a group that moves in
+   the markup does not break this — and `:first-of-type` is chosen so the walk cannot be read as a
+   household expressing a preference. IT IS ANSWERING A DOOR, NOT PICKING A CLAIMING AGE. */
+const CLICK_ANSWERS = {
+  'ss-primary-strategy':  '.ss-btn',
+  'ss-co-arch-strategy':  '.ss-sec-btn',
+  'sec-climate':          '.climate-option'
+};
+
 /* Which control a payload key comes from, for the ASKED test. ⚠️ This maps names; it does not
    decide accountability — a key only counts as ASKED if the product actually refused on that
    control during the walk above. A name in this map with no matching refusal proves nothing. */
@@ -99,6 +109,15 @@ const FROM_CONTROL = {
      map's comment is right that a name here is not evidence; it is also true that a WRONG name
      here removes a key from the population without anything going red. §82.2778. */
   healthcare_annual: 'hc-pre65-monthly',
+
+  /* ── THE THREE DOORS OPENED ON 2026-09-19, NAMED HERE THE SAME DAY. ───────────────────────────
+     ⛔ A NAME HERE IS STILL NOT EVIDENCE — only a refusal observed during the walk is — but a
+        MISSING name keeps a key in the unaccounted set forever even after the product starts
+        asking for it, and that is how `healthcare_annual` sat "unasked" behind a dead id. The map
+        and the doors move together or the count lies in one direction or the other. */
+  market_outlook: 'sec-climate',
+  ss_strategy_primary: 'ss-primary-strategy',
+  ss_strategy_secondary: 'ss-co-arch-strategy',
 
   /* ── THE SECOND PERSON'S CONTROLS, ADDED 2026-09-13 WHEN THIS GATE LEARNED TO ENTER DUAL.
      ⛔⛔ THE ABSENCE OF THESE FIVE LINES WAS NOT AN OVERSIGHT IN A MAP; IT WAS THE INSTRUMENT
@@ -199,8 +218,35 @@ async function walkRefusals(page) {
         continue;
       }
 
-      const next = r.errs.find((e) => e.t && ANSWERS[e.t]);
-      if (!next) { stuck = 'no answer known for: ' + r.errs.map((e) => e.t).join(', '); break; }
+      /* ⛔⛔ THE WALK LEARNED TO CLICK (2026-09-19), AND THE REASON IS §82.2794 IN ITS PUREST
+         FORM. Removing the claiming-age and market-design defaults armed three doors this walk had
+         no way through: they are BUTTON GROUPS and TILES, not text boxes, and every answer it
+         knew how to give was `el.value = ...`. It went STUCK on `ss-co-arch-strategy` — the walk
+         got LONGER because the product got more honest, exactly as predicted, and the prediction
+         was made before it happened rather than after.
+         🔑 THE INSTRUMENT'S REACH IS PART OF ITS RESULT. A walk that cannot pass a door reports a
+            count of what it saw before that door, and NOTHING about what is behind it. Which is
+            why depth is now printed beside the count in `npm run walk`.
+         ⚠️ A CLICK IS AN ANSWER LIKE ANY OTHER AND IS A SHAPE, NOT A JUDGEMENT: the first option
+            is taken, deliberately, because the walk must never look like a household expressing a
+            preference. It is answering a door, not choosing a claiming age. */
+      const clickable = r.errs.find((e) => e.t && CLICK_ANSWERS[e.t]);
+      const typed = r.errs.find((e) => e.t && ANSWERS[e.t]);
+      if (!clickable && !typed) { stuck = 'no answer known for: ' + r.errs.map((e) => e.t).join(', '); break; }
+      if (clickable && !typed) {
+        const done = await page.evaluate((a) => {
+          const host = document.getElementById(a[0]); if (!host) return false;
+          const el = host.matches(a[1]) ? host : host.querySelector(a[1]);
+          if (!el) return false;
+          el.click();
+          return true;
+        }, [clickable.t, CLICK_ANSWERS[clickable.t]]);
+        if (!done) { stuck = 'the click answer for ' + clickable.t + ' matched nothing on the page'; break; }
+        asked.add(clickable.t);
+        await page.waitForTimeout(110);
+        continue;
+      }
+      const next = typed;
       await page.evaluate((a) => {
         const el = document.getElementById(a[0]); if (!el) return;
         if (el.tagName === 'SELECT') {

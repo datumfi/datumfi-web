@@ -137,8 +137,26 @@
       contributions_total: 0,
       portfolio_total:     0,
       ss: {
-        strategy_primary:       'full_67',
-        strategy_secondary:     'optimal_70',
+        /* ⛔⛔ THESE TWO WERE 'full_67' AND 'optimal_70' AND THEY BROKE THIS FILE'S OWN DECLARED
+           RULE, WHICH IS WRITTEN TWENTY LINES BELOW: *"any value that is BOTH a default here AND
+           selectable in its own control is an answer the user can never keep"* and *"ANY NEW KEY
+           HERE MUST DEFAULT TO '' / 0 UNLESS SOMETHING READS IT."* `filing` and `location` already
+           obey it. These did not, and they are the reason a claiming age nobody chose reached the
+           engine for every household that ever opened the Studio.
+           ⛔ THE MARKUP DEFAULT WAS NOT THE WHOLE DEFAULT. Removing `active` from the 67 button on
+              2026-09-19 changed nothing on a cold page, because load() decodes this object and the
+              restore then PAINTS `.active` back onto the control from it. Measured in a browser:
+              markup clean, `.ss-btn.active` still 1, `67 Full`.
+           🔑 A VALUE DELETED IN ONE LAYER IS DELETED *THERE*. This is the same shape as the 93 that
+              survived in the persistence layer after the control let it go — third time in one day.
+           ⚠️ AND THEY WERE NOT EVEN THE SAME DEFAULT: primary 'full_67', secondary 'optimal_70'.
+              Two undeclared defaults in one object literal, disagreeing with each other, so a
+              household with a co-architect was handed a claiming SEQUENCE nobody designed.
+           ⚠️ '' IS SAFE FOR EVERY READER MEASURED: `SS_BY_STRATEGY['']` is undefined and every call
+              site is `|| 0`, so the pooled-income estimate degrades to no Social Security rather
+              than to somebody's guess — which is the honest reading of "not answered yet". */
+        strategy_primary:       '',
+        strategy_secondary:     '',
         pri_overrides_monthly:  { v62: 0, v67: 0, v70: 0 },
         sec_overrides_monthly:  { v62: 0, v67: 0, v70: 0 }
       },
@@ -152,7 +170,14 @@
          two are checked against each other by scripts/_gate_market_climate_port.mjs.
          ⚠️ NOT A NUMBER CHANGE: the engine already resolved 'valuations_matter' to the Blend, so a
             plan saved yesterday and one saved today compute the same Range. Clause 2, not Clause 1. */
-      climate: { outlook: 'blend', custom_weights: null },
+      /* ⛔⛔ `outlook` WAS 'blend' AND IT BROKE THE SAME RULE AS THE TWO ss KEYS ABOVE. Copy Bank
+         §1.4 RULED that no Model Design is active on load and `market_outlook` is omitted until
+         chosen. THREE LAYERS IMPLEMENTED IT AND TWO DID NOT: `marketClimateSelectedKey` returns ''
+         on purpose, the tile markup is generated — and this schema default decoded 'blend' for
+         every cold blueprint, which the restore then painted onto a tile, which made the payload's
+         `|| 'blend'` look like it was reading a choice. A RULING IS NOT IMPLEMENTED UNTIL EVERY
+         LAYER THAT CAN SUPPLY THE VALUE AGREES. */
+      climate: { outlook: '', custom_weights: null },
       // Sketch global assumptions carried so Studio recomputes boundaries identically.
       // Distinct from climate.outlook (the Studio climate lens) — these mirror the Sketch
       // market/inflation radios. Defaults match Sketch's defaults (average / real).

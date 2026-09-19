@@ -76,7 +76,20 @@ const SS_SEC_67   = '1,900';       // monthly at FRA — the co-architect, delib
    TESTING AROUND; this file's own header says so about age 40, activation 65 and plan-through 93. */
 const HC_PRE65    = '1,325';       // monthly before Medicare — deliberately not the shipped default
 
-const MAX_ROUNDS = 10;   // the loop must terminate even if a refusal cannot be satisfied
+/* ⛔⛔ 10 -> 16, RAISED 2026-09-19, AND THE REASON IS THE FINDING RATHER THAN THE NUMBER.
+   The cap exists so the loop terminates on a refusal it cannot satisfy — that is still its job.
+   But a household now has to answer TWO MORE QUESTIONS than it did this morning (the claiming age
+   and the market design, both of which used to be silently defaulted), so a complete seed needs
+   more rounds than a complete seed needed yesterday. THE LOOP RAN OUT, ANSWERED 10 OF 12, AND
+   REPORTED "STILL REFUSING" — which reads exactly like a product defect and was a budget.
+   🔑 §82.2794 A THIRD TIME IN ONE COMMIT: the instrument's reach is part of its result, and REACH
+      INCLUDES HOW LONG IT IS ALLOWED TO KEEP GOING. Every Clause 2 default removed lengthens every
+      walk in the programme — the doors, the click vocabulary, AND the round budget.
+   ⚠️ 16 IS NOT A GUESS: the longest observed walk is DUAL at 16 refusals (`npm run walk`), so this
+      is the measured maximum rather than headroom somebody felt comfortable with. If a future
+      removal pushes past it the loop will say STILL REFUSING again — and the honest response is to
+      re-measure the walk, never to add a comfortable margin here. */
+const MAX_ROUNDS = 16;   // the loop must terminate even if a refusal cannot be satisfied
 
 /* Answer ONE control, generically, INSIDE THE PAGE.
    ⛔ A <select> takes its FIRST ANSWERABLE OPTION, never a typed literal: assigning a <select> a
@@ -111,6 +124,43 @@ function answerOne(id) {
     try { if (typeof window.renderInputs === 'function') window.renderInputs(); } catch (_e) {}
     try { if (typeof window.fireUpdate === 'function') window.fireUpdate(); } catch (_e) {}
     return { ok: true, value: 'taxable account, $750,000 (via addInstance)' };
+  }
+  /* ⛔⛔ THREE DOORS ANSWERED BY A CLICK, ADDED 2026-09-19 WITH THE REFUSALS THAT CREATED THEM —
+     AND THIS BRANCH IS WHY ELEVEN GATES DID NOT STAY RED. Removing the claiming-age and
+     market-design defaults made the product ask two more questions of every household, so every
+     fixture in the suite that had been "complete" became incomplete in the same instant. TWELVE
+     GATES WENT RED ON ONE COMMIT; eleven of them share this file, so eleven were repaired here.
+     🔑 §82.2794 AT SUITE SCALE — THE INSTRUMENT'S REACH IS PART OF ITS RESULT. Every Clause 2
+        default we remove lengthens every walk in the programme. That is the COST of the removal,
+        it is predictable, and a shared seeder is what makes it one edit instead of twelve.
+     ⚠️ THE TWELFTH (`_gate_market_climate_port.mjs`) DOES NOT USE THIS FILE and is repaired on its
+        own terms. A shared helper that eleven of twelve use is not a standard; it is a majority.
+     ⛔ THE FIRST OPTION IS TAKEN, DELIBERATELY, AND IT IS NOT A PREFERENCE. A seeded household must
+        never look like one expressing a view about when to claim — it is answering a door so the
+        gate underneath can measure something else. Same rule the walk states for its own clicks. */
+  const CLICK_DOORS = {
+    'ss-primary-strategy': '.ss-btn',
+    'ss-co-arch-strategy': '.ss-sec-btn',
+    'sec-climate':         '.climate-option'
+  };
+  if (CLICK_DOORS[id]) {
+    const host = document.getElementById(id);
+    if (!host) return { ok: false, why: id + ' host not in the document' };
+    const el = host.matches(CLICK_DOORS[id]) ? host : host.querySelector(CLICK_DOORS[id]);
+    if (!el) return { ok: false, why: 'no ' + CLICK_DOORS[id] + ' inside ' + id };
+    /* ⛔⛔ THE CLICK IS VERIFIED, NOT ASSUMED, AND THE FIRST VERSION OF THIS BRANCH WAS NOT.
+       It returned ok:true the instant `el.click()` returned, so the seeder reported
+       "clicked .ss-btn" while the product went on refusing — the SAME defect this file already
+       records for `sec-drafting`, where the generic branch wrote a string into a section and
+       called it answered. A HELPER THAT REPORTS SUCCESS FROM THE ACT RATHER THAN FROM THE EFFECT
+       IS A HELPER THAT CANNOT FAIL. Twice in one file, so it is written down twice. */
+    el.click();
+    if (!el.classList.contains('active')) {
+      return { ok: false, why: 'clicked ' + CLICK_DOORS[id] + ' inside ' + id
+        + ' and it did not become .active — the handler is not attached to THIS node '
+        + '(a re-render after init replaces the nodes the listeners were bound to)' };
+    }
+    return { ok: true, value: 'clicked ' + CLICK_DOORS[id] + ' (first option — a door answered, not a preference)' };
   }
   /* ⛔ THE TARGET SPEND IS NOT A FIELD EITHER, AND IT ONLY APPEARS ONCE THE ESTATE EXISTS. The
      refusal's target moves from 'sec-drafting' to 'sec-sketch' the moment an account is added —

@@ -125,9 +125,23 @@ const activeKey = await page.evaluate(() => {
   return el ? el.dataset.outlookKey : null;
 });
 const bpDefault = (stripComments(blueprint).match(/climate:\s*\{\s*outlook:\s*'([a-z_]+)'/) || [])[1] || null;
-ck('L3 the tile that ships active and the blueprint\'s shipped default are the SAME value',
-   !!activeKey && activeKey === bpDefault,
-   'tile=' + activeKey + '  blueprint=' + bpDefault);
+/* ⛔⛔ RE-POINTED 2026-09-19, AND THE HAZARD IT GUARDED NO LONGER EXISTS TO BE GUARDED.
+   It read `!!activeKey && activeKey === bpDefault` — the tile that ships active must AGREE with the
+   blueprint's shipped default — which was the right check while there WERE two shipped defaults
+   that could drift apart. Copy Bank §1.4 ruled that no Model Design is active on load and
+   `market_outlook` is omitted until chosen, and on 2026-09-19 the last two layers were brought into
+   line: the designs table stopped shipping `active: true` and the blueprint schema stopped shipping
+   `outlook: 'blend'`.
+   🔑 TWO DEFAULTS THAT AGREE ARE STILL TWO DEFAULTS. The old leg was satisfied by the product
+      handing every household the same unchosen answer from two places in unison — it could only
+      ever catch them DISAGREEING, never catch them EXISTING.
+   ⭐ SO IT NOW ASSERTS NEITHER SHIPS ONE, AND KEEPS THE AGREEMENT CLAUSE FOR THE DAY SOMEBODY
+      REINTRODUCES ONE: if either layer ever ships a default again, the other must match it, and if
+      only one does, this goes red on the SECOND condition rather than passing on the first. */
+ck('L3 NEITHER the tile nor the blueprint ships a market default — and if one ever does, they agree',
+   (activeKey === null && bpDefault === null) || (!!activeKey && activeKey === bpDefault),
+   'tile=' + activeKey + '  blueprint=' + bpDefault
+   + (activeKey === null && bpDefault === null ? '  — both silent, which is the ruled state' : ''));
 
 /* ── L4 · the chosen design reaches the request ─────────────────────────────────────────────── */
 const sent = await page.evaluate(async (expected) => {

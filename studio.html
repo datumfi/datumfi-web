@@ -4161,16 +4161,28 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             <div style="margin-bottom:16px;">
               <div class="input-label" style="margin-bottom:8px;">Current Claiming Plan</div>
               <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:6px;">Primary</div>
-              <div class="ss-group">
+              <!-- ⛔⛔ NO BUTTON SHIPS `active` (2026-09-19). The 67 carried it, so EVERY household
+                   that never touched this control sent `ss_strategy_primary: "full_67"` — a
+                   CLAIMING AGE, chosen for them, on the single decision this product builds a
+                   nine-cell matrix to help them walk. The grid then explored a choice already made
+                   on their behalf.
+                   ⚠️ IT IS NOT THE LARGEST OF THE DEFAULTS IN DOLLARS — the plan-through 90 is —
+                      BUT IT IS THE WORST IN KIND, and it is ordered first for that reason.
+                   ⛔ A RESTING POSITION IS A DEFAULT WEARING A COSTUME. The control now opens with
+                      nothing selected and the Reveal door refuses until a human picks one. -->
+              <div class="ss-group" id="ss-primary-strategy">
                 <button class="ss-btn" type="button"><strong>62</strong><span>Early</span></button>
-                <button class="ss-btn active" type="button"><strong>67</strong><span>Full</span></button>
+                <button class="ss-btn" type="button"><strong>67</strong><span>Full</span></button>
                 <button class="ss-btn" type="button"><strong>70</strong><span>Optimal</span></button>
               </div>
               <div id="ss-co-arch-strategy" style="display:none;margin-top:12px;">
                 <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:6px;">Co-Architect</div>
+                <!-- ⛔ SAME REMOVAL, SECOND PERSON. Clause 1: what is true of the primary's
+                     claiming age is true of the co-architect's, and a default here answers for
+                     somebody the product has never asked a single question of. -->
                 <div class="ss-group">
                   <button class="ss-sec-btn" type="button"><strong>62</strong><span>Early</span></button>
-                  <button class="ss-sec-btn active" type="button"><strong>67</strong><span>Full</span></button>
+                  <button class="ss-sec-btn" type="button"><strong>67</strong><span>Full</span></button>
                   <button class="ss-sec-btn" type="button"><strong>70</strong><span>Optimal</span></button>
                 </div>
               </div>
@@ -15386,7 +15398,14 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         }
         var _map = { '62': 'early_62', '67': 'full_67', '70': 'optimal_70' };
         var _btn = document.querySelector('.ss-sec-btn.active strong');
-        out.ss_strategy_secondary = _map[((_btn && _btn.textContent) || '').trim()] || 'full_67';
+        /* ⛔⛔ `|| 'full_67'` DELETED 2026-09-19, THE THIRD HOME OF THE SAME DEFAULT. The primary's
+           lived in the markup AND in the payload line; the co-architect's lived here. All three
+           had to go in one commit, because emptying any one of them moves the default rather than
+           removing it. THE KEY IS NOW OMITTED WHEN NOBODY HAS CHOSEN, which the engine's schema
+           already tolerates (`ss_strategy_secondary` defaults to null) and the Reveal door now
+           refuses on. */
+        var _secStrategy = _map[((_btn && _btn.textContent) || '').trim()];
+        if (_secStrategy) out.ss_strategy_secondary = _secStrategy;
         return out;
       }
       /* ⛔⛔ EXPOSED BECAUSE THE SECOND CALLER LIVES IN A SHALLOWER SCOPE AND COULD NOT SEE IT.
@@ -15810,11 +15829,66 @@ const _reachesEngine = a =>
         if (_hcMonthly === null) {
           _errs.push({ field: 'Healthcare', message: HEALTHCARE_REQUIRED, target: 'hc-pre65-monthly' });
         }
+        /* ⛔⛔ THE CLAIMING AGE IS ASKED FOR (2026-09-19). Until today the 67 button shipped
+           `active` in the markup, so this control never refused and EVERY household sent
+           `ss_strategy_primary: "full_67"` — a claiming age nobody chose, on the decision this
+           product exists to help them explore. Found by the walk; the copy is Part 8. */
+        if (!document.querySelector('.ss-btn.active')) {
+          _errs.push({ field: 'Claiming age', message: SS_STRATEGY_REQUIRED, target: 'ss-primary-strategy' });
+        }
+        /* ⛔ THE MARKET DESIGN IS ASKED FOR. Copy Bank §1.4 ruled this months ago and the CONTROL
+           obeyed it — `marketClimateSelectedKey` returns '' rather than substituting. The payload
+           line put the Captain's blend back with `|| 'blend'`. Both halves are repaired together;
+           this is the half that tells the household. */
+        /* ⚠️ READ HERE RATHER THAN REUSING `outlookValue` — THAT CONST LIVES IN A DIFFERENT
+           FUNCTION (the payload builder) and a bare reference is a ReferenceError, not a
+           fallback. Same class of mistake as the cross-script call recorded in
+           applyDossierProfile. Both sites ask the SAME accessor, which is the part that must not
+           fork: `marketClimateSelectedKey` is the single source and returns '' for unanswered. */
+        var _mkKey = (window.marketClimateSelectedKey && window.marketClimateSelectedKey()) || '';
+        if (!_mkKey) {
+          _errs.push({ field: 'Market design', message: MARKET_OUTLOOK_REQUIRED, target: 'sec-climate' });
+        }
         var _ssCoTog = document.getElementById('co-arch-toggle');
         if (_ssCoTog && _ssCoTog.checked) {
           var _ssSec = _readSSOverride('ss-sec');
           if (!_ssSec.dict) {
             _errs.push({ field: 'Social Security', message: SS_BENEFIT_REQUIRED_CO, target: 'ss-sec-67' });
+          }
+          /* ⛔⛔ CLAUSE 1, THE LARGEST FINDING OF THIS ARC, AND IT IS FOUR LINES.
+             The product demanded the PRIMARY's retirement date and plan-through date and NEVER
+             ONCE asked the co-architect for theirs — then sent a default on their behalf:
+             `co_architect_plan_end_age: 90`, which is where a slider rests, and
+             `co_architect_retirement_age: 67`. Both the Captain's own.
+             ⭐ THE DIAGNOSIS IS WHY IT SURVIVED EVERY PASS: two NEIGHBOURING fields are symmetric —
+                both dates of birth, both Social Security estimates — so this is not a missing
+                feature, it is a HALF-BUILT one. A wholly absent thing looks absent; a half-built
+                thing looks finished from either end.
+             ⭐⭐ AND IT VINDICATES A REFUSAL THE CAPTAIN MADE ON INSTINCT. He was advised to DELETE
+                the Co-Architect retirement field and declined without being able to say why. THE
+                FIELD WAS NEVER THE PROBLEM — nothing asked for it, so a default answered instead.
+                Deleting it would have destroyed the evidence and left the default in place,
+                unreachable. §82.2694, refusal beats fallback, on a field somebody wanted removed.
+             ⚠️ THE ENGINE HAS ACCEPTED BOTH KEYS SINCE :prod-16. Only the ASKING was missing. */
+          /* ⚠️ A LOCAL REGEX, NOT `_ageDateRe` — THAT ONE IS DECLARED IN A LATER <script>
+             BLOCK (studio.html splits at :18151) and a bare reference here throws rather than
+             falling back. The rule it encodes is the same one: a full MM/YYYY and nothing less. */
+          var _mmYYYY = /^\s*\d{1,2}\s*\/\s*\d{4}\s*$/;
+          var _coRetEl = document.getElementById('co-ret');
+          if (_coRetEl && !_mmYYYY.test(String(_coRetEl.value || '').trim())) {
+            _errs.push({ field: 'Co-Architect retirement date',
+                         message: CO_RET_REQUIRED_T.replace('{NAME}', _coAName()), target: 'co-ret' });
+          }
+          var _coPlanEl = document.getElementById('co-plan-end');
+          if (_coPlanEl && !_mmYYYY.test(String(_coPlanEl.value || '').trim())) {
+            _errs.push({ field: 'Co-Architect plan through date',
+                         message: CO_PLAN_REQUIRED_T.replace('{NAME}', _coAName()), target: 'co-plan-end' });
+          }
+          /* ⛔ AND THE SECOND PERSON'S CLAIMING AGE, for the same reason as the primary's. Clause 1
+             is not "the engine can represent two people" — it is that the product ASKS BOTH. */
+          if (!document.querySelector('.ss-sec-btn.active')) {
+            _errs.push({ field: 'Co-Architect claiming age', message: SS_STRATEGY_REQUIRED,
+                         target: 'ss-co-arch-strategy' });
           }
         }
 
@@ -15877,7 +15951,15 @@ const _reachesEngine = a =>
            the five designs spread $13,000 of keystone (Blend 142k · Parametric 137k · Historical
            149k · CAPE 147k · Regime 136k) where the four presets spread $0 after the ladder's own
            $1,000 rounding. The control was wired to a weighted average — §82.2723 — not unwired. */
-        const outlookValue = (window.marketClimateSelectedKey && window.marketClimateSelectedKey()) || 'blend';
+        /* ⛔⛔ `|| 'blend'` DELETED 2026-09-19, AND THE RULING IT UNDID WAS ALREADY IMPLEMENTED
+           ONE LAYER UP. `marketClimateSelectedKey` returns '' on purpose and says so in its own
+           header — *"never a substituted default, so the caller decides what absence means"* —
+           and this caller decided absence meant the Captain's blend. Copy Bank §1.4 had RULED the
+           control opens with no option active and `market_outlook` omitted until chosen; the
+           control obeyed and the payload line quietly put it back.
+           🔑 A VALUE DELETED IN ONE LAYER IS DELETED *THERE*. The honest part did its job and was
+              overruled by a two-word fallback at the boundary, where nobody re-reads. */
+        const outlookValue = (window.marketClimateSelectedKey && window.marketClimateSelectedKey()) || '';
 
         const activeSS   = document.querySelector('.ss-btn.active strong');
         /* ⚠ A DEAD DEFAULT MUST STILL AGREE WITH ITS LIVE CONTROL. This read 'optimal_70' while
@@ -15885,7 +15967,14 @@ const _reachesEngine = a =>
            today — the handler removes-all-then-adds-one, so exactly one is always selected —
            but the code held TWO answers and only one was on screen, and the day anything
            clears .active it would move the user from 67 to 70 without a word. */
-        const ssStrategy = SS_AGE_MAP[activeSS?.textContent?.trim()] || 'full_67';
+        /* ⛔⛔ `|| 'full_67'` DELETED 2026-09-19. The note above called it "a dead default" that was
+           structurally unreachable because the markup always shipped one button active. THAT WAS
+           TRUE AND IT WAS THE PROBLEM: the button being active by default is exactly how every
+           household that never touched this control sent a claiming age they never chose. Removing
+           the markup's `active` makes this line reachable, so the fallback had to go in the SAME
+           commit or the default would simply have moved from the DOM into the JS.
+           🔑 A DEFAULT WITH TWO HOMES IS NOT REMOVED BY EMPTYING ONE OF THEM. */
+        const ssStrategy = SS_AGE_MAP[activeSS?.textContent?.trim()] || '';
 
 
         /* ⛔ THE ESTATE MUST EXIST. Until 2026-09-12 the client's door opened on a household with
@@ -16103,7 +16192,14 @@ const _reachesEngine = a =>
            honestly, IT IS NOT BUILT. Do not substitute, do not coerce, do not fall back. A MISSING
            ANSWER IS A MISSING KEY." So the keys are omitted rather than sent null — a null is a
            value, and the engine would have to decide what it means. */
-        const body = { current_age: currentAge, retirement_age: retireAge, market_outlook: outlookValue, ss_strategy_primary: ssStrategy, accounts };
+        /* ⛔ market_outlook AND ss_strategy_primary MOVED OUT OF THE UNCONDITIONAL LITERAL
+           (2026-09-19). They sat beside current_age and retirement_age as though they were facts
+           the product had been told, and they were the two the product had never asked for. The
+           rule above this line — A MISSING ANSWER IS A MISSING KEY — already covered every other
+           optional field; these two were simply on the wrong side of it. */
+        const body = { current_age: currentAge, retirement_age: retireAge, accounts };
+        if (outlookValue) body.market_outlook = outlookValue;
+        if (ssStrategy) body.ss_strategy_primary = ssStrategy;
         if (datumSpend !== null && datumSpend !== undefined) body.datum_spend = datumSpend;
         if (planEndAge !== null && planEndAge !== undefined) body.plan_end_age = planEndAge;
         if (filingStatus) body.filing_status = filingStatus;
@@ -17071,6 +17167,34 @@ const _reachesEngine = a =>
             day old. A PUNCH LIST BUILT FROM A MARKER ONLY FINDS DEBT INCURRED AFTER THE MARKER
             EXISTED. Now part of §82.2320. */
       var HEALTHCARE_REQUIRED = 'What health cover costs you before Medicare — it is one of the largest line items in an early retirement. If it costs you nothing, say zero; we will not put a number on it for you.';
+      /* ── PART 8 · THE FOUR DOORS THE WALK FOUND (Architect-authored, wired VERBATIM, 2026-09-19) ──
+         ⛔⛔ EACH OF THESE REPLACES A VALUE THE PRODUCT WAS SENDING ON THE HOUSEHOLD'S BEHALF. They
+            are not new questions; they are questions that were always being ANSWERED, silently, with
+            the Captain's own settings. Found by `npm run walk`, not by anybody suspecting them.
+         ⚠️ THE CLAIMING AGE IS FIRST AND IT IS NOT THE BIGGEST IN DOLLARS. The plan-through 90 is.
+            This one is worse in KIND: the product builds a nine-cell matrix to help a household walk
+            the claiming decision, and a silent default pre-walked it, so the grid explored a choice
+            already made for them. */
+      var SS_STRATEGY_REQUIRED = 'Nobody has chosen when to claim yet. That’s one of the biggest decisions here, so we’d rather ask than assume.';
+      var MARKET_OUTLOOK_REQUIRED = 'Pick how you want the market modelled. There’s no neutral setting here — every choice is a view, including ours.';
+      /* ⚠️⚠️ THE [NAME] SLOT AND ITS UNNAMED CASE — READ BEFORE EDITING. These two strings are
+         authored WITH a placeholder, unlike every other refusal in this file (the state refusal
+         explicitly carries none, because the Architect's rule there was that the facts travel
+         BESIDE the sentence). Here he wrote the name INSIDE it, so it is interpolated.
+         ⛔ THE CO-ARCHITECT MAY HAVE NO NAME — the name field is not demanded and never has been.
+            The unnamed case substitutes the product's OWN heading word for that person,
+            'Co-Architect', which is reuse of an authored token rather than copy I wrote. It reads
+            slightly stiff: "We need Co-Architect's date too."
+         🔑 FLAGGED, NOT FUDGED. If the Architect wants a different token for the unnamed case it is
+            one string and this is where it goes. What is NOT acceptable is leaving the door shut
+            because the polish is unsettled — that would keep the default, which is the defect. */
+      var CO_RET_REQUIRED_T   = 'We need {NAME}’s date too. Two people retiring on different dates is the ordinary case, not the exception — and it changes the answer.';
+      var CO_PLAN_REQUIRED_T  = 'We can’t answer this for {NAME}. Planning to one age and not the other is a decision, and it isn’t ours to make.';
+      function _coAName() {
+        var el = document.getElementById('co-name');
+        var n = el && String(el.value || '').trim();
+        return n || 'Co-Architect';
+      }
       var TAKE_ME_THERE = 'Take me there';
       /* ⚠ RENDERED ONLY WHEN THE TARGET RESOLVES. A door onto an element that is not in the document
          is worse than no door — it promises and does nothing. An unresolvable target renders exactly

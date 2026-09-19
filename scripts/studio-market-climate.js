@@ -53,7 +53,15 @@ function _marketClimateDesigns() {
     { key: "blend", name: "Datumae Blend", tag: "ENSEMBLE",
       desc: "The default. Four modeling lenses run 10,000 paths each — 40,000 modeled paths total — before Monte Carlo resolves the range.",
       help: "WHAT IT MEANS — Datumae Blend is the default Model Design. All four engines participate equally, so no single market lens dominates the result.\n\nWHY YOU MIGHT CHOOSE IT — Start here for the broadest first read. It lets Parametric, Historical, CAPE-Adjusted, and Regime each contribute to the modeled range before you isolate any one assumption set.\n\nWHAT IT MAY DO TO THE RANGE — Because the lenses share the work, the result is usually more balanced than relying on one engine alone. Use it as the reference design for the four single-model comparisons.\n\nMODEL MIX — Parametric 25% · Historical 25% · CAPE-Adjusted 25% · Regime 25%\n\nRUN SIZE — 10,000 paths from each of four engines · 40,000 modeled paths total",
-      active: true },
+      /* ⛔⛔ `active: true` -> false (2026-09-19). THE FOURTH LAYER. Copy Bank §1.4 ruled that no
+         Model Design is active on load; this table lit the Blend anyway, so `.climate-option.active`
+         existed on a cold page and `marketClimateSelectedKey()` — which was written specifically to
+         return '' rather than substitute — returned "blend" truthfully, because a tile really was
+         selected. The accessor was honest and the data under it was not.
+         ⚠️ THE WORD "The default." STAYS IN THE COPY ABOVE and is the Architect's. It describes what
+            the Blend IS — the ensemble you get when you decline to have a view — not what the
+            product picks for you. Those are different claims and only the second one was wrong. */
+      active: false },
     { key: "parametric", name: "Parametric", tag: "PARAMETRIC",
       desc: "Mathematical projection alone — one engine, 10,000 modeled paths, without the other three lenses.",
       help: "WHAT IT MEANS — Parametric runs the mathematical projection alone. Returns are generated from the model’s calculated drift and volatility rather than sampled directly from historical years or valuation regimes.\n\nWHY YOU MIGHT CHOOSE IT — Use it to see the clean mathematical baseline without historical sequencing, CAPE adjustment, or regime persistence influencing the result.\n\nWHAT IT MAY DO TO THE RANGE — The result reflects the distributional assumptions of the Parametric engine by itself. Compare it with Datumae Blend to see how much the other three lenses change the Estate.\n\nMODEL MIX — Parametric 100% · Historical 0% · CAPE-Adjusted 0% · Regime 0%\n\nRUN SIZE — Parametric only · 10,000 modeled paths total",
