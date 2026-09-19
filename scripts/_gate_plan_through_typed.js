@@ -129,12 +129,24 @@ const server = http.createServer((req, res) => {
       warn: ((w || {}).textContent || '').trim(),
       warnDisp: w ? getComputedStyle(w).display : 'MISSING',
       payload: (() => { try { const r = window._buildStudioRequest && window._buildStudioRequest();
-        return r ? r.plan_end_age : null; } catch (e) { return 'ERR'; } })()
+        return r ? r.plan_end_age : null; } catch (e) { return 'ERR'; } })(),
+      raPayload: (() => { try { const r = window._buildStudioRequest && window._buildStudioRequest();
+        return r ? r.retirement_age : null; } catch (e) { return 'ERR'; } })()
     };
   });
 
+  /* ⛔⛔ THE RETIREMENT MONTH IS 03 AND THAT IS THE WHOLE POINT — IT USED TO BE 08.
+     With DOB 08/1982 and retirement 08/2046 the two age derivations in this product AGREE (both
+     say 64), because the months match and there is nothing for a month-aware rule to be aware of.
+     MEASURED: 102 of the 144 DOB-month x retirement-month pairs agree, so a fixture picking the
+     same month for both had a 71% chance of proving nothing — and picked it.
+     ⛔ THIS GATE STOOD OVER THE DEFECT FOR ITS WHOLE LIFE AND WAS STRUCTURALLY INCAPABLE OF
+        SEEING IT. A FIXTURE THAT COLLAPSES THE VARIABLE MEASURES NOTHING; this one collapsed the
+        variable by agreeing with itself.
+     ⭐ 03/2046 SPLITS THEM: month-aware says 63 (March precedes August, so that year's birthday
+        has not happened), year-only says 64. L6 below is the leg that can now tell them apart. */
   await typeInto('#pri-dob', '08/1982');
-  await typeInto('#target-ret', '08/2046');
+  await typeInto('#target-ret', '03/2046');
   /* ⛔ EVERY OTHER REQUIRED CONTROL IS ANSWERED BY THE SHARED SEEDER (2026-09-09), which DERIVES the
      required set from the product's own refusals rather than holding a list. This fixture named its
      controls by hand and was 2 of 4 on that set — green only because it reads specific payload
@@ -171,10 +183,22 @@ const server = http.createServer((req, res) => {
   /* ── L3 · AN INVALID DATE IS REFUSED *OUT LOUD* ──────────────────────────────────────────────
      ⛔ THIS IS THE LEG THE OLD DIRECT-CALL GATE CLAIMED TO OWN. It could not fail, because it never
      let the mirror run. Here the rejection must survive the real event sequence AND be visible. */
-  await typeInto('#plan-end-age', '08/2060');     // age 78, below the ra+20 floor
+  /* ⛔⛔ THIS LEG ASSERTED A RULE THE CAPTAIN DELETED. It read `typeInto('08/2060') // age 78,
+     below the ra+20 floor` — but `retireAge + 20` was STRUCK FROM THE PRODUCT ON 2026-09-13
+     (Spec A248(c)+(e)) as "a LIFESPAN GUESS" that "SCALED", in four places at once. Age 78 is
+     comfortably VALID under the rule that replaced it, so this leg was typing a legal date and
+     demanding a refusal. 🔑 A GATE OUTLIVING ITS RULE DOES NOT GO QUIET — IT GOES RED FOR THE
+     WRONG REASON, AND THEN GETS BELIEVED ABOUT THE WRONG THING.
+     ⚠️ ITS MESSAGE TEST WAS STALE THE SAME WAY: `/plan-through/i` matches no word in the
+        Architect's §6.2 sentence, so even a genuinely invalid date could not have turned this
+        leg green. TWO stale assumptions, one leg, both invisible while it was red.
+     ⛔ 03/2046 is retirement age 63, so the floor is 64 (floor(RA) + 1) and 02/2046 — age 63 —
+        is the first date below it. Derived from the fixture's own dates, never typed as 64. */
+  const raWant = 2046 - 1982 - 1;                 // month-aware: 03 precedes the 08 DOB month
+  await typeInto('#plan-end-age', '02/2046');     // age 63, one short of the floor(RA)+1 floor
   const bad = await state();
-  ok(+bad.slider === wantAge && bad.warnDisp !== 'none' && /plan-through/i.test(bad.warn),
-    'L3 · AN INVALID TYPED DATE REVERTS *AND SAYS SO* [observed slider ' + bad.slider + ' (held), warn "'
+  ok(+bad.slider === wantAge && bad.warnDisp !== 'none' && /run past the day it starts/i.test(bad.warn),
+    'L3 · AN INVALID TYPED DATE REVERTS *AND SAYS SO* [want floor ' + (raWant + 1) + ', observed slider ' + bad.slider + ' (held), warn "'
     + bad.warn.slice(0, 60) + '", display ' + bad.warnDisp + '] — a silent revert made invalid input '
     + 'indistinguishable from valid input, which is how this defect stayed invisible');
 
@@ -197,6 +221,28 @@ const server = http.createServer((req, res) => {
   ok(+cleared.slider === 95 && +cleared.payload === 95 && /^\d{2} \/ \d{4}$/.test(cleared.field),
     'L5 · THE SKETCH SLIDER STILL DRIVES THE FIELD AND THE ENGINE [observed slider ' + cleared.slider
     + ', payload ' + cleared.payload + ', field ' + cleared.field + ']');
+
+  /* ── L6 · THE REQUEST AGREES WITH THE SENTENCE THE HOUSEHOLD WAS SHOWN ──────────────────
+     ⛔⛔ THE DEFECT THIS LEG EXISTS FOR, AND IT WAS NEVER ABOUT THE PLAN-THROUGH FIELD AT ALL.
+     The product held TWO derivations of "how old is this person on that date": the typed-date
+     VALIDATOR asked date-bounds.js (month-aware) while the PAYLOAD read `.split('/')[1]` and
+     threw the month away. For DOB 08/1982 + retirement 03/2046 the validator says 63 and the old
+     payload said 64 — and 42 of 144 DOB-month x retirement-month pairs disagree that way (29.2%).
+     ⛔ IT SHIPPED A ZERO-YEAR PLAN, Captain-found in a browser 2026-09-18: the validator accepted
+        a plan-through as "one year after retirement", the payload then sent a retirement age one
+        year higher, and the engine received plan_end_age == retirement_age, indexed an empty
+        array, and the household read "index 0 is out of bounds for axis 0 with size 0".
+     ⚠️ AND AWAY FROM THAT BOUNDARY IT NEVER CRASHED — IT FLATTERED. Measured on four households
+        at a normal plan-through of 93: Keystone +$3,000 / +$5,000 / +$4,000 / +$11,000 a year,
+        always upward. That is why five sites carried it with every gate green.
+     🔑 SO THE CLAIM IS A RELATIONSHIP, NOT A CONSTANT: whatever the validator computed from the
+        household's own dates is what must leave in the request. Asserting a literal 63 here would
+        re-plant exactly the kind of hand-maintained number this defect was made of. */
+  const raSeen = cleared.raPayload;
+  ok(+raSeen === raWant,
+    'L6 · THE PAYLOAD RETIREMENT AGE IS MONTH-AWARE [DOB 08/1982, retire 03/2046 — want '
+    + raWant + ', observed ' + raSeen + '] — the year-only derivation returned '
+    + (raWant + 1) + ', one year of free compounding on every request it touched');
 
   for (const l of lines) console.log(l);
   console.log('SCORE ' + pass + '/' + (pass + fail) + (fail ? ' RED' : ' GREEN'));

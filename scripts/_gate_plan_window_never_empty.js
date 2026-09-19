@@ -23,7 +23,18 @@
  *      "this file is right"; it is "every file that implements this rule agrees". B7 asserts that,
  *      numerically, over the same exhaustive population as B1.
  *
- * THE RULE AS IT NOW STANDS: floor = the retirement age, ceiling = 105. Derived from what the model
+ * THE RULE AS IT NOW STANDS: floor = floor(retirement age) + 1, ceiling = 105.
+ *   ⛔ THE `+ 1` ARRIVED 2026-09-18 AND IT IS THE SAME DERIVATION, CARRIED ONE STEP FURTHER. The
+ *     09-13 ruling set the floor AT the retirement age for the stated reason that a plan through
+ *     41 for someone retiring at 65 is "A RANGE COMPUTED OVER ZERO DECUMULATION YEARS, an empty
+ *     simulation with a number on it". Plan-through == retirement age IS that same empty
+ *     simulation, one case further in, and it was still being accepted — by BOTH files.
+ *   ⛔⛔ IT WAS NOT THEORETICAL. Captain-found in a browser: the client accepted it, the payload
+ *     sent plan_end_age == retirement_age, and the engine indexed an empty array in front of the
+ *     household ("index 0 is out of bounds for axis 0 with size 0"). `schemas.validate_ages` was
+ *     repaired the same day to `max(ceil(current_age), floor(retirement_age) + 1)`; this is the
+ *     client half, moved WITH it under this file's own standing order.
+ *   🔑 THE RULE DID NOT CHANGE ITS MIND — ITS ARITHMETIC CAUGHT UP WITH ITS REASON. Derived from what the model
  * MEANS — a plan that ends before it begins has no years to run — never from an actuarial table.
  * A 20-year gap asserted that a retirement shorter than twenty years is invalid, which is a
  * judgement about a person's life expectancy this product has no standing to make.
@@ -39,7 +50,7 @@
  *   B0 · PAIRED PRESENCE — a normal retirement age still yields a usable window and still ACCEPTS a
  *        valid plan-through date. "Reject everything" would satisfy every other leg here.
  *   B1 · THE INVARIANT — for every ra the retire field permits, floor <= ceiling
- *   B2 · THE FLOOR IS THE RETIREMENT AGE, for every permitted age
+ *   B2 · THE FLOOR IS floor(RETIREMENT AGE) + 1, for every permitted age
  *   B3 · the deleted 20-year rule stays deleted — constants unexported AND sentence unreconstructed
  *   B4 · a plan-through below the floor is refused with the §6.2 sentence, echoing THIS household
  *   B7 · THE TWO FILES AGREE — date-bounds.js and studio.html compute the same floor (§82.2348)
@@ -117,13 +128,17 @@ function loadDB() {
      The replacement for the old COLLAPSED/CROSSED legs, and a stronger claim than either: with
      the floor derived from the model's meaning rather than from an actuarial table, there is
      nothing left to collapse. Asserted over the SAME exhaustive population as B1 so the two
-     cannot drift. */
+     cannot drift.
+     ⛔ THIS LEG READ `w.floor !== ra` UNTIL 2026-09-18 AND WAS THEREFORE THE GUARDIAN OF THE
+        OFF-BY-ONE: it did not merely miss plan-through == retirement, it ASSERTED it, 46 times
+        over, exhaustively. 🔑 AN EXHAUSTIVE LEG OVER A RULE THAT IS ONE SHORT IS EXHAUSTIVELY
+        WRONG — breadth is not correctness, and a population of 46 made this feel settled. */
   const floorBad = [];
   for (let ra = RA_LO; ra <= RA_HI; ra++) {
     const w = DB.planWindow(ra);
-    if (!w || w.floor !== ra) floorBad.push('ra' + ra + ' -> floor ' + (w && w.floor));
+    if (!w || w.floor !== Math.floor(ra) + 1) floorBad.push('ra' + ra + ' -> floor ' + (w && w.floor));
   }
-  check('B2 · THE FLOOR IS THE RETIREMENT AGE, for every permitted age',
+  check('B2 · THE FLOOR IS floor(RETIREMENT AGE) + 1, for every permitted age',
     floorBad.length === 0,
     floorBad.length ? floorBad.length + ' wrong: ' + floorBad.slice(0, 6).join(' ') : (RA_HI - RA_LO + 1) + ' ages checked');
 
@@ -184,10 +199,24 @@ function loadDB() {
       /retireAge/.test(expr) && !/\b75\b/.test(expr) && !/\+\s*20\b/.test(expr), expr.trim());
     /* The numeric cross-check: both files, same question, same answer, over the same population.
        A textual match could pass while the arithmetic differed. */
+    /* ⛔⛔ THIS LEG USED TO RE-TYPE studio.html's EXPRESSION BY HAND — A THIRD COPY OF THE RULE,
+       INSIDE THE GATE WRITTEN TO PROVE THERE WERE NOT TWO. It read
+       `Math.min(105, Math.max(Math.ceil(ca), Math.ceil(ra)))`, which agreed with the product on
+       the day it was typed and would have gone on agreeing with a WRONG product forever: when
+       both files carried the off-by-one, this leg carried it too and reported them in harmony.
+       🔑 A CROSS-CHECK THAT RESTATES ONE SIDE IS NOT A CROSS-CHECK, IT IS A SECOND VOTE FROM THE
+          SAME VOTER. Now the expression is EVALUATED as studio.html actually spells it — the
+          text B7a already extracted — so the two sides can no longer be brought back into
+          agreement by editing this file. */
     const disagree = [];
+    let studioFloorFn = null;
+    try { studioFloorFn = new Function('currentAge', 'retireAge', 'return (' + expr + ');'); }
+    catch (e) { studioFloorFn = null; }
+    check('B7c-pre · studio.html’s own minPlanEnd expression is evaluable here (no hand copy)',
+      !!studioFloorFn, studioFloorFn ? expr.trim() : 'UNEVALUABLE — fix this leg, do not re-type the rule');
     for (let ra = RA_LO; ra <= RA_HI; ra++) {
       const ca = 44;                                   // a fixed current age below every ra here
-      const studioFloor = Math.min(105, Math.max(Math.ceil(ca), Math.ceil(ra)));
+      const studioFloor = studioFloorFn ? studioFloorFn(ca, ra) : NaN;
       if (DB.planWindow(ra).floor !== studioFloor) disagree.push('ra' + ra);
     }
     check('B7c · date-bounds and studio.html compute the SAME floor for every permitted age',

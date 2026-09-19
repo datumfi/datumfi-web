@@ -5,7 +5,7 @@
  *
  *   Current age (DOB) window : 18-85
  *   Retirement age window    : [max(45, CA+1), 90]
- *   Plan-through age window   : [RA, 105]
+ *   Plan-through age window   : [floor(RA) + 1, 105]
  *
  * Pure, dependency-free. Exposes window.DatumDateBounds.
  */
@@ -45,7 +45,21 @@
      `raMaxValid` is now simply PTA_MAX: every retirement age the retire field permits leaves a
         usable window, which is the condition _gate_plan_window_never_empty was written to check. */
   function planWindow(ra) {
-    var rawFloor = (ra | 0);
+    /* ⛔⛔ THE FLOOR IS floor(RA) + 1, NOT RA — A PLAN THAT ENDS THE YEAR RETIREMENT BEGINS HAS
+       NO YEARS TO MODEL. This read `(ra | 0)`, so plan-through == retirement age PASSED, and the
+       engine was handed a horizon of zero. `schemas.validate_ages` was repaired the same way on
+       2026-09-18 (`max(ceil(current_age), floor(retirement_age) + 1)`) and the note above
+       `minPlanEnd` in studio.html is the standing order: THE TWO FLOORS ARE ONE RULE IN TWO
+       REPOSITORIES AND THEY MOVE TOGETHER OR NOT AT ALL. This is the client half of that move.
+       ⭐ THE ARCHITECT'S SENTENCE WAS ALREADY RIGHT AND IS UNCHANGED. §6.2 says "a plan has to
+          run past the day it starts — choose an age after that", which describes RA + 1 exactly.
+          The copy has been describing a rule the arithmetic did not implement.
+          🔑 THE MESSAGE WAS NEVER THE PROBLEM; THE PREDICATE WAS.
+       ⚠️ `+ 1`, NOT `Math.ceil`. ceil(62) is 62 and a plan ending the year it begins is still
+          zero years, whatever the fractional part happens to be. Note that callers here pass an
+          age that is ALREADY whole (`ageAtDate` returns completed years), so `| 0` was never
+          doing the rounding it looked like it was doing — it was a no-op wearing a guard's coat. */
+    var rawFloor = Math.floor(ra) + 1;
     var floor = Math.min(rawFloor, PTA_MAX);
     var state = rawFloor > PTA_MAX ? 'crossed' : (rawFloor === PTA_MAX ? 'collapsed' : 'open');
     return { floor: floor, ceiling: PTA_MAX, rawFloor: rawFloor, state: state,

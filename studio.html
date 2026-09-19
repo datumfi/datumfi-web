@@ -11516,7 +11516,15 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
             var _retV = (document.getElementById('target-ret') || {}).value || '';
             var _cAge = window.parseAgeFromDob(_dobV);
             var _rYear = parseInt((_retV.replace(/\s/g, '').split('/')[1] || ''), 10);
-            if (_cAge != null && _rYear) { _nearRet = _cAge >= (_rYear - (new Date().getFullYear() - _cAge)) - 5; }
+            /* ⛔ SITE 4 OF 5. Lowest stakes of the five — it only picks which paragraph of copy
+               a household reads — but it is the SAME rule spelled a fourth way, and the reason
+               all five survived is that nobody was counting the spellings.
+               ⚠️ GUARDED ON `typeof`: this block is reachable from a lifted sandbox where the
+                  page globals may be absent, which is why its sibling above tests
+                  `window.parseAgeFromDob` the same way. */
+            var _raOn   = (typeof window.ageOnDate === 'function') ? window.ageOnDate(_retV, _dobV) : null;
+            var _raNear = (_raOn != null) ? _raOn : (_rYear - (new Date().getFullYear() - _cAge));
+            if (_cAge != null && _rYear) { _nearRet = _cAge >= _raNear - 5; }
         }
         if (_rbStrongEq && _rbLightlyDrawn) {
             beats.push('With little drawn and strong equity behind it, this line can also serve as a standby buffer in retirement — a source to lean on during a market downturn rather than selling investments while they\'re down. It costs nothing until you use it.');
@@ -15274,6 +15282,44 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         return age;
       }
 
+      /* ⛔⛔ THE RETIREMENT AGE WAS DERIVED TWO WAYS AND THEY DISAGREED FOR 29.2% OF HOUSEHOLDS.
+         This product spelled "how old is this person on that date" FIVE times, in two families
+         that do not agree:
+           · MONTH-AWARE — date-bounds.js `ageAtDate`, which the typed-date VALIDATOR uses. A
+             retirement date of 03/2045 against a DOB of 08/1982 is 62: March comes before August,
+             so that year's birthday has not happened yet.
+           · YEAR-ONLY — `retYear - (thisYear - currentAge)`, which read `.split('/')[1]` and
+             threw the month away. The same household comes out 63.
+         ⛔ MEASURED, NOT INFERRED: 42 of the 144 DOB-month x retirement-month pairs disagree —
+            29.2%. THE MIXTURE IS WHAT DOES IT, and that is why it reads as correct: `currentAge`
+            on the right-hand side IS month-aware, so the expression subtracts a month-aware
+            operand from a year-only one and is neither.
+         ⛔⛔ IT SHIPPED A ZERO-YEAR PLAN. Captain-found in a browser 2026-09-18: DOB 08/1982,
+            retire 03/2045, plan through 02/2046. The validator computed retirement 62, accepted
+            plan-through 63 as a year later, and moved the slider to 63. THE PAYLOAD then computed
+            retirement 63 and sent { retirement_age: 63, plan_end_age: 63 } — no years to model.
+            The engine indexed an empty array and the household read "Map computation failed /
+            index 0 is out of bounds for axis 0 with size 0".
+         ⚠️ AWAY FROM THE BOUNDARY IT DOES NOT CRASH — IT FLATTERS. Measured on four households
+            with a normal plan-through of 93, the year-only age moves the Keystone +$3,000 /
+            +$5,000 / +$4,000 / +$11,000 per year, ALWAYS UPWARD: one more year of accumulation
+            and one fewer of drawdown. A CRASH GETS REPORTED; A YEAR OF FREE COMPOUNDING DOES NOT.
+            That is why five sites carried this for months with every gate green.
+         🔑 THE VALIDATOR WAS ALWAYS RIGHT. Nothing here changes which dates a household is told
+            are legal; it makes the REQUEST agree with the sentence they were already shown.
+         ⛔ ONE DERIVATION, DELEGATED — NOT A SIXTH SPELLING. date-bounds.js calls itself the
+            SINGLE SOURCE in its own header and it is; this is only the adapter that hands it the
+            two strings the Studio holds. §82.2348: A RULE APPLIED IN ONE FILE IS NOT A RULE, IT
+            IS A BRANCH. */
+      function ageOnDate(dateStr, dobStr) {
+        var DB = typeof window !== 'undefined' ? window.DatumDateBounds : null;
+        if (!DB || !dateStr || !dobStr) return null;
+        var d = DB.parseMoYr(dobStr);
+        if (!d) return null;
+        var a = DB.ageAtDate(dateStr, d.mo, d.yr);
+        return (a == null || !isFinite(a)) ? null : a;
+      }
+
       /* ⛔⛔ FINDING 67 — ONE DERIVATION, TWO CALLERS, SO THEY CANNOT DISAGREE ABOUT WHO LIVES
          IN THE HOUSE. co_architect_age was derived ONLY inside buildMatrixRequest, so
          /api/calculate — the call behind the Range — never received it. In the engine
@@ -15303,7 +15349,12 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
         var coRet     = (document.getElementById('co-ret') || {}).value || '';
         var coRetYear = parseInt((coRet.replace(/s/g, '').split('/')[1] || ''), 10);
         if (coRetYear) {
-          var coRetAge = coRetYear - (new Date().getFullYear() - coAge);
+          /* ⛔ SITE 2 OF 5, AND CLAUSE 1: the same defect reached the co-architect, because the
+             note above ("derived the same way the primary's retireAge is, so the two cannot
+             drift") kept them consistent WITH EACH OTHER while both disagreed with the validator.
+             🔑 TWO COPIES AGREEING IS NOT SINGLE-SOURCING — IT IS THE SAME ANSWER TWICE. */
+          var coRetAge = ageOnDate(coRet, coDob);
+          if (coRetAge == null) coRetAge = coRetYear - (new Date().getFullYear() - coAge);
           if (coRetAge > 0) out.co_architect_retirement_age = coRetAge;
         }
         /* The engine's validator DISCARDS this unless co_architect_age is present, so it may only
@@ -15481,7 +15532,15 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
 
         const currentAge  = parseAgeFromDob(dobVal) || 43;
         const retYear     = parseInt((retVal.replace(/\s/g, '').split('/')[1] || ''), 10);
-        const retireAge   = retYear ? (retYear - (new Date().getFullYear() - currentAge)) : 55;
+        /* ⛔ SITE 1 OF 5 — AND ONE OF THE TWO THAT REACH THE ENGINE. See `ageOnDate`.
+           ⚠️ THE FALLBACK IS THE PRE-EXISTING INVENTED PATH, NOT A SECOND DERIVATION OF A REAL
+              FACT: it can only be reached when the DOB is unreadable, and `currentAge` has
+              already fallen back to 43 by then. That `|| 43` is a separate, older defect (L47 on
+              the data surface) and is NOT folded in here — named so it is not mistaken for this
+              one having been left half-done. */
+        const _raOnDate   = ageOnDate(retVal, dobVal);
+        const retireAge   = (_raOnDate != null) ? _raOnDate
+                          : (retYear ? (retYear - (new Date().getFullYear() - currentAge)) : 55);
 
         // ── DOB + Target Retirement Date gates (evaluated independently) ───────
         const _dw = document.getElementById('pri-dob-warn');
@@ -16201,6 +16260,7 @@ const _reachesEngine = a =>
       window._buildRequestError  = null;
       window._buildRequestErrorField = null;
       window.parseAgeFromDob = parseAgeFromDob;
+      window.ageOnDate = ageOnDate;   // month-aware "age on a given date" — see the note at its definition
 
       // ── Shared date-field validator ────────────────────────────────────────
       // kind: 'dob' | 'ret'  |  dobAge: numeric age or null  |  fieldName: optional label override
@@ -16246,6 +16306,14 @@ const _reachesEngine = a =>
         }
         // kind === 'ret'
         if (year > 2120 || year < currentYear) return 'Enter a realistic ' + retLabel + '.';
+        /* ⚠⚠ SITE 5 OF 5 — KNOWINGLY NOT REPAIRED, AND NAMED SO IT IS NOT MISTAKEN FOR MISSED.
+           Same year-only derivation as the other four, but `_validateDateField` receives
+           `dobAge` (a number) and never the DOB STRING, so it cannot ask `ageOnDate` without a
+           signature change rippling to every caller. Its two consumers are coarse thresholds —
+           "after the current age" and "over 100" — where a one-year skew bites only exactly on
+           the boundary: the repair is small and the change is not.
+           🔑 A DEFECT YOU CHOOSE TO LEAVE MUST BE WRITTEN DOWN WHERE IT LIVES, OR THE NEXT COUNT
+              OF THIS RULE IS FOUR, AND WRONG AGAIN. */
         if (dobAge != null) {
           var retireAge = year - (currentYear - dobAge);
           if (retireAge <= dobAge) return retLabel + ' must be after the current age.';
@@ -16286,7 +16354,12 @@ const _reachesEngine = a =>
               dressed up as an answer. */
         var currentAge = parseAgeFromDob(dobVal);
         if (!currentAge) { if (retWarnEl) retWarnEl.style.display = 'none'; return; }
-        var retireAge = retYear - (currentYear - currentAge);
+        /* ⛔ SITE 3 OF 5, AND IT IS NOT MERELY COSMETIC: this function sets `_planEndAgeMin` and
+           clamps the plan-through SLIDER, and that slider IS `plan_end_age` on the payload. A
+           retirement age one year high here raises the floor of the window the household is
+           allowed to choose from. */
+        var _raOnDate2 = ageOnDate(retVal, dobVal);
+        var retireAge = (_raOnDate2 != null) ? _raOnDate2 : (retYear - (currentYear - currentAge));
         if (retireAge >= 100) {
           if (retWarnEl) { retWarnEl.textContent = 'Target Retirement Date implies retirement age over 100. Check Date of Birth or Target Retirement Date.'; retWarnEl.style.display = 'block'; }
           return;
@@ -16313,7 +16386,15 @@ const _reachesEngine = a =>
               will not accept should not be offered" — INVERTS when the client is the stricter of
               the two: the schema now accepts 72 and a client floor of 87 would hide it. The two
               floors are one rule in two repositories and they move together or not at all. */
-        var minPlanEnd    = Math.min(105, Math.max(Math.ceil(currentAge), Math.ceil(retireAge)));
+        /* ⛔⛔ floor(RA) + 1, NOT RA — REPAIRED 2026-09-18 ALONGSIDE `schemas.validate_ages`, under
+           the standing order written directly above: THE TWO FLOORS ARE ONE RULE IN TWO
+           REPOSITORIES AND THEY MOVE TOGETHER OR NOT AT ALL. `Math.max(ca, ra)` admitted
+           plan-through == retirement age, which is a plan with ZERO DECUMULATION YEARS — the very
+           thing the Captain's own ruling quoted above was written to forbid ("AN EMPTY SIMULATION
+           WITH A NUMBER ON IT"). The rule was ruled correctly and implemented one year short.
+           ⚠️ `+ 1` AND `Math.ceil` BOTH — they answer different questions. ceil() handles a
+              fractional age; the +1 is the requirement that the horizon contain a year at all. */
+        var minPlanEnd    = Math.min(105, Math.max(Math.ceil(currentAge), Math.floor(retireAge) + 1));
         /* ⚠️ THE UNANSWERED RESTING POSITION IS THE MIDPOINT OF THIS HOUSEHOLD'S OWN RANGE (set
            below), not of a fixed 75-105 bar. §3.2 asks for "a position that carries no
            recommendation", and the middle of what is actually allowed is the only position that
@@ -16334,9 +16415,15 @@ const _reachesEngine = a =>
              it to defaultPlanEnd — i.e. entering a DOB silently ANSWERED the plan-through question
              on the user's behalf, and the answer was 93 + their birth year wearing a date's
              clothes. There is no actuarial content in it; it was one household's number.
-             ⚠️ CLAMPING SURVIVES AND MUST: a plan-through age below retirement+20 is refused by
-                the engine, so an answer the person gave is pulled into the range their own
-                household allows. CORRECTING AN ANSWER IS NOT THE SAME ACT AS SUPPLYING ONE. */
+             ⚠️ CLAMPING SURVIVES AND MUST: a plan-through age below ~~retirement+20~~
+                floor(retirement) + 1 is refused by the engine, so an answer the person gave is
+                pulled into the range their own household allows. CORRECTING AN ANSWER IS NOT
+                THE SAME ACT AS SUPPLYING ONE.
+                ⛔ THE `retirement+20` IN THIS SENTENCE WAS STRUCK FROM THE CODE ON 2026-09-13
+                   AND LEFT STANDING HERE FOR FIVE DAYS, describing a rule the product no longer
+                   had. CORRECTED RATHER THAN DELETED so nobody re-derives it — and because a
+                   STALE COMMENT IS NOT INERT: `_gate_plan_through_typed` was written against
+                   this sentence and still asserts the +20 floor today. */
           /* §6.10 — CLAMP THE CONTROL'S RANGE TO THE HOUSEHOLD'S VALID FLOOR, so an impossible
              answer is UNREACHABLE rather than rejected.
              ⛔ THIS IS THE COMPANION TO 'A REFUSAL MUST SURVIVE ITS DOOR BEING SHUT': A DOOR MUST
