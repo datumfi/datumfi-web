@@ -16,8 +16,10 @@
  *       BOTH local + session storage, while the Clerk *_z cloud blob is UNTOUCHED
  *       (sign back in -> plans return). Also driven via the real account-topbar
  *       sign-out button (Issue 1b). And Start-from-Scratch hard-resets Studio to
- *       founder defaults (Age40/Retire65/$750k/$25k/$100k) with the prefill
- *       sources cleared.
+ *       founder defaults (Age40/Retire65/$750k/$25k) with the prefill sources
+ *       cleared — ⛔ THE ~~$100k DATUM~~ IS NO LONGER ONE OF THEM AND MUST NOT COME
+ *       BACK: aa00425 deleted it on the Captain's ruling ("they must pick it"), and
+ *       this gate now asserts its ABSENCE. See the re-pointed legs below.
  *   (c) IN-OVERLAY SIGN-IN — a cold signed-in landing re-renders the options IN
  *       PLACE (no reopen): BOTH Sketch AND Blueprint unlock and route straight to
  *       the archive (the Blueprint option, previously gated on local storage, now
@@ -262,8 +264,31 @@ async function clickAndGetUrl(page, btnId) {
   check('(b) scratch: Retire = 65', scratch.retire === '65', scratch.retire);
   check('(b) scratch: Portfolio = $750k', scratch.portfolio === '$750k', scratch.portfolio);
   check('(b) scratch: Contributions = $25,000', scratch.contrib === '$25,000', scratch.contrib);
-  check('(b) scratch: Datum = $100k', /\$100k/.test(scratch.datum || ''), scratch.datum);
-  check('(b) scratch: spend-input = $100,000', scratch.spend === '$100,000', scratch.spend);
+  /* ⛔⛔ RE-POINTED 2026-09-19, AND THE OLD ASSERTION WAS DEMANDING A CLAUSE 2 VIOLATION.
+     These two legs read `Datum = $100k` and `spend-input = $100,000` and had been filed REPAIR —
+     "the product is wrong, put the number back". THE PRODUCT IS RIGHT. Commit aa00425 (2026-09-12)
+     deleted datum_spend's $100,000 and plan_end_age's 93 as THE TWO MONEY-BEARING DEFAULTS, on the
+     Captain's own ruling, verbatim: "they must pick it." Both were HIS OWN FIGURES. "Not set" is
+     not an empty observation here — it is Architect-authored copy (Empty State Copy Bank §3.2), and
+     the resting slider position is deliberately the arithmetic middle of the control's range rather
+     than the position that reads $100,000.
+     🔑 REPAIRING THIS GATE AS FILED WOULD HAVE RE-INSTALLED DANIEL'S OWN TARGET SPEND ON EVERY NEW
+        HOUSEHOLD'S FIRST SCREEN, WITH A GREEN CHECK OVER IT. §82.2767 — a failing measurement is a
+        claim about an instrument before it is a claim about a threshold, and the instrument was the
+        one that had gone stale.
+     ⭐ SO IT IS RE-POINTED STRICTER, NOT RELAXED: it now asserts the ABSENCE it used to forbid, which
+        makes it a standing Clause 2 guard on the one field the method says is DERIVED LAST. The day
+        anything re-seeds a Datum into a scratch Studio, this goes red — which is what the old leg
+        could never do, because that state was its pass condition.
+     ⚠️ THE OTHER FOUR FOUNDER DEFAULTS ARE LEFT ASSERTED AS THEY WERE (Age 40 / Retire 65 / $750k /
+        $25,000) AND THAT IS NOT AN ENDORSEMENT — they are outside this re-point's proof. aa00425
+        ruled on TWO money-bearing defaults and named only these two; whether a $750k portfolio and
+        $25,000 of contributions on a cold Studio are the same hazard is a RULING NOBODY HAS MADE.
+        Raised by name rather than quietly swept in. */
+  check('(b) scratch: Datum is NOT set (aa00425 — "they must pick it")',
+        !/\$\s*\d/.test(scratch.datum || ''), scratch.datum);
+  check('(b) scratch: spend-input is EMPTY (no seeded target spend)',
+        !String(scratch.spend || '').trim(), scratch.spend);
   check('(c)/(b) signed-in Studio: no page errors', inErrors.length === 0, inErrors.slice(0, 3).join(' | '));
   await ctxIn.close();
 

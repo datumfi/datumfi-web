@@ -130,13 +130,21 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
 
   // 1. RENDER-GATE — the default-paint window was hidden (no 40/65/93 flash).
   check('render-gate: layout HIDDEN while defaults painted (no 40/65/93 flash)', early.gated === true && early.visibility === 'hidden', 'gated=' + early.gated + ' vis=' + early.visibility);
-  check('render-gate: defaults (40/65/93) WERE the pre-seed values (hidden, not shown)', early.sliderAge === 40 && early.sliderRet === 65 && early.sliderPlan === 93, early.sliderAge + '/' + early.sliderRet + '/' + early.sliderPlan);
+  /* ⛔ RE-POINTED 2026-09-19: 93 -> 90. The plan-through slider's resting position changed on
+     2026-09-12 (aa00425) when the Captain ruled OUT the two money-bearing defaults — 93 was HIS OWN
+     plan-through age, and the control now rests at the arithmetic middle of its own range (75-105)
+     carrying no recommendation. THE ASSERTION DID NOT FOLLOW THE PRODUCT FOR A WEEK.
+     ⚠️ THIS LEG'S SUBJECT IS THE RENDER-GATE, NOT THE NUMBER: its job is to prove the pre-seed paint
+        happened BEHIND the gate rather than on screen. The exact resting values are scenery — but
+        scenery that is wrong makes the leg red for a reason that has nothing to do with its subject,
+        which is how a real regression here would have been lost in an already-red gate. */
+  check('render-gate: defaults (40/65/90) WERE the pre-seed values (hidden, not shown)', early.sliderAge === 40 && early.sliderRet === 65 && early.sliderPlan === 90, early.sliderAge + '/' + early.sliderRet + '/' + early.sliderPlan);
 
   // 2. ASYNC SEED — direct load lands the typed values, NOT the hardcoded defaults.
   check('direct load: retire RESTS on 52 (NOT 65 default)', r.sliderRet === 52, 'slider-activation=' + r.sliderRet);
-  check('direct load: PTA RESTS on 85 (NOT 93 default)', r.sliderPlan === 85, 'sl-plan-through=' + r.sliderPlan);
+  check('direct load: PTA RESTS on 85 (NOT the 90 resting position)', r.sliderPlan === 85, 'sl-plan-through=' + r.sliderPlan);
   check('direct load: current age DERIVED from DOB ' + DOB_MO + '/' + DOB_YR + ' = ' + expectedAge() + ' (NOT the 40 default)', r.sliderAge === expectedAge() && r.sliderAge !== 40, 'slider-age=' + r.sliderAge + ' fixture authored ' + FIXTURE_AUTHORED);
-  check('direct load: NOT the hardcoded 40/65/93', !(r.sliderAge === 40 && r.sliderRet === 65 && r.sliderPlan === 93), r.sliderAge + '/' + r.sliderRet + '/' + r.sliderPlan);
+  check('direct load: NOT the cold resting set 40/65/90', !(r.sliderAge === 40 && r.sliderRet === 65 && r.sliderPlan === 90), r.sliderAge + '/' + r.sliderRet + '/' + r.sliderPlan);
   check('direct load: DOB seeds 08/1982', norm(r.dob) === '08/1982', r.dob);
   check('direct load: target-ret shows 03/2035', norm(r.targetRet) === '03/2035', r.targetRet);
   // PROVENANCE: #599 Part 3 (2026-08-03) — date derived from the canonical age, not the stored date.

@@ -18835,6 +18835,56 @@ const _reachesEngine = a =>
         if (!retStr && dobStr && rAge && typeof BP.retDateFromAge === 'function') retStr = BP.retDateFromAge(dobStr, rAge);
         if (retStr) retEl.value = retStr;
       }
+      /* ⛔⛔ THE THIRD ANSWERING ACT, THIRD SITE (§82.2350) — THE DOSSIER RESTORE, AND IT WAS THE
+         ONLY ONE OF THE THREE STORES THAT COULD NOT ANSWER. Measured 2026-09-19 across three gates
+         and SEVENTEEN failing legs that all reduce to this one omission.
+         WHAT WAS WRONG. `applyDossierSliders` set #sl-plan-through from defaults.planThroughAge and
+         STOPPED THERE — it never read defaults.planThroughDate and never set window._ptaAnswered.
+         So _mirrorPlanEnd's `if (!window._ptaAnswered)` guard fired and ACTIVELY BLANKED the field,
+         and the household's own saved plan-through answer vanished on every dossier-seeded load.
+         ⛔ AND THE CONSEQUENCE IS NOT COSMETIC. _isPlanThroughAnswered() reads the SAME bit, so the
+            reveal door pushed PLAN_THROUGH_REQUIRED at a returning household that had answered the
+            question months ago — TOLD TO ANSWER A QUESTION THEIR OWN SAVED FILE ALREADY CONTAINED.
+         🔑 THE BLUEPRINT PATH HAD THIS RIGHT SINCE §82.2350 AND THE DOSSIER PATH NEVER GOT IT. Two
+            restore paths, one contract, and only one of them implemented it. This is the blueprint
+            path's gate copied VERBATIM rather than re-derived — reuse-don't-fork applied to a
+            CONTRACT, because a second hand-written copy is how the first divergence happened.
+         ⛔ GATED ON THE DATE, NOT ON THE AGE, FOR THE REASON THE BLUEPRINT PATH STATES: planThrough
+            carries a SCHEMA DEFAULT of 93 in Dossier.html (parseIntSafe(...,93) and resetVals), so
+            a present AGE proves nothing about whether a human chose it. planThroughDate comes from
+            `dateStrOf` -> `el._dateStr`, which pinAge sets to null unless a real MM/YYYY was typed
+            or restored. THE DATE IS THE PROVENANCE RECORD; THE AGE IS A GUESS WEARING AN ANSWER'S
+            CLOTHES. Same reasoning, same precedence, same two-key test as the blueprint restore.
+         ⚠️ SO A DOSSIER ANSWERED BY AGE ALONE STILL READS UNANSWERED, AND THAT IS DELIBERATE, NOT
+            AN OVERSIGHT. The Dossier's resting display IS the age, so this case is reachable and it
+            is NOT repaired here — there is no stored signal that separates a typed 93 from the
+            default 93, and inventing one would be a fallback where a refusal belongs (§82.2694).
+            FLAGGED FOR A RULING rather than guessed. */
+      /* ⛔⛔ THE DATE IS THE PROVENANCE RECORD; THE AGE IS THE CANONICAL VALUE. READ THAT TWICE —
+         THEY ARE TWO DIFFERENT JOBS AND I CONFLATED THEM ON MY FIRST ATTEMPT AT THIS BLOCK.
+         `planThroughDate` is consulted ONLY to answer "did a human ever answer this question?".
+         Its MONTH is deliberately NOT written into the field: the Part 3 ruling makes the date a
+         CACHE RECOMPUTED FROM THE CANONICAL AGE (month anchored on the DOB), never an input, and
+         `_gate_dossier_seed_one_path` S8 holds that line. I first wrote `_peEl.value = <stored
+         date>` here — copying the blueprint carry — and S8 went red naming the exact stored month.
+         ⚠️ THE BLUEPRINT CARRY DOES WRITE THE STORED DATE AND THIS DOES NOT, SO THE TWO PATHS NOW
+            DISAGREE ABOUT WHETHER A SAVED MONTH SURVIVES. THAT DISAGREEMENT IS OLDER THAN THIS
+            COMMIT and is RAISED, NOT RESOLVED — picking a side silently is how a ruling becomes a
+            defect nobody can find. Flagged for the Architect. What is NOT in doubt is the bit:
+            both paths must mark the question ANSWERED, and only one of them did. */
+      var _peEl   = $('plan-end-age');
+      var _dPtaAge = parseInt(def.planThroughAge, 10);
+      var _dPtaRaw = (def.planThroughDate != null ? String(def.planThroughDate) : '').trim();
+      if (_peEl && !_peEl.value && _ageDateRe.test(_dPtaRaw) &&
+          _dPtaAge >= 75 && _dPtaAge <= 105 && _mayS('plan-end-age')) {
+        var _sPta = $('sl-plan-through');
+        if (_sPta) _sPta.value = _dPtaAge;
+        window._ptaAnswered = true;
+        /* The field is left EMPTY for _mirrorPlanEnd to fill: with the bit set, a real DOB present
+           and no surviving month to preserve, it derives DOB-month + canonical age — which is the
+           same date the typed path and the slider path produce. ONE DERIVATION, NOT A FOURTH. */
+        if (typeof _mirrorPlanEnd === 'function') _mirrorPlanEnd();
+      }
       var salEl = $('pri-salary');
       var gross = parseFloat(pri.grossIncome);
       if (salEl && !salEl.value && gross > 0 && _mayS('pri-salary')) salEl.value = '$' + Math.round(gross).toLocaleString('en-US');
@@ -19473,9 +19523,22 @@ const _reachesEngine = a =>
              *        signed in, NO cached dossier .............. 0 of 16
              *        signed in, dossier stamped to ANOTHER user  0 of 9 profile fields (owner check holds)
              *        signed in + OWN cached dossier ............ 14 of 16 CAME BACK
-             *      The two that cleared were `plan-end-age` and `filing-status` — the only two
-             *      fields `applyDossierProfile` does not write. THE NEGATIVES MATCHED TOO, which is
-             *      what makes this the mechanism and not a correlation.
+             *      The two that cleared were `plan-end-age` and `filing-status` — ~~the only two
+             *      fields `applyDossierProfile` does not write~~. THE NEGATIVES MATCHED TOO, which
+             *      is what makes this the mechanism and not a correlation.
+             *      ⛔ THAT PARENTHETICAL WENT STALE ON 2026-09-19 AND I STRUCK IT IN THE COMMIT THAT
+             *         MADE IT FALSE: `applyDossierProfile` NOW WRITES `plan-end-age`, because the
+             *         dossier restore was the one of three stores that could not answer the
+             *         plan-through question (see the §82.2350 third-site block in that function).
+             *         The MEASUREMENT above is untouched and still correct — 14 of 16 came back on
+             *         2026-09-15 — only the explanation of WHY those two were the survivors has
+             *         moved. `filing-status` is now the only one.
+             *      ⚠️ THE SUPPRESSION BELOW IS WHAT KEEPS THE SCRATCH CLEAR HONEST AFTER THAT
+             *         CHANGE, AND IT WAS CHECKED RATHER THAN ASSUMED: `_scratchSeedBoot` returns
+             *         before the dossier seed runs at all, so a user who asked for a blank page
+             *         still gets one. A NEW WRITER IN A SUPPRESSED PATH IS ONLY SAFE WHILE THE
+             *         SUPPRESSION IS ABOVE IT — if that early return ever moves, this write is the
+             *         first thing that re-fills a field the user asked us to throw away.
              *   ⭐ AND THE SOURCE WAS PROVEN, NOT INFERRED: the fixture's dossier carried a
              *      DIFFERENT co-architect salary (111000) from the one typed into the page
              *      (111500), and the field came back reading 111,000. A value can only arrive from
@@ -21919,7 +21982,14 @@ const _reachesEngine = a =>
     // Blueprint cannot inherit the prior session's numbers. Saved slots, the archive,
     // and the Clerk cloud are untouched. If lingering data existed, reload to a clean
     // /studio.html (skip-overlay flag set) so the engine recomputes founder defaults
-    // (Age40 / Retire65 / $750k / $25k / $100k / $166k); otherwise just dismiss.
+    // ~~(Age40 / Retire65 / $750k / $25k / $100k / $166k)~~ -> (Age40 / Retire65 / $750k / $25k).
+    /* ⛔ THE $100k CAME OUT ON 2026-09-12 (aa00425) AND THIS LINE KEPT NAMING IT FOR A WEEK. It was
+       datum_spend's default — THE CAPTAIN'S OWN TARGET SPEND — deleted on his ruling, verbatim:
+       "they must pick it." A cold Studio now reads "Not set" (authored copy, §3.2) and the resting
+       slider sits at the middle of its range, not at the position that reads $100,000.
+       🔑 STRUCK RATHER THAN DELETED so nobody re-derives the old list from a tidy comment and puts
+          the number back. `_p7_studio_overlay_parity` now asserts the ABSENCE — it spent that week
+          asserting the PRESENCE and was filed as a product defect on the strength of it. */
     function _clearCarriedDesign() {
       var had = false;
       try {
