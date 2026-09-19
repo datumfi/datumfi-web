@@ -19916,6 +19916,9 @@ const _reachesEngine = a =>
   <!-- A306 — SS Matrix grid CSS -->
   <style>
   .ss-matrix-wrap{display:grid;grid-template-columns:44px repeat(3,1fr);gap:4px;padding:4px;}
+  /* ⛔ A SOLO HOUSEHOLD HAS NO SECOND AXIS. Three rows, one column - not a 3x3 grid with the
+     spousal dimension collapsed, because a collapsed dimension still asks the question. */
+  .ss-matrix-wrap.ss-solo{grid-template-columns:44px minmax(0,1fr);}
   .ss-matrix-corner{display:flex;align-items:flex-end;justify-content:flex-end;padding-bottom:4px;}
   .ss-matrix-col-hdr{text-align:center;font-size:10px;color:var(--muted);padding:4px 2px 6px;font-family:var(--font-mono);letter-spacing:0.04em;}
   .ss-matrix-row-hdr{display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-size:11px;color:var(--muted);font-family:var(--font-mono);font-weight:600;}
@@ -20130,6 +20133,13 @@ const _reachesEngine = a =>
     }
     window._ssNormalizeResult = _ssNormalizeResult;   // gate seam — read-only translation
     window._ssCanonKey        = _ssCanonKey;
+    /* ⛔ GATE SEAM — READ-ONLY, AND IT IS A REAL EXPORT, NOT A FORMALITY. I first wrote this
+       comment claiming `renderMatrixGrid` was "already a window property because this inline
+       block is not an IIFE". THAT WAS WRONG AND THE GATE CAUGHT IT IMMEDIATELY: its L0 read
+       {"grid":true,"fn":false}. This block IS scoped — which is exactly why every other seam
+       around it is assigned by hand. 🔑 AN ASSUMPTION ABOUT SCOPE IS A MEASUREMENT NOBODY TOOK;
+       the L0 leg exists so that seven legs below cannot pass vacuously over a missing seam. */
+    window.renderMatrixGrid   = renderMatrixGrid;
 
     function renderMatrixGrid(result) {
       /* ⛔ NORMALISED HERE TOO, NOT ONLY AT THE FETCH SITES. renderMatrixGrid is reached from FOUR
@@ -20166,6 +20176,26 @@ const _reachesEngine = a =>
       var ageLabel = { early_62: '62', full_67: '67', optimal_70: '70' };
       var lookup   = {};
       cases.forEach(function(c) { lookup[c.case_key] = c; });
+      /* ⛔⛔ NINE EMPTY CELLS FOR EVERY SOLO HOUSEHOLD, LIVE IN PRODUCTION UNTIL 2026-09-18.
+         The engine answers a solo run on ONE axis - case_key 'age_62', not 'age_62_x_None' -
+         because naming a pairing that does not exist would be a lie, and `_ssCanonKey` above
+         says so in its own comment and already handles that shape. THE RENDERER NEVER DID: it
+         built `p + '_x_' + s` unconditionally, so all nine lookups missed and all nine cells
+         drew an em-dash. Captain-found in a browser.
+         ⛔ IT IS CLAUSE 1 IN ONE SURFACE: joint worked, solo did not. MEASURED against the live
+            engine - solo returns 3 cases keyed age_62/age_67/age_70, joint returns 9 keyed
+            age_NN_x_age_NN. The product asked a person with no spouse which age their spouse
+            would claim at, and then answered nothing.
+         ⭐ THE SOLO COPY WAS ALREADY WRITTEN. The tradeoff chain's final `else` branch - the one
+            reached when there is no secondary key - carries three authored solo sentences that
+            had never once rendered. This is a SHAPE fix, not new copy and not new cells.
+         🔑 DERIVED FROM THE ENGINE'S ANSWER, NOT FROM THE CO-ARCHITECT TOGGLE. The toggle is a
+            control that can disagree with what was actually computed; the cases are what we were
+            given. A renderer that trusts a control over its own data can draw a grid for a
+            household the engine never modelled. */
+      var isSolo = cases.every(function (c) {
+        return typeof c.case_key === 'string' && c.case_key.indexOf('_x_') === -1;
+      });
 
       var currentCase = currentPlanKey ? lookup[currentPlanKey] : null;
 
@@ -20223,23 +20253,31 @@ const _reachesEngine = a =>
         + 'border-bottom:1px solid rgba(255,255,255,0.06);">'
         + '▲ higher than your plan &nbsp;·&nbsp; ▼ lower than your plan &nbsp;·&nbsp; mixed arrows = tradeoff'
         + '</div>'
-        + '<div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);'
-        + 'text-align:center;margin-bottom:4px;letter-spacing:0.06em;text-transform:uppercase;">'
-        + 'Secondary / Spousal Claims At</div>'
-        + '<div class="ss-matrix-wrap">';
+        + (isSolo ? ''
+             : '<div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);'
+             + 'text-align:center;margin-bottom:4px;letter-spacing:0.06em;text-transform:uppercase;">'
+             + 'Secondary / Spousal Claims At</div>')
+        + '<div class="ss-matrix-wrap' + (isSolo ? ' ss-solo' : '') + '">';
 
-      // Corner + column headers
-      html += '<div class="ss-matrix-corner"><div style="font-size:8px;color:var(--muted);'
-        + 'text-align:right;line-height:1.3;">Primary<br>claims at</div></div>';
-      strats.forEach(function(s) {
-        html += '<div class="ss-matrix-col-hdr">' + ageLabel[s] + '</div>';
-      });
+      /* Corner + column headers — BOTH ARE THE SECOND AXIS AND A SOLO HOUSEHOLD HAS NONE. Leaving
+         an empty corner in place would keep the grid aligned and keep the question on screen;
+         the row headers alone already say what the column of ages means. */
+      if (!isSolo) {
+        html += '<div class="ss-matrix-corner"><div style="font-size:8px;color:var(--muted);'
+          + 'text-align:right;line-height:1.3;">Primary<br>claims at</div></div>';
+        strats.forEach(function(s) {
+          html += '<div class="ss-matrix-col-hdr">' + ageLabel[s] + '</div>';
+        });
+      }
 
       // Data rows
       strats.forEach(function(p) {
         html += '<div class="ss-matrix-row-hdr">' + ageLabel[p] + '</div>';
-        strats.forEach(function(s) {
-          var key = p + '_x_' + s;
+        /* ⛔ ONE CELL PER ROW WHEN SOLO, AND THE KEY IS THE PRIMARY ALONE — exactly the shape
+           `_ssCanonKey` normalises to. The cell body below is UNCHANGED and shared by both
+           shapes: a second copy of it for solo would drift the day either one is edited. */
+        (isSolo ? [null] : strats).forEach(function(s) {
+          var key = isSolo ? p : (p + '_x_' + s);
           var c   = lookup[key];
           if (!c) { html += '<div class="ss-matrix-cell ss-cell-empty">—</div>'; return; }
           var isCurrent  = !!(currentPlanKey && key === currentPlanKey);
