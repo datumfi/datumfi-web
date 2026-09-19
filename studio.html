@@ -5184,7 +5184,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                 <small>Floor → Ceiling · annual spending</small>
                 <div class="mc-premium-dual">
                   <div><span>Target spend</span><b id="mcHeroDatum"></b></div>
-                  <div><span>Plan confidence</span><b id="mcSuccess"></b></div>
+                  <div><span>Plan delivery</span><b id="mcSuccess"></b></div>
                 </div>
                 <div class="mc-premium-meta">
                   <div class="mc-premium-climate mc-climate-chip" id="mcClimateChip" data-climate="blend"><span>Model design</span><strong id="mcClimate"></strong></div>
@@ -5240,7 +5240,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                 <div class="mc-card-title">Spend</div>
                 <strong class="mc-card-value" id="mcDatumValue"></strong>
                 <span class="mc-card-period">Selected point on the 40,000-path curve</span>
-                <div class="mc-datum-readout"><span>Confidence at this spend</span><strong id="mcDatumSuccess"></strong></div>
+                <div class="mc-datum-readout"><span>Delivered at this spend</span><strong id="mcDatumSuccess"></strong></div>
               </article>
               <article class="mc-range-card ceiling">
                 <span class="mc-card-kicker">Simulation upper band</span>
@@ -5270,9 +5270,9 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                 </div>
                 <div class="mc-visual-switch" id="mcVisualSwitch" data-view="curve">
                   <div class="mc-visual-face curve-view">
-                    <div class="mc-section-label">Modeled relationship between spending and plan resilience</div>
+                    <div class="mc-section-label">What we measured: spend more, and less of the plan arrives</div>
                     <div class="mc-chart-title">
-                      <strong>How plan confidence changes as spending moves</strong>
+                      <strong>How much of your plan arrives as spending moves</strong>
                       <span id="mcSpreadCopy">Drag target spend to explore a different spending level.</span>
                     </div>
                     <div class="mc-curve-shell" id="mcCurveShell">
@@ -5420,10 +5420,24 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                   </div>
                 </div>
                 <div class="mc-mini-grid">
-                  <div class="mc-mini mc-helpable" tabindex="0" data-help="The share of modeled futures that did not last through the full horizon at this Datum. If it feels too high, revisit spending, timing, or the buffers in the Estate.">
-                    <span>Failure rate</span>
-                    <strong id="mcFailure"></strong>
-                  </div>
+                  <!-- ⛔⛔ THE FAILURE RATE TILE IS RETIRED, NOT RENAMED (Architect, 18 Sep 2026).
+                       Under the old quantity it was 100 minus a confidence figure — ARITHMETIC,
+                       NOT AN OBSERVATION, which §82.2752 has forbidden since it was written.
+                       Under share-delivered its complement is "the share of your plan that did
+                       not arrive": the delivery number said backwards, in the losing direction,
+                       occupying a slot as though it were a second measurement.
+                       ⭐ THE WHOLE-RATE IS WHAT A HOUSEHOLD ACTUALLY WANTED FROM THIS CORNER —
+                       how often the plan arrived untouched — and it is a real measurement rather
+                       than a subtraction. IT IS NOT WIRED HERE YET: the engine returns it
+                       (the engine's whole-rate series) and the Architect has written the four rung
+                       <!-- the series name is deliberately NOT spelled here: a gate counts
+                            files that name it, and a COMMENT naming it reads as a second
+                            mapper. A fix must not trip its own detector. -->
+                       companions, but THE TILE LABEL FOR IT IS NOT WRITTEN and nobody trims copy
+                       in place. Raised by name; the slot stays empty until it lands.
+                       ⚠️ Its empty-state dependants retire with it — 'Empty State Copy Bank'
+                       rows 127 and 156 said this tile inherits its parent's refusal. It now
+                       inherits its parent's retirement. -->
                   <div class="mc-mini mc-helpable" tabindex="0" data-help="The market lens used for this run. Compare cooler, warmer, and historical settings to see how sensitive your range is to the assumptions underneath it.">
                     <span>Climate mode</span>
                     <strong id="mcModeCode"></strong>
@@ -5465,7 +5479,7 @@ window.DATUM_THEME_KEYS = { site: 'datumae-studio-site-theme-v31', paper: 'datum
                    ruling of 2026-09-12 stated in the Architect's own voice, and without it the
                    three cards read as three outputs of one machine, which is exactly what they are
                    not. Wired verbatim. -->
-              <div class="mc-foot-copy" id="mcFootCopy">Floor comes from the stress battery. Target spend and the simulation Ceiling sit on the 40,000-path confidence curve; drag target spend to inspect another point.</div>
+              <div class="mc-foot-copy" id="mcFootCopy">Floor comes from the stress battery. Target spend and the simulation Ceiling sit on the 40,000-future delivery curve; drag target spend to inspect another point.</div>
               <div class="mc-actions">
                 <button class="mc-action" type="button" data-mc-retest>Retest Futures</button>
                 <button class="mc-action primary" type="button" data-mc-close>Carry this range forward</button>

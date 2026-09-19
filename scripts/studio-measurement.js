@@ -101,7 +101,7 @@
         to the panel without adding it here is how a stale number outlives the run that produced it. */
   var DATA_SLOTS = ['mcClimate', 'mcSuccess', 'mcHorizon', 'mcFloorValue',
     'mcDatumValue', 'mcDatumSuccess', 'mcCeilingValue', 'mcAxisMin', 'mcAxisMax',
-    'mcGuardrail', 'mcTerminal', 'mcFailure', 'mcModeCode', 'mcRangeWidth',
+    'mcGuardrail', 'mcTerminal', 'mcModeCode', 'mcRangeWidth',
     'mcHeroRange', 'mcHeroDatum'];
 
   /* ⛔⛔ §6.9b — THE SURVIVOR DISCLOSURE. THE STRING IS THE ARCHITECT'S, SHIPPED VERBATIM, AND IT IS
@@ -325,7 +325,22 @@
 
     if (!Number.isFinite(floor) || !Number.isFinite(datum) || !Number.isFinite(ceiling)) return null;
 
-    var grid = cc.spend_grid, rates = cc.success_rates;
+    /* ⛔⛔ THE PANEL READS share_delivered, NOT success_rates, AND THE SWAP IS THE WHOLE POINT
+     * OF THIS COMMIT. Once spending flexes against relative guardrails a household stops FAILING
+     * and starts SPENDING LESS, so the success rate saturates at 1.0000 across a wide band and
+     * stops telling anybody anything. MEASURED on one household across the full grid:
+     *     success_rates    1.0000 -> 0.0000     a step
+     *     share_delivered  1.000000 -> 0.221790 a curve
+     * 🔑 THE OLD NUMBER IS NOT MERELY COARSE, IT ANSWERS A DIFFERENT QUESTION. "How often did I
+     *    avoid disaster" is not "how much of the life I planned did I actually get", and it is
+     *    the second one a Range is for.
+     * ⛔ NO FALLBACK TO success_rates, DELIBERATELY. An engine image that predates this field
+     *    returns nothing here, the guards below refuse, and the panel shows its EMPTY STATE. A
+     *    fallback would silently print the old quantity under the new labels — an honest-looking
+     *    number that is the wrong measurement, which is worse than a blank panel.
+     * ⚠️ SO THIS CLIENT REQUIRES AN ENGINE IMAGE CARRYING share_delivered. :prod-16 does NOT —
+     *    verified against the live endpoint. These commits do not ship without a new image. */
+    var grid = cc.spend_grid, rates = cc.share_delivered;
     if (!Array.isArray(grid) || !Array.isArray(rates)) return null;
     if (grid.length < 2 || grid.length !== rates.length) return null;
     for (var k = 0; k < grid.length; k++) {
@@ -587,7 +602,9 @@
     put('mcAxisMax', money(b.maxSpend));
     put('mcGuardrail', money(s.guardrail));
     put('mcTerminal', s.terminal == null ? '' : s.terminal);
-    put('mcFailure', Number.isFinite(conf) ? pct(1 - conf) : '');
+    /* ⛔ mcFailure IS RETIRED WITH ITS TILE. It was `pct(1 - conf)` — a subtraction wearing a
+     * measurement's slot. Its markup is gone from studio.html and writing to an element that no
+     * longer exists would be a silent no-op that outlives everyone who remembers why. */
 
     /* §6.9b — painted by the SAME call that paints the tiers it describes. There is no path
        that renders a stepped-down number without it, which is the only structural way "it must

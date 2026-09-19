@@ -97,6 +97,20 @@ const RESPONSE = {
   success_rates: { parametric: 0.82, bootstrap: 0.90, cape: 0.91, regime: 0.77, datum_spend: TARGET },
   capacity_curve: {
     spend_grid:    Array.from({ length: 47 }, (_, i) => 18225 + 5000 * i),
+    /* ⛔⛔ THE PANEL READS share_delivered FROM 18 SEPTEMBER 2026 AND THIS FIXTURE PREDATED IT.
+       When the client swapped, every mapping leg below went red at once — not because the
+       mapping broke, but because THE FIXTURE STOPPED SUPPLYING THE FIELD THE PANEL READS. 1 red
+       became 19 in one edit, which is what a stale fixture looks like from the inside.
+       ⚠️ THE VALUES ARE IDENTICAL TO success_rates BELOW, DELIBERATELY. Every leg here asks a
+       MAPPING question — does the panel read the engine's curve, at the right spend, onto the
+       right axis — and that question does not change with the key the curve arrives under.
+       Handing share_delivered DIFFERENT numbers would silently re-point 40 assertions at a new
+       expected value and call the result a pass.
+       ⛔ success_rates STAYS IN THE FIXTURE. The engine still returns it, the swap is additive on
+       the wire, and a fixture that dropped it would stop proving the two can coexist — which is
+       the exact state every deployed client will be in until the old key is retired. */
+    share_delivered: Array.from({ length: 47 }, (_, i) => 1 - i / 46),
+    whole_rate:      Array.from({ length: 47 }, (_, i) => Math.max(0, 1 - 1.8 * i / 46)),
     success_rates: Array.from({ length: 47 }, (_, i) => 1 - i / 46),
     median_ending: Array.from({ length: 47 }, (_, i) => 2000000 - 40000 * i)
   }
@@ -213,6 +227,12 @@ const REQUEST = { retirement_age: 52.6, plan_end_age: 93, datum_spend: TARGET };
     const bad = JSON.parse(JSON.stringify(a[0]));
     bad.capacity_curve.spend_grid = bad.capacity_curve.spend_grid.map((v) => v + 20000); // grid now starts at 38,225 > window low 31,000
     bad.capacity_curve.success_rates[0] = 0.90;                                          // and NOT saturated
+    /* ⛔ THE FIELD THE PANEL READS MUST BE THE FIELD THIS LEG DE-SATURATES. When the
+       client swapped to share_delivered on 18 Sep this line went on editing
+       success_rates, so the curve the panel read was still saturated, the refusal never
+       fired, and the leg reported the panel CLAMPING when it had simply been handed a
+       valid window. A LEG THAT PERTURBS A FIELD NOBODY READS TESTS NOTHING. */
+    bad.capacity_curve.share_delivered[0] = 0.90;
     const s = window.DatumMeasurement.fromEngine(bad, a[1]);
     const stillEmpty = (document.getElementById('mcFloorValue') || {}).textContent;
     window.DatumMeasurement.render(s);
