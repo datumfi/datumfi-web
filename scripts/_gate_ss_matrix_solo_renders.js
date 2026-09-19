@@ -134,7 +134,14 @@ const server = http.createServer((req, res) => {
             NOT THE DEFECT. Routed through `window._ssCanonKey`, the SAME function the renderer
             uses, so the comparison cannot drift from the thing it is comparing. It still catches
             an invented cell: a key the engine never sent survives no translation into one it did. */
-      engineKeys: (r.cases || []).map(function (c) { return window._ssCanonKey(c.case_key); })
+      engineKeys: (r.cases || []).map(function (c) { return window._ssCanonKey(c.case_key); }),
+      /* ⛔⛔ THE NUMBERS, READ OFF THE SCREEN. The first draft of this gate asserted cell COUNTS,
+         keys, labels and the presence of copy — and not one figure. It went 8/8 GREEN over a
+         surface the Captain then opened and found printing "$0K/yr" total spending and a "lower
+         spending estimate" of $3,821K in every cell. A GATE THAT COUNTS CELLS PROVES THE GRID,
+         NOT THE ANSWER: cells full of wrong money satisfy every structural leg there is. */
+      spend: Array.from(g.querySelectorAll('.ss-cell-spend-val')).map(function (e) { return e.textContent.trim(); }),
+      floor: Array.from(g.querySelectorAll('.ss-cell-floor-val')).map(function (e) { return e.textContent.trim(); })
     };
   }, result);
 
@@ -162,6 +169,20 @@ const server = http.createServer((req, res) => {
   ok(/permanently lower monthly benefit for life|bridge years require more portfolio support|balances bridge length/.test(s.text),
     'L5 · THE AUTHORED SOLO COPY ACTUALLY RENDERS [observed ' + (/permanently lower monthly benefit for life/.test(s.text) ? 'present' : 'ABSENT')
     + '] — these three sentences were written long ago and had never once reached a screen');
+
+  /* ── L8/L9 · THE FIGURES IN THE CELLS ARE THE ENGINE OWN ANSWERS ──────────────────
+     Derived from the fixture, never typed. `fmtK` is re-implemented here deliberately: reading
+     the page formatter to check the page would be a second vote from the same voter. */
+  const kFmt = (n) => "$" + Math.round(n / 1000) + "K";
+  const wantSpend = (SOLO.cases || []).map((c) => kFmt(c.tiers.keystone));
+  const wantFloor = (SOLO.cases || []).map((c) => kFmt(c.tiers.bedrock));
+  ok(wantSpend.every((w, i) => (s.spend[i] || "").indexOf(w) === 0),
+    "L8 · TOTAL SPENDING IS THE KEYSTONE THE ENGINE SENT [want " + JSON.stringify(wantSpend)
+    + ", screen " + JSON.stringify(s.spend) + "] — the Captain saw $0K/yr in every solo cell");
+  ok(wantFloor.every((w, i) => (s.floor[i] || "").indexOf(w) === 0),
+    "L9 · LOWER ESTIMATE IS THE BEDROCK THE ENGINE SENT [want " + JSON.stringify(wantFloor)
+    + ", screen " + JSON.stringify(s.floor) + "] — he saw $3,821K, and BEDROCK ABOVE KEYSTONE is "
+    + "impossible by construction: the strictest tier cannot outspend a looser one");
 
   const j = await draw(JOINT);
   const jointKeys = j.engineKeys;
