@@ -224,22 +224,94 @@ if (declaredUnseen.length) {
     + ' payload no instrument walks is a promise nobody has read.');
 }
 
+/* ══ THE SECOND SURFACE, COUNTED FOR THE FIRST TIME ═══════════════════════════════════════════
+   ⛔⛔ THIS BLOCK REPLACES AN EDGE NOTE THAT HAD BEEN FALSE FOR SIX DAYS, AND THE STALENESS IS
+      THE FINDING. It read: "`buildMatrixRequest` is NOT REACHABLE from any scope an instrument
+      can address ... it CANNOT BE CALLED BY A HARNESS AT ALL", and then named the method to close
+      it: *expose the builder the way _buildStudioRequest is exposed.*
+      ⭐ THAT WAS DONE ON 2026-09-13. studio.html:20796 carries `window.buildMatrixRequest =
+         buildMatrixRequest;` with a note saying it exists so this census can read it. The walk
+         that reads it was written too. BOTH HALVES SHIPPED AND THE CENSUS WENT ON PRINTING THAT
+         IT WAS IMPOSSIBLE, because nothing ever re-read the sentence.
+      ⛔ AND IT WAS DARK FOR A SECOND REASON ON TOP OF THE FIRST: the walk lives behind
+         `_gate_payload_accounted`'s L0, and that gate's fixture was keyed on a control id that no
+         longer exists, so it stopped at the healthcare door and never reached the matrix at all.
+         TWO INDEPENDENT BLINDFOLDS OVER ONE SURFACE, and removing either alone changed nothing.
+   🔑 A CAPABILITY THAT SHIPPED AND A CENSUS THAT STILL SAYS IT IS IMPOSSIBLE ARE THE SAME DEFECT
+      AS A DEFAULT NOBODY CHOSE: a recorded claim outliving the thing it described. §82.2752.
+   ⚠️ SO THIS SECTION IS DERIVED, NEVER TYPED. If the observation carries no matrix body it says
+      UNMEASURED and says why — it must never again assert a shape from memory. */
+const mObs = (obs.matrix || {});
+const mSolo = mObs.solo || {}, mDual = mObs.dual || {};
+console.log('');
+console.log('══ SURFACE 2 OF 2 — THE SS-MATRIX REQUEST, ITS OWN BUILDER AND ITS OWN DEFAULTS ══');
+if (!mSolo.reachable && !mDual.reachable) {
+  console.log('⛔ UNMEASURED THIS RUN. The observation carries no matrix body, so every count here');
+  console.log('   would be ZERO BECAUSE NOBODY LOOKED, not because nothing is there.');
+  console.log('   ⇒ the walk lives in _gate_payload_accounted (walkMatrix). If it is stuck, fix that first.');
+} else {
+  const mBody = mDual.body || mSolo.body || {};
+  const mKeys = Object.keys(mBody);
+  const calcDual = (obs.dual || {}).payload || {};
+  const onlyMatrix = mKeys.filter((k) => !(k in calcDual));
+  const onlyCalc = Object.keys(calcDual).filter((k) => !(k in mBody));
+  /* ⛔ UNACCOUNTED IS DERIVED FROM THE SAME PREDICATE THE CALCULATE SURFACE USES — a key on the
+     body that no control refused for. Re-deriving it differently here would let the two surfaces
+     disagree about what "the user did not choose" means, which is the defect one level up. */
+  const askedDual = new Set(((obs.dual || {}).askedKeys) || []);
+  const mUnaccounted = mKeys.filter((k) => !askedDual.has(k) && k !== 'accounts');
+  console.log('  reachable: solo=' + !!mSolo.reachable + ' · dual=' + !!mDual.reachable
+    + '  ·  keys: solo=' + Object.keys(mSolo.body || {}).length + ' dual=' + mKeys.length);
+  console.log('  ONLY ON THE MATRIX (' + onlyMatrix.length + '): ' + (onlyMatrix.join(', ') || 'none'));
+  console.log('  ONLY ON CALCULATE (' + onlyCalc.length + '): ' + (onlyCalc.join(', ') || 'none'));
+  console.log('  ⚠️ A DIFFERENCE IS A DECISION; AN UNEXPLAINED DIFFERENCE IS A DEFECT. This reports, it does not judge.');
+  console.log('');
+  console.log('  ON THE MATRIX BODY AND NOT ASKED FOR ANYWHERE (' + mUnaccounted.length + '):');
+  mUnaccounted.forEach((k) => console.log('    · ' + pad(k, 32) + JSON.stringify(mBody[k])));
+  console.log('  🔑 THIS SURFACE CANNOT BE CLEANED BY FIXING THE OTHER ONE. It has its own builder,');
+  console.log('     so a default removed from /api/calculate survives here until removed here too.');
+
+  /* ══ THE UNION — THE ONLY NUMBER ON THIS PAGE THAT IS ABOUT THE PRODUCT ══════════════════════
+     ⛔⛔ EITHER SURFACE'S COUNT ALONE IS A HALF-TRUTH, AND THE HALVES OVERLAP. A key cleaned off
+        /api/calculate and left on the matrix body is still a value nobody chose reaching an
+        engine — it simply reaches it through the other door. §82.2760, a denominator is part of
+        the result: the denominator here is BOTH BUILDERS, not the one that happens to be open.
+     ⭐ THIS IS A CLOSED SET AND THAT IS THE WHOLE POINT. It is derived from the engine's own
+        request model and the second builder's own body — not from a list anybody wrote — so it
+        CAN GO TO ZERO, and the distance to zero is printable on any day somebody asks. */
+  const unionOpen = new Set([...open.map((r) => r.field), ...mUnaccounted]);
+  const bothSurfaces = [...unionOpen].filter((k) => open.some((r) => r.field === k) && mUnaccounted.includes(k));
+  const matrixOnly = mUnaccounted.filter((k) => !open.some((r) => r.field === k));
+  console.log('');
+  console.log('══ THE UNION ACROSS BOTH SURFACES — "a value no household chose" ══');
+  console.log('  ' + unionOpen.size + ' distinct keys reach an engine without anyone having chosen them.');
+  console.log('    · ' + open.length + ' on /api/calculate · ' + mUnaccounted.length + ' on the SS-matrix request'
+    + ' · ' + bothSurfaces.length + ' on BOTH · ' + matrixOnly.length + ' reachable ONLY through the matrix door.');
+  if (matrixOnly.length) {
+    console.log('  ⛔ THE MATRIX-ONLY ONES ARE THE EASIEST TO MISS AND THE LAST TO BE FOUND:');
+    matrixOnly.forEach((k) => console.log('    · ' + pad(k, 32) + JSON.stringify(mBody[k])));
+  }
+  console.log('  🔑 THE COUNT HAS RISEN EVERY TIME IT WAS TAKEN, AND NOT BECAUSE THE PRODUCT GOT WORSE.');
+  console.log('     It rose because a SURFACE came into view. Surfaces are finite and this census now');
+  console.log('     names the ones it does not cover, so the rising stops — not when the defaults run');
+  console.log('     out, but when the surfaces do.');
+}
+
 console.log('');
 console.log('══ THE EDGE OF THIS CENSUS — WHAT IT DOES NOT COVER, NAMED WITH ITS METHOD ══');
-console.log('⛔ 1. THE SS-MATRIX REQUEST. A SECOND surface with its own builder and its own defaults.');
-console.log('     MEASURED THIS SESSION: `buildMatrixRequest` is NOT REACHABLE from any scope an');
-console.log('     instrument can address — typeof window.buildMatrixRequest === "undefined" and a');
-console.log('     scoped eval cannot see it either. It is nested inside another function, so unlike');
-console.log('     _buildStudioRequest it CANNOT BE CALLED BY A HARNESS AT ALL.');
-console.log('     ⇒ METHOD TO CLOSE IT: intercept the POST body on a walked page, or expose the');
-console.log('       builder the way _buildStudioRequest is exposed. It is measurable. It has never');
-console.log('       been measured, and nothing about its shape has been enumerated here.');
-console.log('⛔ 2. JOINT-THAT-BECAME-SOLO — bereavement, divorce. The co-architect toggle can be');
-console.log('     turned OFF after being ON, and its off-branch DELETES every co-architect account.');
-console.log('     No instrument in this repo has ever walked that transition.');
-console.log('     ⇒ METHOD TO CLOSE IT: walk dual to a complete payload, toggle off, re-enumerate,');
-console.log('       and diff. A third column on this board, by the same machinery.');
-console.log('🔑 BOTH ARE COUNTED AT ZERO ABOVE BECAUSE NEITHER HAS BEEN LOOKED AT. Saying so in the');
-console.log('   output, every run, is the only thing that stops a bounded census from being read as');
-console.log('   a complete one.');
+console.log('✅ THE TWO EDGES THIS SECTION USED TO NAME ARE BOTH CLOSED, 2026-09-19:');
+console.log('   · the SS-matrix request is walked and counted above;');
+console.log('   · JOINT-THAT-BECAME-SOLO is walked by _gate_payload_accounted L19-L22 — the toggle');
+console.log('     is turned off after being on, the estate loss is named, and the co-architect keys');
+console.log('     are re-enumerated. Both were BUILT and DARK, not absent.');
+console.log('⛔ 1. THE THIRD CONFIGURATION IS NOT ON THIS BOARD. The columns here are SOLO and DUAL.');
+console.log('     Joint-that-became-solo is measured in a gate and has no column, so every count');
+console.log('     printed above is silent about it.');
+console.log('     ⇒ METHOD TO CLOSE IT: a third column, fed by the same observation file.');
+console.log('⛔ 2. ONE HOUSEHOLD PER CONFIGURATION. The walk answers each refusal with a SHAPE, so');
+console.log('     these counts describe the fields a door demands, NEVER whether the value is right.');
+console.log('     ⇒ METHOD TO CLOSE IT: this is the engine harness\'s job, not this one\'s.');
+console.log('🔑 AN EDGE NOTE IS A MEASUREMENT AND GOES STALE LIKE ONE. The two above were true when');
+console.log('   written and false within a week, and nothing re-read them. Check this list against');
+console.log('   the product before quoting it — that is what the last one cost.');
 console.log('');
