@@ -77,13 +77,39 @@ const SENTENCE = (yr) => `After ${yr}, this plans for one person: the larger Soc
    leave the disclosure hidden for a reason that has nothing to do with the survivor window. Shaped
    from a MEASURED production response (2026-09-14, :prod-9) rather than invented: the window this
    panel draws must sit inside the engine's grid or fromEngine refuses on the saturation rule. */
+/* ⛔⛔ FIXTURE REPAIRED 2026-09-19 — IT SUPPLIED THE FIELD THE PANEL STOPPED READING.
+   This carried `capacity_curve.success_rates` and NO `share_delivered`, so `fromEngine` refused
+   at its own door (`if (!Array.isArray(rates)) return null`) and P2/P2b failed with the
+   disclosure blank. THE PRODUCT WAS NOT WRONG: the panel was deliberately swapped from
+   success_rates to share_delivered, with NO FALLBACK, because once spending flexes against the
+   guardrails the success rate saturates and answers a different question.
+   ⭐ PROVEN AGAINST PRODUCTION BEFORE THIS FIXTURE MOVED, which is the only thing that makes the
+      repair honest (§82.2767): the LIVE endpoint returns `share_delivered=True` on :prod-19.
+      Re-pointing a test to a changed product is legitimate ONLY once the change has been shown
+      correct independently — otherwise it is teaching the test to accept a defect.
+   ⛔ THIS GATE WAS NOT ON THE RED LEDGER AT ALL. It went red when the panel swapped fields and
+      nobody knew, because the disposition census is a hand-typed array that runs no gates. IT IS
+      THE SURVIVOR SENTENCE — the Standing Goal's own named case, dark and unreported.
+
+   ⚠️ THE TWO ARRAYS DISAGREE ON PURPOSE AND MUST STAY DISAGREEING (§82.2425, fingerprint the
+      stores). `success_rates` is a STEP and `share_delivered` is a CURVE — the exact contrast
+      measured on a real household (1.0000 -> 0.0000 a step, 1.000000 -> 0.221790 a curve). If
+      anyone ever re-adds the forbidden fallback to success_rates, the panel draws a staircase
+      instead of a curve and P6 below goes red. A FIXTURE THAT FEEDS BOTH STORES THE SAME NUMBERS
+      CANNOT TELL WHICH ONE WAS READ. Both are saturated at the ends (first >= 0.999, last
+      <= 0.001) so the out-of-grid rule is satisfied whichever way the window falls. */
+const GRID_N = 47;
 const mkResponse = (survivorYear) => ({
   tiers: { blended: { bedrock: 87000, foundation: 102000, keystone: 112000, capstone: 130000 } },
   success_rates: { parametric: 0.82, bootstrap: 0.90, cape: 0.91, regime: 0.77, datum_spend: 95000 },
   capacity_curve: {
-    spend_grid:    Array.from({ length: 47 }, (_, i) => 40000 + 5000 * i),
-    success_rates: Array.from({ length: 47 }, (_, i) => 1 - i / 46),
-    median_ending: Array.from({ length: 47 }, (_, i) => 2000000 - 40000 * i)
+    spend_grid:      Array.from({ length: GRID_N }, (_, i) => 40000 + 5000 * i),
+    // A STEP — what the old measure looks like, kept so the swap stays provable.
+    success_rates:   Array.from({ length: GRID_N }, (_, i) => (i < GRID_N / 2 ? 1 : 0)),
+    // A CURVE — what the panel must actually read. Distinguishable from the step at every point
+    // in the middle of the window, which is where the disclosure's household sits.
+    share_delivered: Array.from({ length: GRID_N }, (_, i) => 1 - i / (GRID_N - 1)),
+    median_ending:   Array.from({ length: GRID_N }, (_, i) => 2000000 - 40000 * i)
   },
   params: survivorYear === 'ABSENT' ? {} : { survivor_calendar_year: survivorYear }
 });
@@ -219,6 +245,42 @@ const REQUEST = { retirement_age: 60, plan_end_age: 90, datum_spend: 95000 };
   check('P5 §6.11 — the retired note is absent from the live DOM',
         note.byId === false && note.byClass === 0 && note.inText === false,
         `byId=${note.byId} byClass=${note.byClass} inText=${note.inText}`);
+
+  /* ── P6 · WHICH SERIES DID THE PANEL ACTUALLY READ? ────────────────────────
+     ⛔⛔ ADDED 2026-09-19 BECAUSE THIS GATE'S OWN FIXTURE WENT DARK FOR WANT OF IT. The panel
+     was swapped from success_rates to share_delivered with NO FALLBACK, deliberately — a
+     fallback would print the old quantity under the new labels, an honest-looking number that
+     answers a different question. NOTHING ASSERTED THE SWAP. This gate simply stopped being able
+     to drive the panel at all, and the red sat outside the ledger.
+     🔑 A CONTRACT ENFORCED ONLY BY A COMMENT IS ENFORCED BY NOBODY (§82.2425). The fixture feeds
+        the two series DIFFERENT SHAPES — a step and a curve — so the question "which one was
+        read" has an observable answer instead of being a matter of trust.
+     ⚠️ READ OFF THE SCENARIO, NOT OFF THE SCREEN. fromEngine keeps the engine's own grid and
+        rates on the scenario it returns, so this compares what the panel CARRIES against both
+        candidate sources. Asserting a rendered pixel would prove the chart drew something. */
+  const series = await page.evaluate(([res, req]) => {
+    const M = window.DatumMeasurement;
+    const s = M.fromEngine(res, req);
+    if (!s) return { refused: true };
+    const cc = res.capacity_curve;
+    const eq = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length
+                         && a.every((v, i) => Number(v) === Number(b[i]));
+    return {
+      refused: false,
+      readShareDelivered: eq(s.rates, cc.share_delivered),
+      readSuccessRates:   eq(s.rates, cc.success_rates),
+      seriesDiffer:       !eq(cc.share_delivered, cc.success_rates)
+    };
+  }, [mkResponse(2064), REQUEST]);
+
+  check('P6 CONTROL: the fixture feeds the two series DIFFERENT shapes',
+        series.seriesDiffer === true,
+        series.seriesDiffer ? 'step vs curve — the question is answerable'
+                            : 'IDENTICAL — this gate cannot tell which series was read, and P6b below is vacuous');
+  check('P6b the panel read share_delivered, NOT success_rates — the no-fallback rule, asserted',
+        series.refused === false && series.readShareDelivered === true && series.readSuccessRates === false,
+        series.refused ? 'fromEngine REFUSED the scenario'
+                       : `share_delivered=${series.readShareDelivered} success_rates=${series.readSuccessRates}`);
 
   await browser.close();
   server.close();

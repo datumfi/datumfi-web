@@ -65,7 +65,16 @@ const ANSWERS = {
   'spend-input': '$100,000', 'plan-through': '93', 'plan-end-age': '03 / 2064',
   'ss-pri-62': '1,800', 'ss-pri-67': '2,400', 'ss-pri-70': '3,000',
   'ss-sec-62': '1,500', 'ss-sec-67': '2,000', 'ss-sec-70': '2,600',
-  'hc-monthly': '1,150', 'pri-location': 'Alabama', 'filing-status': 'Single / Individual'
+  /* ⛔⛔ `hc-monthly` -> `hc-pre65-monthly`, REPAIRED 2026-09-19. THAT ID DOES NOT EXIST IN THE
+     SHELL AND HAS NOT FOR SOME TIME — the control is `hc-pre65-monthly` and it is the target
+     studio.html actually pushes on the Healthcare refusal. So the walk hit a door it had no key
+     for, stopped, and L0 reported STUCK — which made every leg beneath it assert over a Studio
+     that had never opened. THE INSTRUMENT LEG WAS THE FAILING ONE, exactly as filed.
+     ⚠️ IT WENT STUCK ONLY BECAUSE THE PRODUCT GOT MORE HONEST. This field used to ship a
+        hard-coded "$1,150" — $13,800/yr nobody chose — so it NEVER refused and the walk never
+        reached this door. Removing that default armed a refusal the gate could not answer.
+        🔑 A FIXTURE THAT NEVER MET A DOOR CANNOT BE SAID TO HAVE PASSED THROUGH IT. */
+  'hc-pre65-monthly': '1,150', 'pri-location': 'Alabama', 'filing-status': 'Single / Individual'
 };
 
 /* Which control a payload key comes from, for the ASKED test. ⚠️ This maps names; it does not
@@ -84,7 +93,12 @@ const FROM_CONTROL = {
      this map has never been evidence; only a refusal observed during the walk is. */
   datum_spend: 'sec-sketch',
   plan_end_age: 'plan-end-age',
-  healthcare_annual: 'hc-monthly',
+  /* ⛔ THE SAME DEAD ID, AND HERE IT WAS THE MORE EXPENSIVE OF THE TWO. This named a control that
+     does not exist, so the ASKED test could never match a refusal against it and
+     `healthcare_annual` was counted UNASKED — silently, in the gate's own headline figure. The
+     map's comment is right that a name here is not evidence; it is also true that a WRONG name
+     here removes a key from the population without anything going red. §82.2778. */
+  healthcare_annual: 'hc-pre65-monthly',
 
   /* ── THE SECOND PERSON'S CONTROLS, ADDED 2026-09-13 WHEN THIS GATE LEARNED TO ENTER DUAL.
      ⛔⛔ THE ABSENCE OF THESE FIVE LINES WAS NOT AN OVERSIGHT IN A MAP; IT WAS THE INSTRUMENT

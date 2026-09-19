@@ -193,4 +193,98 @@ for (const r of LEDGER) {
 console.log(DIM('  ⚠️ NOTHING IN THIS FILE TURNS ANYTHING GREEN. It is the record that makes the count'));
 console.log(DIM('     reportable, and the thing that stops an itemisation becoming the alibi for the repair.'));
 console.log('');
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+   §82.2791 · A HAND-MAINTAINED LEDGER OF MEASUREMENTS IS NOT A MEASUREMENT.
+   ⛔⛔ ADDED 2026-09-19 BECAUSE THIS FILE WAS READ AS A SUITE RESULT BY THREE SESSIONS RUNNING,
+      INCLUDING ITS OWN AUTHOR'S. Everything above is a TYPED ARRAY. It runs no gates. Its headline
+      — "24 red, unchanged for five days" — was quoted to the Captain as a fact about the product
+      and was a fact about the list.
+   ⭐ MEASURED THE DAY IT WAS CAUGHT: a real run read GREEN 271 / RED 18 / TOTAL 289, and the array
+      was wrong in BOTH directions — `_gate_plan_through_typed` filed REPAIR-red while GREEN 6/6,
+      and TWO reds missing entirely, one of which cannot render the survivor sentence.
+   🔑 THE STATIONARITY WAS THE INSTRUMENT'S. A list that cannot move reports no movement, and that
+      reads exactly like a product that is not being repaired.
+   ⚖️ THE RULE: an instrument that reports a count DERIVES that count from the thing it counts, or
+      DECLARES ON ITS OWN FACE that it does not. This block does the first where a run exists and
+      the second where it does not. It is deliberately the LAST thing printed, because the numbers
+      above are the ones somebody will copy.
+   ══════════════════════════════════════════════════════════════════════════════════════════════ */
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+const HR = '  ' + '─'.repeat(92);
+console.log(HR);
+
+function newestBaseline() {
+  const dir = tmpdir();
+  let best = null;
+  for (const f of readdirSync(dir)) {
+    if (!/^datum-baseline-results--.+\.json$/.test(f)) continue;   // keyed receipts ONLY — the
+    const p = join(dir, f);                                        // canonical path is overwritten
+    const m = statSync(p).mtimeMs;                                 // by whichever run finished last
+    if (!best || m > best.mtime) best = { path: p, file: f, mtime: m };
+  }
+  return best;
+}
+
+let base = null;
+try { base = newestBaseline(); } catch (e) { base = null; }
+
+if (!base) {
+  console.log(RED(B('  ⛔ THIS PAGE IS HAND-MAINTAINED AND HAS NOT BEEN RECONCILED.')));
+  console.log(DIM('     No suite receipt found in ' + tmpdir() + '. EVERY COUNT ABOVE WAS TYPED BY A'));
+  console.log(DIM('     PREVIOUS SESSION AND MAY BE WRONG IN EITHER DIRECTION — a green gate filed as a'));
+  console.log(DIM('     product defect, or a red gate absent from the list altogether. Both have happened.'));
+  console.log(DIM('     Run `node scripts/_suite_baseline.mjs` and re-run this. DO NOT QUOTE THE NUMBERS ABOVE.'));
+} else {
+  let run = null;
+  try { run = JSON.parse(readFileSync(base.path, 'utf8')); } catch (e) { run = null; }
+  if (!run || !Array.isArray(run.gates)) {
+    console.log(RED(B('  ⛔ A SUITE RECEIPT WAS FOUND AND COULD NOT BE READ — treat this page as hand-maintained.')));
+    console.log(DIM('     ' + base.file));
+  } else {
+    const redNow = new Set(
+      run.gates.filter((g) => g && (g.verdict === 'RED' || g.status === 'RED' || g.exitCode === 1 || g.exit === 1))
+               .map((g) => g.name || g.gate || g.file)
+    );
+    const listed = new Set(LEDGER.map((r) => r.gate));
+    /* A row whose disposition head is CLOSED or REPAIRED is asserting it is GREEN now, so it is
+       not expected in the red set. Everything else on this page claims to be red. */
+    const claimsRed = new Set(
+      LEDGER.filter((r) => !/^(CLOSED|REPAIRED)/.test(r.disposition)).map((r) => r.gate)
+    );
+    const phantom = [...claimsRed].filter((g) => !redNow.has(g));   // page says red, run says green
+    const missing = [...redNow].filter((g) => !listed.has(g));      // run says red, page never heard of it
+
+    const age = Math.round((Date.now() - base.mtime) / 60000);
+    console.log(B('  RECONCILED AGAINST A REAL RUN') + DIM('  ·  ' + base.file + '  (' + age + ' min old)'));
+    console.log(DIM('     run: ') + GRN('GREEN ' + run.green) + DIM(' · ') + RED('RED ' + run.red) + DIM(' · TOTAL ' + run.total));
+    console.log(DIM('     this page claims ') + String(claimsRed.size) + DIM(' red gate file(s).'));
+    console.log('');
+    if (!phantom.length && !missing.length) {
+      console.log(GRN(B('  ✅ THE PAGE AND THE RUN AGREE.')) + DIM('  Every gate this page calls red is red, and'));
+      console.log(DIM('     every red in the run has a row here. The dispositions are still JUDGEMENTS and'));
+      console.log(DIM('     are not verified by this check — only the POPULATION is.'));
+    } else {
+      console.log(RED(B('  ⛔ THE PAGE AND THE RUN DISAGREE. THE RUN IS THE MEASUREMENT.')));
+      for (const g of phantom) {
+        console.log(YEL('     PHANTOM  ') + g + DIM('  — this page calls it red; the suite says GREEN.'));
+        console.log(DIM('               ⛔ A DISPOSITION OVER A GREEN GATE IS AN ORDER TO CHANGE A WORKING PRODUCT.'));
+      }
+      for (const g of missing) {
+        console.log(CYN('     MISSING  ') + g + DIM('  — the suite says RED; this page has no row for it.'));
+        console.log(DIM('               ⛔ AN UNLISTED RED IS INVISIBLE TO EVERY TRIAGE THAT READS THIS PAGE.'));
+      }
+      console.log('');
+      console.log(DIM('     Repair the ARRAY, not the run. Then re-run this.'));
+    }
+    console.log('');
+    console.log(DIM('  ⚠️ THE RECEIPT IS KEYED TO THE COMMIT IT RAN AGAINST. A stale receipt reconciles'));
+    console.log(DIM('     cleanly against a tree that has since moved — check the age above before trusting it.'));
+  }
+}
+console.log(HR);
+console.log('');
 process.exit(0);

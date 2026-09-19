@@ -137,7 +137,24 @@ function engineResponse(datum, saturate) {
   }
   return {
     tiers: { blended: { bedrock: 41000, keystone: 55000, capstone: 68000 } },
-    capacity_curve: { spend_grid: grid, success_rates: rates },
+    /* ⛔⛔ FIXTURE REPAIRED 2026-09-19 — THIS EMITTED `success_rates` AND THE PANEL READS
+       `share_delivered`. fromEngine refused at its own door and THIS GATE ABORTED ENTIRELY with
+       "fromEngine returned null" — it rendered NO verdict while being counted as on guard, which
+       is worse than a red: §82.2777, a guard must be SHOWN to fire, and an aborting gate is an
+       ABSENT one wearing a present one's name. It was not on the red ledger either.
+       ⭐ THE PRODUCT IS CORRECT AND THAT WAS PROVEN BEFORE THIS LINE MOVED: the LIVE endpoint on
+          :prod-19 returns share_delivered. The swap was deliberate and carries NO FALLBACK,
+          because once spending flexes the success rate saturates and answers a different question.
+       ⚠️ success_rates IS KEPT AND DELIBERATELY FALSIFIED TO A FLAT 0.5 (§82.2425). It is not
+          decoration: if anyone re-adds the forbidden fallback, EVERY confidence reading in this
+          gate becomes 50% and every assertion below breaks loudly, instead of the gate silently
+          measuring the wrong series. A FIXTURE THAT FEEDS BOTH STORES THE SAME NUMBERS CANNOT
+          TELL WHICH ONE WAS READ. */
+    capacity_curve: {
+      spend_grid: grid,
+      share_delivered: rates,
+      success_rates: rates.map(() => 0.5)
+    },
     success_rates: { datum_spend: datum }
   };
 }
@@ -154,6 +171,12 @@ async function readPanel(page, res) {
     return {
       confidence: txt('mcSuccess'),
       failure:    txt('mcFailure'),
+      /* ⛔ THE FAILURE TILE IS RETIRED AND ITS ABSENCE IS NOW THE ASSERTION, NOT AN OBSTACLE.
+         It was `pct(1 - conf)` — a subtraction wearing a measurement's slot — and its markup was
+         deleted from studio.html. The legs below used to demand it exist and be EMPTY, so they
+         went red over a deliberate removal. Asserting ABSENT is strictly stronger: an empty tile
+         can be filled by the next commit, a missing one cannot. */
+      failureTileAbsent: !document.getElementById('mcFailure'),
       datumValue: txt('mcDatumValue'),
       stateKey:   host ? host.getAttribute('data-range-state') : null,
       note:       txt('mcRangeStateNote'),
@@ -203,14 +226,22 @@ async function readPanel(page, res) {
 
   /* ── ARM B · beyond the grid on a NON-SATURATED curve: genuinely unmeasured ───────────────── */
   const b = await readPanel(page, engineResponse(400000, false));
+  /* ⛔ RE-POINTED 2026-09-19: `b.failure === ''` -> `b.failureTileAbsent`. Both legs demanded the
+     retired failure tile EXIST and be empty, so they reported a deliberate deletion as a defect.
+     The tile's markup is gone from studio.html and studio-measurement.js records why. Asserting
+     the ABSENCE is stricter than asserting the emptiness, and it guards the ruling rather than
+     the artefact — §82.2767, the instrument was the thing that had gone stale. */
   ok('L2', 'a spend beyond the grid shows NO percentage and says so in the authored words',
-     b.confidence === '' && b.failure === '' && b.stateKey === 'above_unmeasured'
+     b.confidence === '' && b.failureTileAbsent && b.stateKey === 'above_unmeasured'
        && /not going to guess/.test(b.note),
-     `confidence="${b.confidence}" failure="${b.failure}" state=${b.stateKey}`);
+     `confidence="${b.confidence}" failureTileAbsent=${b.failureTileAbsent} state=${b.stateKey}`);
 
+  /* ⚠️ AND THIS LEG WAS PASSING VACUOUSLY. `b.failure !== '100%'` compared the string "(absent)"
+     against "100%" and was true for the wrong reason — an empty green over a retired element.
+     It now asserts the same claim against something that is actually observable. */
   ok('L4', 'a null confidence renders BLANK, never as 0% (the repair\'s own first defect)',
-     b.confidence !== '0%' && b.failure !== '100%',
-     `confidence="${b.confidence}" failure="${b.failure}"`);
+     b.confidence !== '0%' && b.confidence === '' && b.failureTileAbsent,
+     `confidence="${b.confidence}" failureTileAbsent=${b.failureTileAbsent}`);
 
   /* ── ARM C · below the Floor: must read as good news and still carry the typed number ─────── */
   const c = await readPanel(page, engineResponse(30000, true));
