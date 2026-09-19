@@ -19997,7 +19997,24 @@ const _reachesEngine = a =>
     }
 
     // ── Number formatters ─────────────────────────────────────────────────
-    function fmtK(n) { return '$' + Math.round(n / 1000) + 'K'; }
+    /* ⛔⛔ A MISSING NUMBER IS NOT ZERO DOLLARS. This read `'$' + Math.round(n / 1000) + 'K'`,
+       and `Math.round(null / 1000)` IS 0, so a field the engine did not compute printed as a
+       confident "$0K/yr" — indistinguishable from a household that really can support nothing.
+       ⛔ CAPTAIN-FOUND IN A BROWSER 2026-09-18, on his own one-year plan. The SS matrix returned
+          `keystone: None` for all three cases and every cell read "$0K/yr Total spending" beside
+          a "Lower spending estimate" of $3,821K — a LOWER estimate ABOVE the total, which cannot
+          happen from a healthy tier solve and was the tell that both figures were junk.
+       🔑 THE ENGINE WAS HONEST AND THIS FUNCTION LAUNDERED IT. `None` on the wire says "I did not
+          compute this"; `$0K` says "I computed this, and it is nothing". A NULL RENDERED AS A
+          NUMBER IS WORSE THAN A CRASH, because a crash tells the user to come back later and this
+          tells them their retirement is worth nothing.
+       ⚠️ THE EM-DASH IS THIS SURFACE'S EXISTING "NO ANSWER" GLYPH — `.ss-cell-empty` already
+          draws one — so this invents no new vocabulary. It is deliberately NOT a zero, NOT a
+          blank, and NOT a guess at the nearest value. */
+    function fmtK(n) {
+      if (typeof n !== 'number' || !isFinite(n)) return '—';
+      return '$' + Math.round(n / 1000) + 'K';
+    }
     function fmt(n)  { return Math.round(n).toLocaleString('en-US'); }
 
     var _lastMatrixResult = null;
@@ -21167,7 +21184,12 @@ const _reachesEngine = a =>
       if (!_selGrid) return;
       var _AGE_LBL = { early_62: '62', full_67: '67', optimal_70: '70' };
 
-      function _fmtK(n)  { return '$' + Math.round(n / 1000) + 'K'; }
+      /* ⛔ THE SECOND COPY OF THE SAME FORMATTER, AND IT CARRIED THE SAME DEFECT. The inspect
+         panel printed `$0K` for a null exactly as the grid did. DELEGATED RATHER THAN PATCHED
+         TWICE: two copies that agree today are the shape that drifts tomorrow, and this file has
+         already paid for that lesson more than once. Same script block, so `fmtK` is in scope —
+         verified, not assumed. */
+      function _fmtK(n)  { return fmtK(n); }
       function _fmtMo(n) { return '$' + Math.round(n / 12).toLocaleString('en-US') + '/mo'; }
 
       function _populateInspectPanel(caseKey) {

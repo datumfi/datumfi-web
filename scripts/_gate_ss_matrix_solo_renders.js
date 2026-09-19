@@ -21,7 +21,9 @@
  *
  * ── WHY REAL CAPTURED PAYLOADS, NOT HAND-WRITTEN ONES ─────────────────────────────────────────
  * ⛔ THE FIXTURES ARE THE LIVE ENGINE'S OWN ANSWERS, captured from datumfi.com and committed
- *    (scripts/fixtures/ss_matrix_{solo,joint}.json). THE WHOLE DEFECT WAS A DISAGREEMENT ABOUT
+ *    (scripts/_fixtures/ss_matrix_*.json — UNDER `_` BECAUSE THE BUILD'S LEAK-GUARD
+ *    CAUGHT THEM BEING PUBLISHED AS WEB ASSETS: a test fixture served to the public internet is
+ *    a payload nobody reviewed on a domain that serves real households). THE WHOLE DEFECT WAS A DISAGREEMENT ABOUT
  *    KEY SHAPE BETWEEN TWO SIDES, so a fixture I typed by hand would encode MY belief about what
  *    the engine emits — which is precisely the belief that was wrong. A hand-written fixture
  *    would have passed against the broken renderer.
@@ -68,9 +70,11 @@ function mutate(src, anchor, repl, label) {
   return src.replace(anchor, repl);
 }
 
-const FIX_DIR = path.join(ROOT, 'scripts', 'fixtures');
+const FIX_DIR = path.join(ROOT, 'scripts', '_fixtures');
 const SOLO = JSON.parse(fs.readFileSync(path.join(FIX_DIR, 'ss_matrix_solo.json'), 'utf8'));
 const JOINT = JSON.parse(fs.readFileSync(path.join(FIX_DIR, 'ss_matrix_joint.json'), 'utf8'));
+/* The Captain's own one-year household as the LIVE ENGINE answered it, degeneracy and all. */
+const DEGEN = JSON.parse(fs.readFileSync(path.join(FIX_DIR, 'ss_matrix_solo_degenerate.json'), 'utf8'));
 
 const MIME = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.json':'application/json','.png':'image/png','.woff2':'font/woff2','.ico':'image/x-icon' };
 const server = http.createServer((req, res) => {
@@ -183,6 +187,26 @@ const server = http.createServer((req, res) => {
     "L9 · LOWER ESTIMATE IS THE BEDROCK THE ENGINE SENT [want " + JSON.stringify(wantFloor)
     + ", screen " + JSON.stringify(s.floor) + "] — he saw $3,821K, and BEDROCK ABOVE KEYSTONE is "
     + "impossible by construction: the strictest tier cannot outspend a looser one");
+
+  /* ── L10 · A NUMBER THE ENGINE DID NOT COMPUTE IS NOT PRINTED AS MONEY ───────────────
+     ⛔⛔ THE FIXTURE IS THE CAPTAIN'S OWN HOUSEHOLD, VERBATIM FROM PRODUCTION: a ONE-YEAR plan
+     (DOB 08/1982, retire 03/2045, plan through 03/2046). /api/calculate REFUSES it with 422
+     range_not_drawable; THE SS MATRIX SUCCEEDS ANYWAY and returns keystone: null with bedrock at
+     3,821,000. `Math.round(null / 1000)` is 0, so every cell printed a confident "$0K/yr".
+     🔑 THE ENGINE WAS HONEST AND THE FORMATTER LAUNDERED IT. null means "I did not compute
+        this"; $0K means "I computed this, and it is nothing". Those are different sentences and
+        only one of them is true.
+     ⚠️ THIS LEG DOES NOT EXCUSE THE ENGINE. Two defects remain OPEN and are recorded rather
+        than papered over here: (1) the matrix does not honour the refusal the Range applies, and
+        (2) the tier solve degenerates at short horizons. This leg only guarantees the CLIENT
+        stops turning their output into a dollar figure. A DISPLAY GUARD IS NOT A FIX FOR THE
+        THING IT IS GUARDING AGAINST. */
+  const d = await draw(DEGEN);
+  const printsZero = d.spend.some((t) => /\$0K/.test(t)) || d.floor.some((t) => /\$0K/.test(t));
+  ok(!printsZero && d.spend.length > 0,
+    "L10 · A NULL TIER RENDERS AS NO ANSWER, NOT AS $0K [spend " + JSON.stringify(d.spend)
+    + ", floor " + JSON.stringify(d.floor) + "] — the Captain read $0K/yr total spending beside a "
+    + "$3,821K lower estimate, and both came from fields the engine had declined to compute");
 
   const j = await draw(JOINT);
   const jointKeys = j.engineKeys;
